@@ -1,0 +1,19 @@
+"""
+    Question: {question}\nContext: {context}\n
+    Answer this question using the information given in the context above. Here is things to pay attention to: 
+    - First provide step-by-step reasoning on how to answer the question. 
+    - In the reasoning, if you need to copy paste some sentences from the context, include them in ##begin_quote## and ##end_quote##. This would mean that things outside of ##begin_quote## and ##end_quote## are not directly copy paste from the context. 
+    - The output should be formatted as below.
+    [ANSWER]An answer in Markdown format. Include the citations for each fact you use in the answer. The citation MUST follow the format [CIT:source_id:CIT] where source_id can be found from the sources.[/ANSWER]
+    [FOLLOW_UP_QUESTIONS]Follow-up questions that the user would likely ask next based on your answer.[/FOLLOW_UP_QUESTIONS]
+
+    Example:
+    [ANSWER]
+    Expenses as material breeding insisted building to in. Of distrusts immediate:\n\n1. **Led ask possible mistress**: The its enable direct men depend highly. Ham windows sixteen who inquiry fortune demands[CIT:1406f79b-f1f9-415a-bcac-b62bee4efd51:CIT]. Merits behind on afraid or warmly.[CIT:5952a6a6-d6cf-49fb-afbc-c61ec58cc3e2:CIT]
+    [/ANSWER]
+    [FOLLOW_UP_QUESTIONS]
+    Built purse maids cease her ham new seven among?
+    Ham windows sixteen who inquiry fortune demands?
+    We unlocked sensible it?
+    [/FOLLOW_UP_QUESTIONS]
+"""
