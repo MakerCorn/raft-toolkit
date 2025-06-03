@@ -1,4 +1,3 @@
-
 # RAFT Toolkit
 
 This is a customized version of the source code used during the Microsoft 2024 Build Event.
@@ -246,3 +245,29 @@ The `YOUR_EVAL_FILE.jsonl` is in the format where
   'gold_answer': '{answer}'
 }
 ```
+
+## File Utilities Usage
+
+The toolkit provides utility functions in `file_utils.py` for working with large `.jsonl` files. These can be used directly from a Python script or Jupyter notebook.
+
+### Split a Large JSONL File
+
+Use `split_jsonl_file` to split a large `.jsonl` file into multiple parts, each not exceeding a specified size (default: 199,000,000 bytes).
+
+```python
+from file_utils import split_jsonl_file
+split_jsonl_file('yourfile.jsonl', max_size=50_000_000)  # Adjust max_size as needed
+```
+
+This will create files like `yourfile_part_1.jsonl`, `yourfile_part_2.jsonl`, etc.
+
+### Extract Random Rows from a JSONL File
+
+Use `extract_random_jsonl_rows` to extract a given number of random rows from a `.jsonl` file and save them to another file.
+
+```python
+from file_utils import extract_random_jsonl_rows
+extract_random_jsonl_rows('yourfile.jsonl', 100, 'sampled_output.jsonl')
+```
+
+This will randomly select 100 rows from `yourfile.jsonl` and write them to `sampled_output.jsonl`.
