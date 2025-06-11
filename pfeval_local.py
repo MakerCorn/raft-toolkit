@@ -35,6 +35,19 @@ def get_args() -> argparse.Namespace:
     return args
 
 def evaluate_aistudio(model_config, project_scope, project_scope_report, data_path, workers=1, score_model=None):
+    """Evaluate using AI Studio.
+
+    Args:
+        model_config: The model configuration.
+        project_scope: The project scope.
+        project_scope_report: The project scope for reporting.
+        data_path: The path to the data.
+        workers: Number of worker threads.
+        score_model: The model to use for scoring.
+
+    Returns:
+        The result of the evaluation.
+    """
     # create unique id for each run with date and time
     time_str = datetime.now().strftime("%Y%m%d%H%M%S")
     run_id = f"chat_evaluation_sdk_{time_str}"
@@ -62,6 +75,19 @@ def evaluate_aistudio(model_config, project_scope, project_scope_report, data_pa
     return result
 
 def evaluate_local(model_config, project_scope, project_scope_report, data_path, workers=2, score_model=None):
+    """Evaluate locally.
+
+    Args:
+        model_config: The model configuration.
+        project_scope: The project scope.
+        project_scope_report: The project scope for reporting.
+        data_path: The path to the data.
+        workers: Number of worker threads.
+        score_model: The model to use for scoring.
+
+    Returns:
+        The results of the evaluation.
+    """
     data = []
     with open(data_path) as f:
         for line in f:
@@ -87,6 +113,15 @@ def evaluate_local(model_config, project_scope, project_scope_report, data_path,
         return result
 
     def evaluate_row(row, pbar):
+        """Evaluate a single row of data.
+
+        Args:
+            row (dict): The row of data to evaluate.
+            pbar (tqdm): The progress bar instance.
+
+        Returns:
+            dict: The row with evaluation results.
+        """
         for evaluator in evaluators:
             try:
                 result = evaluate_row_with(row, evaluator)

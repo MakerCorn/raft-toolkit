@@ -26,6 +26,11 @@ def install_default_record_field(logging, field, value):
     Wraps the log record factory to add a default progress field value
     Required to avoid a KeyError when the progress field is not set
     Such as when logging from a different thread
+
+    Args:
+        logging (module): The logging module.
+        field (str): The name of the field to add to the log record.
+        value (str): The default value for the field.
     """
     old_factory = logging.getLogRecordFactory()
 
@@ -36,3 +41,26 @@ def install_default_record_field(logging, field, value):
         return record
 
     logging.setLogRecordFactory(record_factory)
+
+
+def get_logger(name):
+    """Returns a configured logger with the specified name.
+
+    Args:
+        name (str): The name of the logger.
+
+    Returns:
+        logging.Logger: The configured logger instance.
+    """
+    return logging.getLogger(name)
+
+
+def setup_logging(config_path):
+    """Sets up logging configuration from a YAML file.
+
+    Args:
+        config_path (str): Path to the YAML configuration file.
+    """
+    with open(config_path, 'rt') as f:
+        config = yaml.safe_load(f.read())
+    logging.config.dictConfig(config)

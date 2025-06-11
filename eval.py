@@ -55,6 +55,14 @@ if __name__ == "__main__":
     def get_openai_response(
         prompt: str
     ) -> str | None :
+        """Gets a response from the OpenAI API for a given prompt.
+
+        Args:
+            prompt (str): The prompt to send to the OpenAI API.
+
+        Returns:
+            str | None: The response from the API, or None if an error occurs.
+        """
         response = completions_completer(
             model=model,
             prompt=prompt,
@@ -70,6 +78,14 @@ if __name__ == "__main__":
             return response
 
     def get_answer(input_json: dict[str, Any]) -> dict[str, Any]:
+        """Processes the input JSON to generate an answer using the OpenAI API.
+
+        Args:
+            input_json (dict[str, Any]): The input data as a dictionary.
+
+        Returns:
+            dict[str, Any]: The input JSON with the generated answer added.
+        """
         prompt = input_json[prompt_key]
         try:
             result = get_openai_response(prompt)
@@ -82,6 +98,12 @@ if __name__ == "__main__":
         result: dict[str, Any], 
         write_file_name: str
     ) -> None:
+        """Writes the result dictionary to a file in JSON Lines format.
+
+        Args:
+            result (dict[str, Any]): The result to write to the file.
+            write_file_name (str): The name of the file to write to.
+        """
         global file_write_lock
         with file_write_lock:
             with open(write_file_name, "a") as outfile:
@@ -150,4 +172,3 @@ if __name__ == "__main__":
 
     end_time = time.time()
     logger.info(f"total time used: {end_time - start_time}")
-    

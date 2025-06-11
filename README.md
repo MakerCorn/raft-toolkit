@@ -1,273 +1,175 @@
 # RAFT Toolkit
 
-This is a customized version of the source code used during the Microsoft 2024 Build Event.
+> **Retrieval Augmentation Fine-Tuning Toolkit**  
+> Adapt LLMs to domain-specific RAG with synthetic QA datasets.
 
-## RAFT Overview
+---
 
-RAFT is a recipe to adapting LLMs to domain-specific RAG. RAFT takes an input document from the user and creates a dataset using the document, consisting of synthetically generated `{ question, answer, documents }` triplets. The dataset can then be used to fine-tune models for improved question-answering and retrieval.
+## 🚀 Overview
 
-The input data from the user can be either a general text document (pdf, json, txt, or pptx) for general QA or an API documentation in the API Zoo JSONL format for API calling.
+RAFT takes an input document and creates a dataset of `{question, answer, documents}` triplets for fine-tuning LLMs on retrieval-augmented tasks. Supports general text (PDF, JSON, TXT, PPTX) and API documentation (API Zoo JSONL).
 
-## Install Dependencies
+---
 
-Dependencies can be installed using the following command:
+## 📦 Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Arguments:
+---
 
-- `--datapath` - the path at which the document is located
-- `--output` - the path at which to save the dataset
-- `--output-format` - the format of the output dataset. Defaults to `hf` for HuggingFace. Can be one of `hf`, `completion`, `chat`.
-- `--output-type` - the type of the output dataset file. Defaults to `jsonl`. Can be one of `jsonl`, `parquet`.
-- `--output-chat-system-prompt` - The system prompt to use when the output format is `chat`. Optional.
-- `--distractors` - the number of distractor documents to include per data point / triplet
-- `--doctype` - the type of the document, must be one of the accepted doctypes
-  - currently accepted doctypes: `pdf`, `txt`, `json`, `api`, `pptx`
-  - documents in `json` format must have a "text" attribute containing the content from which chunks are extracted
-  - documents in `api` format must follow the API json format detailed in the Gorilla [API Store](https://github.com/ShishirPatil/gorilla/blob/main/data/README.md)
-- `--p` - the percentage of including the oracle documents in the context
-- `--chunk_size` - the size of each chunk in number of tokens
-- `--questions` - the number of data points / triplets to generate per chunk
-- `--workers` - the number of workers used in the generation stage
-- `--embed-workers` - the number of workers used in the chunking and embedding stage
-- `--openai_key` - your OpenAI key used to make queries to GPT-3.5 or GPT-4
-- `--embedding-model` - The embedding model to use to encode documents chunks. Defaults to `text-embedding-ada-002`.
-- `--completion-model` - The model to use to generate questions and answers. Defaults to `gpt-4`.
-- `--use-azure-identity` - Token will be retrieved at runtime using the Azure Default Credentials. Set to `False` to use Token from Environment Variables. Defaults to `True`.
-- `--fast` - Fast mode flag. By default, this flag is not included and the script runs in safe mode, where it saves checkpoint datasets, allowing the script to recover and continue where it left off in the case of an interruption. Include this flag to run RAFT without recovery.
+## ⚙️ Main Arguments
 
-## Usage
+- **`--datapath`**: Path to the input document
+- **`--output`**: Path to save the generated dataset
+- **`--output-format`**: Output format (`hf` [default], `completion`, `chat`)
+- **`--output-type`**: Output file type (`jsonl` [default], `parquet`)
+- **`--output-chat-system-prompt`**: System prompt for chat output (optional)
+- **`--distractors`**: Number of distractor documents per data point
+- **`--doctype`**: Document type (`pdf`, `txt`, `json`, `api`, `pptx`)
+- **`--p`**: Percentage of including the oracle document in context
+- **`--chunk_size`**: Size of each chunk (in tokens)
+- **`--questions`**: Number of QA pairs to generate per chunk
+- **`--workers`**: Number of workers for QA generation
+- **`--embed-workers`**: Number of workers for chunking/embedding
+- **`--openai_key`**: OpenAI API key
+- **`--embedding-model`**: Embedding model (default: `text-embedding-ada-002`)
+- **`--completion-model`**: Model for QA generation (default: `gpt-4`)
+- **`--use-azure-identity`**: Use Azure Default Credentials for token retrieval
+- **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
+- **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
 
-### Usage with OpenAI API
+---
 
-Run the following command with your desired arguments to generate the dataset.  
+## ⚡ Quick Start
 
-```bash 
+```bash
 python3 raft.py \
-  --datapath PATH_TO_DATA \
-  --output OUTPUT_PATH \
-  --output-format hf \ # or completion or chat
-  --distractors 3 \
-  --p 1.0 \
+  --datapath sample_data/United_States_PDF.pdf \
+  --output ./sample_ds4 \
+  --distractors 4 \
   --doctype pdf \
   --chunk_size 512 \
   --questions 5 \
-  --openai_key YOUR_OPENAI_KEY
+  --openai_key OPENAI_KEY
 ```
 
-**Note**: As an alternative to passing the OpenAI key with the `--openai_key` argument, you also store the standard OpenAI environment variables in a file called `.env` like so. All standard OpenAI env variables are supported.
+---
 
+## 🧩 Chunking Options
+
+- **Semantic** (default): Embedding-based, best for context preservation.
+- **Fixed**: Splits by token count (`--chunk_size`).
+- **Sentence**: Splits by sentence boundaries, each chunk ≤ `--chunk_size` tokens.
+
+**Extra parameters for semantic chunking** (via `--chunking-params`):
+- `overlap`: Tokens to overlap between chunks (default: 0)
+- `min_chunk_size`: Minimum chunk size (default: 0)
+- `number_of_chunks`: Override number of chunks (default: auto)
+
+**Example:**
 ```bash
-# OpenAI
-OPENAI_API_KEY=<replace_me>
+python3 raft.py --datapath sample_data/United_States_PDF.pdf \
+  --output ./sample_ds4 \
+  --distractors 4 \
+  --doctype pdf \
+  --chunk_size 512 \
+  --questions 5 \
+  --openai_key OPENAI_KEY \
+  --chunking-strategy semantic \
+  --chunking-params '{"overlap": 50, "min_chunk_size": 200}'
 ```
 
-`raft.py` does the following:
+---
 
-- Takes a document located at `PATH_TO_DATA`, breaks it into chunks of size `chunk_size` tokens if the data is a pdf, json, txt, or pptx or chunks of one API endpoint if the data is an API documentation, as denoted by `doctype`.
-- For each chunk, uses GPT-4 to synthetically generate `questions` question-answer pairs and adds `distractors` distractor chunks to each pair, creating {Q, A, D} triplets. Each triplet represents one datapoint in the dataset, where Q is the question/use-case, A is the answer, and D is the relevant chunk + distractor chunks.
-- Each data point / triplet also contains other attributes (e.g. metadata), such as `id`, `type`, and `cot_answer`.
-- Uses the HuggingFace Dataset API to create a dataset from all triplets and saves it at `OUTPUT_PATH` in the .arrow and .jsonl formats.
+## 📝 Workflow
 
-### Usage with Azure OpenAI API
+1. **Chunk Generation**: Document is split into chunks (see options above).
+2. **QA Generation**: LLM generates N questions and answers per chunk.
+3. **Distractor Appending**: Random chunks are added as distractors for each QA pair.
+4. **Dataset Export**: Data is saved in the specified format for fine-tuning.
 
-Create a file `.env` like so. All standard Azure OpenAI environment variables are supported.
+---
 
-```bash
-# Azure OpenAI API
-AZURE_OPENAI_ENDPOINT=https://<endpoint_sub_domain>.openai.azure.com/
-AZURE_OPENAI_API_KEY=<replace_me>
-OPENAI_API_VERSION=2023-05-15
-```
+## 💡 Tips
 
-**Note**: make sure your strip the path from the endpoint and keep just the domain. The full base URL will automatically be built based on the other env variables.
+- You can use a `.env` file for OpenAI/Azure keys.
+- For Azure, set deployment names with `--completion-model` and `--embedding-model`.
+- Use `--chunking-strategy` and `--chunking-params` for best results on your data.
 
-In addition, if you used non default Azure OpenAI deployment names, you'll need to specify them using the following CLI arguments:
+---
 
-```bash
---completion-model my-gpt-deployment-name
---embedding-model my-ada-deployment-name
-```
+## 📚 File Utilities
 
-### Configuring different endpoints for the completion and embedding models
+- **Split large JSONL files:**
 
-When using a non OpenAI endpoint, it is often the case that the endpoints for the embedding and completion models
-are different.
-
-In that situation, it is possible to override default OpenAI and Azure OpenAI environment variables with `COMPLETION_` or `EMBEDDING_` prefixed environment variables. Here is an example:
-
-```bash
-# Llama 3 70b Instruct completion model
-# Uses an OpenAI v1 compatible endpoint on Azure MaaS
-
-COMPLETION_OPENAI_BASE_URL=https://Meta-Llama-3-70B-Instruct-<replace_me>-serverless.eastus2.inference.ai.azure.com/v1
-COMPLETION_OPENAI_API_KEY=<replace_me>
-
-# Ada 2 embedding model
-# Uses an Azure OpenAI endpoint
-
-EMBEDDING_AZURE_OPENAI_ENDPOINT=https://<replace_me>.openai.azure.com/
-EMBEDDING_AZURE_OPENAI_API_KEY=<replace_me>
-EMBEDDING_OPENAI_API_VERSION=<replace_me>
-```
-
-Running the `raft.py` CLI will look like:
-
-```bash
-cd raft
-python3 raft.py \
-    --datapath $PWD/sample_data/UC_Berkeley.pdf \
-    --output $PWD/output \
-    --distractors 3 \
-    --doctype pdf \
-    --chunk_size 512 \
-    --questions 5 \
-    --completion-model Meta-Llama-3-70B-Instruct-<replace_me> \
-    --embedding-model text-embedding-ada-002
-```
-
-**Note**: The `--completion-model` and `--embedding-model` in the case of an Azure OpenAI endpoint must be set to the deployment name.
-
-### Example Usage
-
-This details the command and process used to generate the example dataset found in `./sample_ds4`. The document is a pdf of the Wikipedia page on the United States of America.
-
-```bash
-python3 raft.py --datapath sample_data/United_States_PDF.pdf --output ./sample_ds4 --distractors 4 --doctype pdf --chunk_size 512 --questions 5 --openai_key OPENAI_KEY
-```
-
-#### 1. Chunk generation
-
-RAFT takes pdf and divides text into chunks of size 512 tokens. A sample chunk:  
-
- ```python
- "[CLS] United States of America Flag Coat of arms Motto : \" In God We Trust \" [ 1 ] Other traditional mottos : [ 2 ] \" E pluribus unum \" ( Latin ) \" Out of many, one \" \" Annuit cœptis \" ( Latin ) \" Providence favors our undertakings \" \" Novus ordo seclorum \" ( Latin ) \" New order of the ages \" Anthem : \" The Star - Spangled Banner \" [ 3 ] United States The United States of America ( USA or U. S. A. ), commonly know n as the United States ( US or U. S. ) or America, is a country primarily located in North America, between Canada and Mexico. It is a liberal democracy and republic of 50 federated states, a federal capital district ( Washington, D. C. ), and 326 Indian reservations that overlap with state boundaries. Outside the union of states, it asserts sovereignty over five major unincorporated island territories and various uninhabited islands. [ i ] The country has the world\'s third - largest land area, [ c ] largest maritime exclusive economic zone, and the third - largest population ( over 334 million ). [ j ] The federal government uses a presidential system with three separate branches : legislative, executive, and judicial. American territory was first settled by Paleo - Indians who migrated across the Bering land bridge over 12, 000 years ago. Colonization by the British began in 1607. Thirteen colonies eventually rebelled against the British Crown over taxation and political representation, declaring independence on July 4, 1776. Their victory in the American Revolutionary War ( 1775 – 83 ) resulted in a confederation of states before the U. S. Constitution and Bill of Rights were ratified. The young nation continued to acquire neighbor ing territories and spanned North America by the late 1840s. Longstanding disagreements over slavery led to the secession of the southern Confederate States of America, which were defeated by the remaining Union in the American Civil War ( 1861 – 65 ). Slavery was abolished, but discriminatory laws persisted in the South. By 1900, rapid industrialization established the United States as a great power and the world\'s largest economy. Following the Japanese attack on Pearl Harbor in December 1941, the United States joined the Allies of World War II. After their victory, it competed against the Soviet Union for dominance in nuclear and conventional"
+  ```python
+  from file_utils import split_jsonl_file
+  split_jsonl_file('yourfile.jsonl', max_size=50_000_000)
   ```
 
-#### 2. Question and answer generation
+- **Extract random rows:**
 
-RAFT then uses GPT-4 to generate 5 questions per chunk as well as the label (answer) for each question. Proceeding with the previous example chunk:  
+  ```python
+  from file_utils import extract_random_jsonl_rows
+  extract_random_jsonl_rows('yourfile.jsonl', 100, 'sampled_output.jsonl')
+  ```
 
-**Questions:**  
+---
 
-```python
-['What is the official motto of the United States of America?',
-  'How many states are there in the United States of America?',
-  'Which territories does the United States claim sovereignty over, outside the union of states?',
-  'When did the thirteen colonies declare independence from the British Crown?',
-  'What caused the secession of the southern Confederate States of America?']
- ```
+## 🛠️ Fine-tuning & Evaluation
 
- **Answers:**
+- See [azure-ai-studio-ft/howto.md](azure-ai-studio-ft/howto.md) for Azure fine-tuning.
+- Evaluate your model with:
 
-```python
-['"In God We Trust"',
- '50 federated states',
- 'Five major unincorporated island territories.',
- 'July 4, 1776',
- 'Disagreements over slavery']
- ```
+  ```bash
+  python3 eval.py --question-file YOUR_EVAL_FILE.jsonl --answer-file YOUR_ANSWER_FILE
+  ```
 
-#### 3. Append distractor documents
+---
 
-For each question-answer pair, append 4 randomly selected chunks as distractor documents to form the {Q, A, D} triplet. Proceeding with the current example, a {Q, A, D} triplet, or one datapoint, would look like: 
+## 🦙 Using Ollama as the OpenAI Model Service
 
-```python
-{
-  'id': 'seed_task_0', 
-  'type': 'general', 
-  'question': 'What is the official motto of the United States of America?', 
-  'context': {
-    'sentences': [
-      ["the Gulf of Mexico are prone to hurricanes, ... and enforces the Act. [ 189 ] As of 2022, the U. S",
-    "energy from fossil fuel and the largest ... there are 19, 969 airports in the U. S., of which 5, 193 are designated",
-    'weaponry, ideology, and international i... and is a permanent member of the UN Security Council. The first documentary evidence of the phrase " United States',
-    '[CLS] United States of America Flag Coat of arms ... dominance in nuclear and conventional',
-    '##om ic soft pow er. [ 405 ] [ 406 ] Nearly all present ... rights in the United States are advanced by global standards.']
-    ],
-    'title': [
-      ['placeholder_title',
-      'placeholder_title',
-      'placeholder_title',
-      'placeholder_title',
-      'placeholder_title']
-    ]
-  },
-  'answer': '"In God We Trust"',
-  'cot_answer': None
-}
+You can use [Ollama](https://ollama.com/) as a local OpenAI-compatible API for running models like Llama 3, Mistral, and others. This allows you to run RAFT without cloud API keys.
 
-```
-
-#### 4. Generate and save dataset
-
-RAFT repeats steps 2 and 3 for each chunk and saves the dataset to the path specified by the `--output` argument.
-
-
-#### 5. Convert the dataset to the format expected for fine tuning
-
-If you specified the `--output-format completion` or `--output-format chat` argument for the `raft.py` script, you can skip this part.
-
-Otherwise, you need to convert the dataset to the format expected for fine-tuning a `completion` model in Azure with the following command:
+**1. Start Ollama with your desired model:**
 
 ```bash
-python3 format.py --input output/data-00000-of-00001.arrow --output output.completion.jsonl --output-format completion
+ollama run llama3
 ```
 
-**Note**: the `format.py` script also has its own help
+**2. Set the OpenAI-compatible endpoint in your environment:**
 
 ```bash
-python3 format.py --help
+export OPENAI_API_BASE_URL="http://localhost:11434/v1"
+export OPENAI_API_KEY="ollama-anything"  # Any non-empty string
+```
+Or add these to your `.env` file:
+```
+OPENAI_API_BASE_URL=http://localhost:11434/v1
+OPENAI_API_KEY=ollama-anything
 ```
 
-**Note**: If fine tuning a chat model, then you need to use `--output-format chat` and optionally add the `--output-chat-system-prompt` parameter to configure the system prompt included in the dataset.
+**3. Run RAFT as usual:**
 
-#### 6. Finetune your own model on Microsoft AI Studio
-
-Once the dataset is prepared, follow the instructions in [azure-ai-studio-ft/howto.md](azure-ai-studio-ft/howto.md) to finetune and deploy your own RAFT model. Make sure to use `prompt` as input and `completion` as output when fine tuning a `completion` model and the `messages` column as input when fine tuning a `chat` model.
-
-#### 7. Evaluate RAFT model
-
-After deploying your model in AI Studio, use command to evaluate the RAFT model. Make sure to fill in `base_url`, `api_key` and `model_name` in the `eval.py`, these can be found in the AI Studio.
-
-```bash 
-python3 eval.py --question-file YOUR_EVAL_FILE.jsonl --answer-file YOUR_ANSWER_FILE
+```bash
+python3 raft.py \
+  --datapath sample_data/United_States_PDF.pdf \
+  --output ./sample_ds4 \
+  --distractors 4 \
+  --doctype pdf \
+  --chunk_size 512 \
+  --questions 5 \
+  --openai_key $OPENAI_API_KEY
 ```
 
-The `YOUR_EVAL_FILE.jsonl` is in the format where
+**Note:**
+- Ollama's API is compatible with the OpenAI API, but some advanced features may not be supported.
+- You can specify different models by running `ollama run <model_name>` and setting the appropriate model in your RAFT command if needed.
 
-```python
-{
-  'instruction': '<DOCUMENT> document1 </DOCUMENT>\n<DOCUMENT> document2 </DOCUMENT> ...\n{question}",
-  'gold_answer': '{answer}'
-}
-```
+---
 
-## File Utilities Usage
+## 📄 License
 
-The toolkit provides utility functions in `file_utils.py` for working with large `.jsonl` files. These can be used directly from a Python script or Jupyter notebook.
-
-### Split a Large JSONL File
-
-Use `split_jsonl_file` to split a large `.jsonl` file into multiple parts, each not exceeding a specified size (default: 199,000,000 bytes).
-
-```python
-from file_utils import split_jsonl_file
-split_jsonl_file('yourfile.jsonl', max_size=50_000_000)  # Adjust max_size as needed
-```
-
-This will create files like `yourfile_part_1.jsonl`, `yourfile_part_2.jsonl`, etc.
-
-### Extract Random Rows from a JSONL File
-
-Use `extract_random_jsonl_rows` to extract a given number of random rows from a `.jsonl` file and save them to another file.
-
-```python
-from file_utils import extract_random_jsonl_rows
-extract_random_jsonl_rows('yourfile.jsonl', 100, 'sampled_output.jsonl')
-```
-
-This will randomly select 100 rows from `yourfile.jsonl` and write them to `sampled_output.jsonl`.
+This project is licensed under the MIT License. See the [LICENSE](https://opensource.org/licenses/MIT) file or the OSI page for full terms.

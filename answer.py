@@ -37,6 +37,14 @@ def get_args() -> argparse.Namespace:
     return args
 
 def load_prompt_template(file_path: str) -> str:
+    """Loads the prompt template from the specified file.
+
+    Args:
+        file_path (str): The path to the prompt template file.
+
+    Returns:
+        str: The content of the prompt template file.
+    """
     with open(file_path, 'r') as file:
         return file.read()
 
@@ -48,7 +56,18 @@ prompt_templates = {
 
 @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
 def get_answer(chat_completer, context, question, model, system_prompt):
+    """Generates an answer to a question based on the provided context.
 
+    Args:
+        chat_completer: The chat completer instance to use for generating the answer.
+        context (str): The context information to use for generating the answer.
+        question (str): The question to answer.
+        model (str): The model name to use for generating the answer.
+        system_prompt (str): The system prompt to use for generating the answer.
+
+    Returns:
+        dict: A dictionary containing the generated answer under the key "final_answer".
+    """
     response = chat_completer(
         model=model,
         messages=[
@@ -63,6 +82,19 @@ def get_answer(chat_completer, context, question, model, system_prompt):
 
 
 def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt", total_records=-1):
+    """Answers questions in the local dataset using the specified model and parameters.
+
+    Args:
+        chat_completer: The chat completer instance to use for generating answers.
+        model (str): The model name to use for generating answers.
+        data_path (str): The path to the input data file (JSONL format).
+        workers (int, optional): The number of worker threads to use for parallel processing. Defaults to 1.
+        system_prompt (str, optional): The system prompt to use for generating answers. Defaults to "gpt".
+        total_records (int, optional): The total number of records/questions to process. Defaults to -1 (all records).
+
+    Returns:
+        list: A list of dictionaries containing the original data along with the generated answers.
+    """
     data = []
     total_count = 0
 
@@ -81,6 +113,15 @@ def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt
         return result
 
     def answer_row(row, pbar):
+        """Answers a single row (question-context pair) and updates the progress bar.
+
+        Args:
+            row (dict): The data row containing the question and context.
+            pbar (tqdm): The progress bar instance to update.
+
+        Returns:
+            dict: The updated data row with the generated answer.
+        """
         try:
             result = answer_row_with(row)
         except Exception as e:

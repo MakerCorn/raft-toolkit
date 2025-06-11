@@ -65,6 +65,17 @@ def format_prompt(context, question):
     return f"{context}\n{question}"
 
 def evaluate_aistudio(model_config, project_scope, project_scope_report, data_path):
+    """Evaluate using AI Studio.
+
+    Args:
+        model_config: The model configuration.
+        project_scope: The project scope.
+        project_scope_report: The project scope report.
+        data_path: The path to the data file.
+
+    Returns:
+        The result of the evaluation.
+    """
     # create unique id for each run with date and time
     time_str = datetime.now().strftime("%Y%m%d%H%M%S")
     run_id = f"chat_evaluation_sdk_{time_str}"
@@ -92,6 +103,17 @@ def evaluate_aistudio(model_config, project_scope, project_scope_report, data_pa
     return result
 
 def evaluate_local(model_config, project_scope, project_scope_report, data_path):
+    """Evaluate locally.
+
+    Args:
+        model_config: The model configuration.
+        project_scope: The project scope.
+        project_scope_report: The project scope report.
+        data_path: The path to the data file.
+
+    Returns:
+        The results of the evaluation.
+    """
     data = []
     with open(data_path) as f:
         for line in f:
@@ -132,6 +154,53 @@ def evaluate_local(model_config, project_scope, project_scope_report, data_path)
                 results.append(future.result())
 
     return results
+
+class PfevalCompletion:
+    """Handles completion-based programmatic function evaluation (PF-Eval) tasks.
+
+    This class manages the setup, execution, and result processing for completion-based evaluation tasks, including prompt construction and result parsing.
+    """
+
+    def __init__(self, config):
+        """Initializes PfevalCompletion with the given configuration.
+
+        Args:
+            config (dict): Configuration dictionary for the evaluation task.
+        """
+        # Initialization code here
+
+    def run(self, input_data):
+        """Executes the completion-based evaluation on the provided input data.
+
+        Args:
+            input_data (Any): The input data to be evaluated.
+
+        Returns:
+            Any: The result of the evaluation.
+        """
+        # Execution code here
+
+    def build_prompt(self, input_data):
+        """Constructs a prompt for the completion model based on input data.
+
+        Args:
+            input_data (Any): The input data for prompt construction.
+
+        Returns:
+            str: The constructed prompt string.
+        """
+        # Prompt construction code here
+
+    def parse_result(self, result):
+        """Parses the result returned by the completion model.
+
+        Args:
+            result (Any): The raw result from the completion model.
+
+        Returns:
+            Any: The parsed result in a structured format.
+        """
+        # Result parsing code here
 
 if __name__ == "__main__":
     import time

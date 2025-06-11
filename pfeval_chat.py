@@ -20,8 +20,10 @@ logger = logging.getLogger("pfeval-chat")
 load_dotenv()
 
 def get_args() -> argparse.Namespace:
-    """
-    Parses and returns the arguments specified by the user's command
+    """Parses and returns the arguments specified by the user's command
+
+    Returns:
+        argparse.Namespace: The parsed arguments
     """
     parser = argparse.ArgumentParser()
 
@@ -38,6 +40,14 @@ def get_args() -> argparse.Namespace:
     return args
 
 def load_prompt_template(file_path: str) -> str:
+    """Loads a prompt template from a file
+
+    Args:
+        file_path (str): The path to the template file
+
+    Returns:
+        str: The content of the template file
+    """
     with open(file_path, 'r') as file:
         return file.read()
 
@@ -48,7 +58,18 @@ prompt_templates = {
 
 @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
 def get_answer(chat_completer, context, question, model, system_prompt):
+    """Gets an answer from the chat model given a context and question
 
+    Args:
+        chat_completer (ChatCompleter): The chat completer instance
+        context (str): The context for the question
+        question (str): The question to ask
+        model (str): The model to use
+        system_prompt (str): The system prompt to use
+
+    Returns:
+        dict: A dictionary containing the final answer
+    """
     response = chat_completer(
         model=model,
         messages=[
@@ -62,9 +83,32 @@ def get_answer(chat_completer, context, question, model, system_prompt):
     return {"final_answer": answer}
 
 def format_prompt(context, question):
+    """Formats the prompt for the model by combining context and question
+
+    Args:
+        context (str): The context for the question
+        question (str): The question to ask
+
+    Returns:
+        str: The formatted prompt
+    """
     return f"{context}\n{question}"
 
 def evaluate_aistudio(chat_completer, model_config, project_scope, project_scope_report, data_path, model, score_model):
+    """Evaluates the model using the Aistudio platform
+
+    Args:
+        chat_completer (ChatCompleter): The chat completer instance
+        model_config (AzureOpenAIModelConfiguration): The model configuration
+        project_scope (dict): The project scope for groundedness
+        project_scope_report (dict): The project scope for reporting
+        data_path (str): The path to the input data
+        model (str): The model to use for evaluation
+        score_model (str): The model to use for scoring
+
+    Returns:
+        dict: The result of the evaluation
+    """
     # create unique id for each run with date and time
     time_str = datetime.now().strftime("%Y%m%d%H%M%S")
     run_id = f"chat_evaluation_sdk_{time_str}"
@@ -98,6 +142,20 @@ def evaluate_aistudio(chat_completer, model_config, project_scope, project_scope
     return result
 
 def evaluate_local(chat_completer, model_config, project_scope, project_scope_report, data_path, model, score_model):
+    """Evaluates the model locally using the provided data
+
+    Args:
+        chat_completer (ChatCompleter): The chat completer instance
+        model_config (AzureOpenAIModelConfiguration): The model configuration
+        project_scope (dict): The project scope for groundedness
+        project_scope_report (dict): The project scope for reporting
+        data_path (str): The path to the input data
+        model (str): The model to use for evaluation
+        score_model (str): The model to use for scoring
+
+    Returns:
+        list: A list of evaluation results for each data instance
+    """
     data = []
     with open(data_path) as f:
         for line in f:
@@ -113,6 +171,15 @@ def evaluate_local(chat_completer, model_config, project_scope, project_scope_re
 
     @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
     def evaluate_row_with(row, evaluator):
+        """Evaluates a single row of data with the given evaluator
+
+        Args:
+            row (dict): The data row to evaluate
+            evaluator (Evaluator): The evaluator to use
+
+        Returns:
+            dict: The evaluation result for the row
+        """
         final_answer = get_answer(chat_completer=chat_completer, question=data_path.question, context=data_path.context, model=model, system_prompt="gpt")
         result = evaluator(
             model=score_model,
@@ -124,6 +191,15 @@ def evaluate_local(chat_completer, model_config, project_scope, project_scope_re
         return result
 
     def evaluate_row(row, pbar):
+        """Evaluates a single row of data and updates the progress bar
+
+        Args:
+            row (dict): The data row to evaluate
+            pbar (tqdm): The progress bar instance
+
+        Returns:
+            dict: The evaluation result for the row
+        """
         for evaluator in evaluators:
             result = evaluate_row_with(row, evaluator)
             row.update(result)

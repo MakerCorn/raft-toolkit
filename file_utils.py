@@ -2,8 +2,8 @@ import os
 import random
 
 def split_jsonl_file(file_path, max_size=199_000_000):
-    """
-    Splits a .jsonl file into multiple parts, each not exceeding max_size bytes.
+    """Splits a .jsonl file into multiple parts, each not exceeding max_size bytes.
+
     Args:
         file_path (str): Path to the .jsonl file to split.
         max_size (int): Maximum size in bytes for each part file.
@@ -34,8 +34,8 @@ def split_jsonl_file(file_path, max_size=199_000_000):
     print("Split completed.")
 
 def extract_random_jsonl_rows(file_path, num_rows, output_file):
-    """
-    Extracts a given number of random rows from a .jsonl file and saves them to another file.
+    """Extracts a given number of random rows from a .jsonl file and saves them to another file.
+
     Args:
         file_path (str): Path to the .jsonl file to sample from.
         num_rows (int): Number of random rows to extract.
@@ -51,6 +51,28 @@ def extract_random_jsonl_rows(file_path, num_rows, output_file):
     with open(output_file, 'w', encoding='utf-8') as outfile:
         outfile.writelines(sampled_lines)
     print(f"Extracted {num_rows} random rows to {output_file}.")
+
+def format_file_path(path):
+    """Formats a file path string for consistency across the application.
+
+    Args:
+        path (str): The file path to format.
+
+    Returns:
+        str: The formatted file path.
+    """
+    # ...existing code...
+
+def read_file_lines(file_path):
+    """Reads all lines from a file and returns them as a list.
+
+    Args:
+        file_path (str): The path to the file to read.
+
+    Returns:
+        list: A list of lines read from the file.
+    """
+    # ...existing code...
 
 # Example usage in a notebook:
 # from scripts.split_files import split_jsonl_file

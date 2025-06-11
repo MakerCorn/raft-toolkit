@@ -43,7 +43,10 @@ DocType = Literal["api", "pdf", "json", "txt", "pptx"]
 
 def get_args() -> argparse.Namespace:
     """
-    Parses and returns the arguments specified by the user's command
+    Parses and returns the arguments specified by the user's command line input.
+
+    Returns:
+        argparse.Namespace: Parsed command-line arguments.
     """
     parser = argparse.ArgumentParser()
 
@@ -91,6 +94,10 @@ def get_args() -> argparse.Namespace:
                         help="Whether to pace the calls to the LLM to stay below the Token/Minute limits")
     parser.add_argument("--templates", default="./",
                         help="The system prompt template location")
+    parser.add_argument("--chunking-strategy", type=str, default="semantic",
+                        help="Chunking strategy to use: semantic, fixed, or sentence")
+    parser.add_argument("--chunking-params", type=str, default=None,
+                        help="JSON string of extra parameters for the chunker (e.g., '{\"overlap\": 50, \"min_chunk_size\": 200}')")
 
     args = parser.parse_args()
     return args
@@ -111,10 +118,26 @@ def get_chunks(
     use_azure_identity: bool = True,
     embed_workers: int = 1,
     pace: bool = False,
+    chunking_strategy: str = "semantic",
+    chunking_params: dict = None,
 ) -> list[str]:
     """
-    Takes in a `data_path` and `doctype`, retrieves the document, breaks it down into chunks of size
-    `chunk_size`, and returns the chunks.
+    Retrieves the document at `data_path`, splits it into chunks using the specified strategy, and returns the chunks.
+
+    Args:
+        data_path (Path): Path to the input document or directory.
+        doctype (DocType): Type of the document (pdf, txt, json, api, pptx).
+        chunk_size (int): Size of each chunk in tokens.
+        openai_key (str, optional): OpenAI API key.
+        model (str, optional): Embedding model name.
+        use_azure_identity (bool): Use Azure identity for authentication.
+        embed_workers (int): Number of worker threads for embedding.
+        pace (bool): Whether to pace LLM calls.
+        chunking_strategy (str): Chunking algorithm to use.
+        chunking_params (dict, optional): Extra parameters for the chunker.
+
+    Returns:
+        list[str]: List of document chunks as strings.
     """
     chunks = []
 
@@ -147,7 +170,7 @@ def get_chunks(
             with ThreadPoolExecutor(max_workers=embed_workers) as executor:
                 for file_path in file_paths:
                     futures.append(executor.submit(
-                        get_doc_chunks, embeddings, file_path, doctype, chunk_size))
+                        get_doc_chunks, embeddings, file_path, doctype, chunk_size, chunking_strategy, chunking_params))
                     if (pace):
                         time.sleep(15)
 
@@ -165,7 +188,25 @@ def get_doc_chunks(
     file_path: Path,
     doctype: DocType = "pdf",
     chunk_size: int = 512,
+    chunking_strategy: str = "semantic",
+    chunking_params: dict = None,
 ) -> list[str]:
+    """
+    Extracts text from a document and splits it into chunks using the specified chunking strategy and parameters.
+
+    Args:
+        embeddings (AzureOpenAIEmbeddings): Embedding model instance.
+        file_path (Path): Path to the file to chunk.
+        doctype (DocType): Document type.
+        chunk_size (int): Target chunk size in tokens.
+        chunking_strategy (str): Chunking algorithm ('semantic', 'fixed', 'sentence').
+        chunking_params (dict, optional): Extra parameters for the chunker.
+
+    Returns:
+        list[str]: List of chunked document strings.
+    """
+    if chunking_params is None:
+        chunking_params = {}
     if doctype == "json":
         with open(file_path, 'r') as f:
             data = json.load(f)
@@ -181,7 +222,7 @@ def get_doc_chunks(
                 text += page.extract_text()
     elif doctype == "txt":
         with open(file_path, 'r') as file:
-            data = file.read()
+            text = file.read()
     elif doctype == "pptx":
         text = extract_text_from_pptx(file_path)
     elif doctype == "api":
@@ -192,19 +233,54 @@ def get_doc_chunks(
         raise TypeError(
             "Document is not one of the accepted types: api, pdf, json, txt, pptx")
 
-    num_chunks = ceil(len(text) / chunk_size)
-    logger.info(f"Splitting text into {num_chunks} chunks.")
-
-    text_splitter = SemanticChunker(embeddings, number_of_chunks=num_chunks)
-    chunks = text_splitter.create_documents([text])
-    chunks = [chunk.page_content for chunk in chunks]
+    # Select chunking strategy
+    if chunking_strategy == "semantic":
+        num_chunks = chunking_params.get("number_of_chunks") or ceil(len(text) / chunk_size)
+        overlap = chunking_params.get("overlap", 0)
+        min_chunk_size = chunking_params.get("min_chunk_size", 0)
+        text_splitter = SemanticChunker(
+            embeddings,
+            number_of_chunks=num_chunks,
+            chunk_overlap=overlap,
+            min_chunk_size=min_chunk_size
+        )
+        chunks = text_splitter.create_documents([text])
+        chunks = [chunk.page_content for chunk in chunks]
+    elif chunking_strategy == "fixed":
+        # Simple fixed-size chunking
+        chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+    elif chunking_strategy == "sentence":
+        # Sentence-based chunking (naive, can be improved)
+        import re
+        sentences = re.split(r'(?<=[.!?]) +', text)
+        chunks = []
+        current = ""
+        for sentence in sentences:
+            if len(current) + len(sentence) > chunk_size:
+                chunks.append(current)
+                current = sentence
+            else:
+                current += (" " if current else "") + sentence
+        if current:
+            chunks.append(current)
+    else:
+        raise ValueError(f"Unknown chunking strategy: {chunking_strategy}")
     return chunks
 
 
 @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
 def generate_chunk_instructions(chat_completer: ChatCompleter, chunk: Any, x=5, model: str = None) -> list[str]:
     """
-    Generates `x` questions / use cases for `api_call`. Used when the input document is of type `api`.
+    Generates `x` synthetic instructions/questions for an API chunk using an LLM.
+
+    Args:
+        chat_completer (ChatCompleter): LLM chat completion client.
+        chunk (Any): API chunk (as string or dict).
+        x (int): Number of questions/instructions to generate.
+        model (str, optional): Model name to use.
+
+    Returns:
+        list[str]: List of generated instructions/questions.
     """
     response = chat_completer(
         model=model,
@@ -243,8 +319,17 @@ build_qa_messages = {
 @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
 def generate_instructions_gen(chat_completer: ChatCompleter, chunk: Any, x: int = 5, model: str = None, prompt_key: str = "gpt") -> list[str]:
     """
-    Generates `x` questions / use cases for `chunk`. Used when the input document is of general types 
-    `pdf`, `json`, or `txt`.
+    Generates `x` synthetic questions for a general chunk (pdf, json, txt) using an LLM.
+
+    Args:
+        chat_completer (ChatCompleter): LLM chat completion client.
+        chunk (Any): Document chunk as string.
+        x (int): Number of questions to generate.
+        model (str, optional): Model name to use.
+        prompt_key (str): Prompt template key.
+
+    Returns:
+        list[str]: List of generated questions.
     """
     response = chat_completer(
         model=model,
@@ -262,7 +347,14 @@ def generate_instructions_gen(chat_completer: ChatCompleter, chunk: Any, x: int 
 
 def encode_question(question: str, api: Any) -> list[str]:
     """
-    Encode multiple prompt instructions into a single string for the `api` case.
+    Encodes a question and API context into a prompt for the LLM (API case).
+
+    Args:
+        question (str): The question/instruction.
+        api (Any): API context (as dict or string).
+
+    Returns:
+        list[str]: List of prompt messages for the LLM.
     """
     prompts = []
 
@@ -276,9 +368,16 @@ def encode_question(question: str, api: Any) -> list[str]:
 
 def encode_question_gen(question: str, chunk: Any, prompt_key: str = "gpt") -> list[str]:
     """
-    Encode multiple prompt instructions into a single string for the general case (`pdf`, `json`, or `txt`).
-    """
+    Encodes a question and chunk context into a prompt for the LLM (general case).
 
+    Args:
+        question (str): The question.
+        chunk (Any): Document chunk as string.
+        prompt_key (str): Prompt template key.
+
+    Returns:
+        list[str]: List of prompt messages for the LLM.
+    """
     prompts = []
 
     prompt = prompt_templates[prompt_key].format(
@@ -294,7 +393,18 @@ def encode_question_gen(question: str, chunk: Any, prompt_key: str = "gpt") -> l
 @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
 def generate_label(chat_completer: ChatCompleter, question: str, context: Any, doctype: DocType = "pdf", model: str = None, prompt_key: str = "gpt") -> str | None:
     """
-    Generates the label / answer to `question` using `context` and GPT-4.
+    Generates an answer/label for a question using the provided context and LLM.
+
+    Args:
+        chat_completer (ChatCompleter): LLM chat completion client.
+        question (str): The question.
+        context (Any): Context for answering (chunk or API info).
+        doctype (DocType): Document type.
+        model (str, optional): Model name to use.
+        prompt_key (str): Prompt template key.
+
+    Returns:
+        str | None: The generated answer/label.
     """
     question = encode_question(question, context) if doctype == "api" else encode_question_gen(
         question, context, prompt_key)
@@ -321,6 +431,24 @@ def generate_question_cot_answer(
         model: str = None,
         prompt_key: str = "gpt",
 ):
+    """
+    Generates a single QA data point with context, distractors, and answer for a chunk/question.
+
+    Args:
+        chat_completer (ChatCompleter): LLM chat completion client.
+        chunks (list[str]): All document chunks.
+        chunk (str): The current chunk.
+        chunk_id (int): Index of the current chunk.
+        question (str): The question to answer.
+        doctype (DocType): Document type.
+        num_distract (int): Number of distractor chunks.
+        p (float): Probability of including the oracle chunk.
+        model (str, optional): Model name to use.
+        prompt_key (str): Prompt template key.
+
+    Returns:
+        dict: Data point with question, answer, context, and metadata.
+    """
     datapt = {
         "id": None,
         "type": None,
@@ -379,9 +507,27 @@ def build_or_load_chunks(
         use_azure_identity: bool,
         embed_workers: int,
         pace: bool,
+        chunking_strategy: str = "semantic",
+        chunking_params: dict = None,
 ):
     """
-    Builds chunks and checkpoints them if asked
+    Loads chunks from checkpoint if available, otherwise builds and saves new chunks.
+
+    Args:
+        datapath (Path): Path to the input document or directory.
+        doctype (str): Document type.
+        CHUNK_SIZE (int): Target chunk size in tokens.
+        OPENAPI_API_KEY (str): API key for embedding model.
+        embedding_model (str): Embedding model name.
+        checkpoints_dir (Path): Directory for checkpoints.
+        use_azure_identity (bool): Use Azure identity for authentication.
+        embed_workers (int): Number of embedding workers.
+        pace (bool): Whether to pace LLM calls.
+        chunking_strategy (str): Chunking algorithm.
+        chunking_params (dict, optional): Extra parameters for the chunker.
+
+    Returns:
+        list[str]: List of document chunks.
     """
     chunks_ds: Dataset = None
     chunks = None
@@ -393,7 +539,8 @@ def build_or_load_chunks(
 
     if not chunks:
         chunks = get_chunks(datapath, doctype, CHUNK_SIZE, OPENAPI_API_KEY, model=embedding_model,
-                            use_azure_identity=use_azure_identity, embed_workers=embed_workers, pace=pace)
+                            use_azure_identity=use_azure_identity, embed_workers=embed_workers, pace=pace,
+                            chunking_strategy=chunking_strategy, chunking_params=chunking_params)
 
     if not chunks_ds:
         chunks_table = pa.table({"chunk": chunks})
@@ -403,11 +550,25 @@ def build_or_load_chunks(
 
 
 def main():
+    """
+    Main entry point for the RAFT toolkit. Parses arguments, runs chunking, QA generation, and dataset export.
+    """
 
     main_start = time.time()
 
     # run code
     args = get_args()
+    # Parse chunking_params JSON string if provided
+    import json as _json
+    chunking_params = None
+    if args.chunking_params:
+        try:
+            chunking_params = _json.loads(args.chunking_params)
+        except Exception as e:
+            logger.error(f"Failed to parse --chunking-params: {e}")
+            chunking_params = None
+    else:
+        chunking_params = None
 
     # Load system prompt template
     prompt_templates[args.system_prompt_key] = load_prompt_template(
@@ -447,7 +608,8 @@ def main():
 
     # Chunks
     chunks = build_or_load_chunks(datapath, args.doctype, CHUNK_SIZE, OPENAPI_API_KEY,
-                                  args.embedding_model, checkpoints_dir, args.use_azure_identity, args.embed_workers, args.pace)
+                                  args.embedding_model, checkpoints_dir, args.use_azure_identity, args.embed_workers, args.pace,
+                                  chunking_strategy=args.chunking_strategy, chunking_params=chunking_params)
 
     cot_answers_ds = None
 
@@ -497,7 +659,23 @@ def main():
 
 def stage_generate(chat_completer: ChatCompleter, checkpoints_dir, chunks, num_questions, max_workers, doctype, completion_model, system_prompt_key, num_distract, use_azure_identity, p):
     """
-    Given a chunk, create {Q, A, D} triplets and add them to the dataset.
+    Generates the full dataset by creating QA/distractor triplets for each chunk, with checkpointing and parallelism.
+
+    Args:
+        chat_completer (ChatCompleter): LLM chat completion client.
+        checkpoints_dir (Path): Directory for checkpoints.
+        chunks (list[str]): All document chunks.
+        num_questions (int): Number of questions per chunk.
+        max_workers (int): Number of worker threads.
+        doctype (str): Document type.
+        completion_model (str): Model for QA generation.
+        system_prompt_key (str): Prompt template key.
+        num_distract (int): Number of distractor chunks.
+        use_azure_identity (bool): Use Azure identity for authentication.
+        p (float): Probability of including the oracle chunk.
+
+    Returns:
+        Dataset: HuggingFace Dataset containing all generated data points.
     """
 
     questions_checkpointing = Checkpointing(checkpoints_dir / "questions")
@@ -509,6 +687,16 @@ def stage_generate(chat_completer: ChatCompleter, checkpoints_dir, chunks, num_q
     def generate_chunk_instructions_ds(chunk: str, chunk_id: int, doctype: str, *args, **kwargs):
         """
         Generates a dataset of instructions for a given chunk.
+
+        Args:
+            chunk (str): The document chunk.
+            chunk_id (int): The ID/index of the chunk.
+            doctype (str): Document type.
+            *args: Additional arguments for the instruction generation.
+            **kwargs: Additional keyword arguments for the instruction generation.
+
+        Returns:
+            Dataset: A dataset containing the generated instructions.
         """
         questions = generate_chunk_instructions(
             chunk=chunk, *args, **kwargs) if doctype == "api" else generate_instructions_gen(chunk=chunk, *args, **kwargs)
@@ -519,6 +707,19 @@ def stage_generate(chat_completer: ChatCompleter, checkpoints_dir, chunks, num_q
 
     @checkpointed(answers_checkpointing)
     def generate_question_cot_answers(questions_ds, chunk_id: int, chunk: str, *args, **kwargs):
+        """
+        Generates the CoT answers for a set of questions in a chunk.
+
+        Args:
+            questions_ds (Dataset): The dataset of questions.
+            chunk_id (int): The ID/index of the chunk.
+            chunk (str): The document chunk.
+            *args: Additional arguments for the answer generation.
+            **kwargs: Additional keyword arguments for the answer generation.
+
+        Returns:
+            Dataset: A dataset containing the CoT answers.
+        """
         def process_example(chunk, question):
             cot_answer = generate_question_cot_answer(
                 chunk=chunk, chunk_id=chunk_id, chunks=chunks, question=question, *args, **kwargs)
@@ -531,6 +732,15 @@ def stage_generate(chat_completer: ChatCompleter, checkpoints_dir, chunks, num_q
         return ds
 
     def process_chunk(i):
+        """
+        Process a single chunk: generate questions and CoT answers.
+
+        Args:
+            i (int): The ID/index of the chunk to process.
+
+        Returns:
+            Dataset: A dataset containing the generated CoT answers for the chunk.
+        """
         chunk = chunks[i]
 
         if (use_azure_identity):

@@ -21,6 +21,9 @@ datasetFormats = list(get_args(DatasetFormat))
 def get_args() -> argparse.Namespace:
     """
     Parses and returns the arguments specified by the user's command
+
+    Returns:
+        argparse.Namespace: The parsed arguments
     """
     parser = argparse.ArgumentParser()
 
@@ -97,6 +100,13 @@ def _remove_all_columns_but(ds: Dataset, keep_columns) -> Dataset:
     """
     HF Dataset doesn't have a way to copy only specific columns of a Dataset so this help
     removes all columns but the ones specified.
+
+    Args:
+        ds (Dataset): The dataset to remove columns from
+        keep_columns (list): The list of column names to keep
+
+    Returns:
+        Dataset: The dataset with only the specified columns
     """
     remove_columns = list(ds.column_names)
     for keep in keep_columns:
@@ -142,6 +152,12 @@ class OpenAiChatDatasetFormatter(OpenAiCompletionDatasetFormatter):
 def extract_final_answer(cot_answer: str) -> str:
     """
     Extracts the final answer from the cot_answer field
+
+    Args:
+        cot_answer (str): The chain-of-thought answer string
+
+    Returns:
+        str: The extracted final answer
     """
     if cot_answer:
         return cot_answer.split("<ANSWER>: ")[-1]
@@ -151,6 +167,12 @@ def extract_context(instruction: str) -> str:
     """
     Extracts the context from the instruction field.
     Keeps all <DOCUMENTS/> and removes the last line with the question.
+
+    Args:
+        instruction (str): The instruction string
+
+    Returns:
+        str: The extracted context
     """
     return "\n".join(instruction.split("\n")[:-1])
 
@@ -175,6 +197,16 @@ class EvalDatasetFormatter(DatasetFormatter):
         return _remove_all_columns_but(newds, keep_columns)
 
 def append_extension(path: str, extension: str) -> str:
+    """
+    Appends the given extension to the file path if not already present.
+
+    Args:
+        path (str): The file path
+        extension (str): The extension to append
+
+    Returns:
+        str: The file path with the appended extension
+    """
     suffix = "." + extension
     if not path.endswith(suffix):
         path = path + suffix
