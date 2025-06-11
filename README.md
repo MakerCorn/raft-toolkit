@@ -42,6 +42,24 @@ pip install -r requirements.txt
 
 ---
 
+## 📝 Azure OpenAI Support
+
+To enable Azure OpenAI support, set the environment variable `AZURE_OPENAI_ENABLED=1` (or `true`).
+
+You must also set the appropriate Azure OpenAI environment variables (e.g., `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY`, etc.) as required by your deployment.
+
+Example for zsh:
+
+```zsh
+export AZURE_OPENAI_ENABLED=1
+export AZURE_OPENAI_ENDPOINT="https://your-azure-endpoint.openai.azure.com/"
+export AZURE_OPENAI_KEY="your-azure-api-key"
+```
+
+If `AZURE_OPENAI_ENABLED` is not set or is set to `0`/`false`, the toolkit will use standard OpenAI API endpoints and keys.
+
+---
+
 ## ⚡ Quick Start
 
 ```bash

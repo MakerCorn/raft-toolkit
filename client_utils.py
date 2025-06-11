@@ -15,17 +15,14 @@ def is_azure() -> bool:
     """Check if the environment is configured for Azure OpenAI.
 
     Returns:
-        bool: True if Azure OpenAI environment variables are set, False otherwise.
+        bool: True if the AZURE_OPENAI_ENABLED environment variable is set to '1' or 'true' (case-insensitive), False otherwise.
     """
-    azure = (
-        "AZURE_OPENAI_ENDPOINT" in environ or
-        "AZURE_OPENAI_KEY" in environ or
-        "AZURE_OPENAI_AD_TOKEN" in environ
-    )
+    value = environ.get("AZURE_OPENAI_ENABLED", "0").lower()
+    azure = value in ("1", "true", "yes")
     if azure:
-        logger.debug("Using Azure OpenAI environment variables")
+        logger.debug("Azure OpenAI support is enabled via AZURE_OPENAI_ENABLED.")
     else:
-        logger.debug("Using OpenAI environment variables")
+        logger.debug("Azure OpenAI support is disabled (AZURE_OPENAI_ENABLED not set or false). Using OpenAI environment variables.")
     return azure
 
 def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> OpenAI:
@@ -44,35 +41,3 @@ def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> OpenAI
             return AzureOpenAI(**kwargs)
         else:
             return OpenAI(**kwargs)
-
-def build_langchain_embeddings(**kwargs: Any) -> OpenAIEmbeddings:
-    """Build OpenAI or AzureOpenAI embeddings client based on environment variables.
-
-    Args:
-        **kwargs (Any): Additional keyword arguments for the OpenAIEmbeddings or AzureOpenAIEmbeddings client.
-
-    Returns:
-        OpenAIEmbeddings: The configured embeddings client instance.
-    """
-    env = read_env_config("EMBEDDING")
-    with set_env(**env):
-        if is_azure():
-            return AzureOpenAIEmbeddings(**kwargs)
-        else:
-            return OpenAIEmbeddings(**kwargs)
-
-def safe_min(a: Any, b: Any) -> Any:
-    """Return the minimum of two values, safely handling None values."""
-    if a is None:
-        return b
-    if b is None:
-        return a
-    return min(a, b)
-
-def safe_max(a: Any, b: Any) -> Any:
-    """Return the maximum of two values, safely handling None values."""
-    if a is None:
-        return b
-    if b is None:
-        return a
-    return max(a, b)

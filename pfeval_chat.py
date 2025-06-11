@@ -12,7 +12,7 @@ import logging
 from logconf import log_setup
 from tenacity import retry, wait_exponential, retry_if_exception_type
 from openai import RateLimitError
-from client_utils import ChatCompleter, build_openai_client
+from client_utils import build_openai_client, ChatCompleter, is_azure
 from openai import OpenAI
 
 logger = logging.getLogger("pfeval-chat")

@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_openai import AzureOpenAIEmbeddings
-from client_utils import build_openai_client, build_langchain_embeddings, UsageStats, ChatCompleter
+from client_utils import build_openai_client, UsageStats, ChatCompleter, is_azure
 from math import ceil
 from format import DatasetConverter, datasetFormats, outputDatasetTypes
 from pathlib import Path
