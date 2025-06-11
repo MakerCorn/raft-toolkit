@@ -1,23 +1,16 @@
 # RAFT Toolkit
 
 > **Retrieval Augmentation Fine-Tuning Toolkit**  
-> Adapt LLMs to domain-specific RAG with synthetic QA datasets.
-
----
 
 ## 🚀 Overview
 
 RAFT takes an input document and creates a dataset of `{question, answer, documents}` triplets for fine-tuning LLMs on retrieval-augmented tasks. Supports general text (PDF, JSON, TXT, PPTX) and API documentation (API Zoo JSONL).
-
----
 
 ## 📦 Installation
 
 ```bash
 pip install -r requirements.txt
 ```
-
----
 
 ## ⚙️ Main Arguments
 
@@ -40,8 +33,6 @@ pip install -r requirements.txt
 - **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
 - **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
 
----
-
 ## 📝 Azure OpenAI Support
 
 To enable Azure OpenAI support, set the environment variable `AZURE_OPENAI_ENABLED=1` (or `true`).
@@ -58,8 +49,6 @@ export AZURE_OPENAI_KEY="your-azure-api-key"
 
 If `AZURE_OPENAI_ENABLED` is not set or is set to `0`/`false`, the toolkit will use standard OpenAI API endpoints and keys.
 
----
-
 ## ⚡ Quick Start
 
 ```bash
@@ -73,8 +62,6 @@ python3 raft.py \
   --openai_key OPENAI_KEY
 ```
 
----
-
 ## 🧩 Chunking Options
 
 - **Semantic** (default): Embedding-based, best for context preservation.
@@ -82,11 +69,13 @@ python3 raft.py \
 - **Sentence**: Splits by sentence boundaries, each chunk ≤ `--chunk_size` tokens.
 
 **Extra parameters for semantic chunking** (via `--chunking-params`):
+
 - `overlap`: Tokens to overlap between chunks (default: 0)
 - `min_chunk_size`: Minimum chunk size (default: 0)
 - `number_of_chunks`: Override number of chunks (default: auto)
 
 **Example:**
+
 ```bash
 python3 raft.py --datapath sample_data/United_States_PDF.pdf \
   --output ./sample_ds4 \
@@ -99,8 +88,6 @@ python3 raft.py --datapath sample_data/United_States_PDF.pdf \
   --chunking-params '{"overlap": 50, "min_chunk_size": 200}'
 ```
 
----
-
 ## 📝 Workflow
 
 1. **Chunk Generation**: Document is split into chunks (see options above).
@@ -108,15 +95,11 @@ python3 raft.py --datapath sample_data/United_States_PDF.pdf \
 3. **Distractor Appending**: Random chunks are added as distractors for each QA pair.
 4. **Dataset Export**: Data is saved in the specified format for fine-tuning.
 
----
-
 ## 💡 Tips
 
 - You can use a `.env` file for OpenAI/Azure keys.
 - For Azure, set deployment names with `--completion-model` and `--embedding-model`.
 - Use `--chunking-strategy` and `--chunking-params` for best results on your data.
-
----
 
 ## 📚 File Utilities
 
@@ -134,8 +117,6 @@ python3 raft.py --datapath sample_data/United_States_PDF.pdf \
   extract_random_jsonl_rows('yourfile.jsonl', 100, 'sampled_output.jsonl')
   ```
 
----
-
 ## 🛠️ Fine-tuning & Evaluation
 
 - See [azure-ai-studio-ft/howto.md](azure-ai-studio-ft/howto.md) for Azure fine-tuning.
@@ -144,8 +125,6 @@ python3 raft.py --datapath sample_data/United_States_PDF.pdf \
   ```bash
   python3 eval.py --question-file YOUR_EVAL_FILE.jsonl --answer-file YOUR_ANSWER_FILE
   ```
-
----
 
 ## 🦙 Using Ollama as the OpenAI Model Service
 
@@ -163,8 +142,10 @@ ollama run llama3
 export OPENAI_API_BASE_URL="http://localhost:11434/v1"
 export OPENAI_API_KEY="ollama-anything"  # Any non-empty string
 ```
+
 Or add these to your `.env` file:
-```
+
+```env
 OPENAI_API_BASE_URL=http://localhost:11434/v1
 OPENAI_API_KEY=ollama-anything
 ```
@@ -183,10 +164,9 @@ python3 raft.py \
 ```
 
 **Note:**
+
 - Ollama's API is compatible with the OpenAI API, but some advanced features may not be supported.
 - You can specify different models by running `ollama run <model_name>` and setting the appropriate model in your RAFT command if needed.
-
----
 
 ## 📄 License
 
