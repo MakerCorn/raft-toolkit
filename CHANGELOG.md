@@ -91,6 +91,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📦 Dependencies
 
+#### Critical Dependency Migration
+- **PromptFlow Evaluation**: Migrated from deprecated `promptflow.eval` to `azure-ai-evaluation`
+  - Updated all evaluation tools to use new Azure AI Evaluation SDK
+  - Fixed parameter names: `question` → `query`, `answer` → `response`
+  - Resolved installation failures with missing `promptflow.eval` package
+
 #### New Development Dependencies
 - **Testing**: pytest-cov, pytest-asyncio, httpx for API testing
 - **Security**: bandit, safety, semgrep for security scanning
@@ -131,11 +137,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 #### Workflow Dependencies
-- **Proper test gating**: Tests only run after successful builds
-- **Release gating**: Releases only after successful tests
-- **Error handling**: Comprehensive failure management
+- **Strict dependency chain**: Build → Test → Release workflow gating
+- **Test gating**: Tests only run after successful builds via `workflow_run` trigger
+- **Release gating**: Releases only after successful tests with proper status checks
+- **Pull request support**: Tests run directly for PRs while maintaining dependency chain
+- **Error handling**: Comprehensive failure management with clear status messages
 - **Artifact management**: Proper cleanup and retention
 - **Deprecated actions**: Updated to latest versions (upload-artifact@v4, action-gh-release@v1, upload-pages-artifact@v3)
+
+#### Docker Build Issues
+- **Missing file references**: Removed non-existent `run_cli.py` from Dockerfile COPY commands
+- **Correct entry points**: CLI uses `raft.py`, web uses `run_web.py`, tests use `run_tests.py`
 
 #### Documentation Issues
 - **Mermaid diagram**: Improved readability with black text on light backgrounds

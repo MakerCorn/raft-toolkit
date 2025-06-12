@@ -1,9 +1,9 @@
 import os
 import json
 from datetime import datetime
-from promptflow.core import AzureOpenAIModelConfiguration
-from promptflow.evals.evaluators import RelevanceEvaluator, GroundednessEvaluator, FluencyEvaluator, CoherenceEvaluator, SimilarityEvaluator
-from promptflow.evals.evaluate import evaluate
+from azure.ai.evaluation import AzureOpenAIModelConfiguration
+from azure.ai.evaluation import RelevanceEvaluator, GroundednessEvaluator, FluencyEvaluator, CoherenceEvaluator, SimilarityEvaluator
+from azure.ai.evaluation import evaluate
 from dotenv import load_dotenv
 import argparse
 from tqdm import tqdm
@@ -64,8 +64,8 @@ def evaluate_aistudio(model_config, project_scope, project_scope_report, data_pa
         },
         evaluator_config={
             "defaults": {
-                "question": "${data.question}",
-                "answer": "${data.final_answer}",
+                "query": "${data.question}",
+                "response": "${data.final_answer}",
                 "ground_truth": "${data.gold_final_answer}",
                 "context": "${data.context}",
             },

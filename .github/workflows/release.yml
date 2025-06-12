@@ -26,16 +26,26 @@ jobs:
     - name: Check test workflow status
       id: check
       run: |
-        # Check if triggered by successful test workflow or manual dispatch or tag push
-        if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]] || \
-           [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
-           [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+        # Only allow releases if:
+        # 1. Triggered by successful test workflow
+        # 2. Manual dispatch (with warning)
+        # 3. Tag push (assumes tests passed on main branch)
+        if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
           echo "success=true" >> $GITHUB_OUTPUT
           echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "✅ Release approved: Tests passed"
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Manual release dispatch - bypassing test requirement"
+        elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo "should-release=true" >> $GITHUB_OUTPUT
+          echo "🏷️ Tag-triggered release - assuming tests passed on main"
         else
           echo "success=false" >> $GITHUB_OUTPUT
           echo "should-release=false" >> $GITHUB_OUTPUT
-          echo "Tests failed or were cancelled. Skipping release."
+          echo "❌ Tests failed or were cancelled. Skipping release."
           exit 1
         fi
 

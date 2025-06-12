@@ -7,6 +7,8 @@ on:
       - completed
     branches: [ main, develop ]
   workflow_dispatch:
+  pull_request:
+    branches: [ main, develop ]
 
 env:
   REGISTRY: ghcr.io
@@ -22,8 +24,15 @@ jobs:
     - name: Check build workflow status
       id: check
       run: |
-        if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+        # Allow tests to run if:
+        # 1. Triggered by successful build workflow
+        # 2. Manual dispatch
+        # 3. Pull request (tests run directly for PRs)
+        if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]] || \
+           [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
+           [[ "${{ github.event_name }}" == "pull_request" ]]; then
           echo "success=true" >> $GITHUB_OUTPUT
+          echo "Tests approved to run"
         else
           echo "success=false" >> $GITHUB_OUTPUT
           echo "Build workflow failed or was cancelled. Skipping tests."

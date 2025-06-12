@@ -117,7 +117,6 @@ COPY cli/ ./cli/
 COPY tools/ ./tools/
 COPY templates/ ./templates/
 COPY raft.py ./
-COPY run_cli.py ./
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/data /app/outputs && \
