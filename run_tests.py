@@ -112,19 +112,23 @@ def main():
     
     cmd = [python_cmd, "-m", "pytest"]
     
-    # Add test selection
-    test_markers = []
+    # Add test selection - use direct path specification instead of markers
+    test_paths = []
     if args.unit:
-        test_markers.append("unit")
+        test_paths.append("tests/unit/")
     if args.integration:
-        test_markers.append("integration")
+        test_paths.append("tests/integration/")
     if args.api:
-        test_markers.append("api")
+        test_paths.append("tests/api/")
     if args.cli:
-        test_markers.append("cli")
+        test_paths.append("tests/cli/")
     
-    if test_markers:
-        cmd.extend(["-m", " or ".join(test_markers)])
+    if test_paths:
+        # Use direct paths instead of markers to avoid marker issues
+        cmd.extend(test_paths)
+    else:
+        # If no specific test type selected, test all
+        cmd.append("tests/")
     
     # Add options
     if args.coverage:
