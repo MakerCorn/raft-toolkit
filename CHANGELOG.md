@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 
+#### Critical Test Configuration Fix
+- **pytest.ini header format**: Fixed incorrect `[tool:pytest]` header to `[pytest]`. The `[tool:pytest]` format is for pyproject.toml files, not pytest.ini files. This was causing markers to not be registered properly, resulting in pytest exit code 5 when no tests were collected due to unrecognized markers.
+
 ### 📦 Dependencies
 
 ---
