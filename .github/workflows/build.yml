@@ -37,7 +37,7 @@ jobs:
         
         # Linting (fast fail on critical issues)
         echo "### Code Quality" >> $GITHUB_STEP_SUMMARY
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,__pycache__,.git
+        flake8 . --count --show-source --statistics
         black --check . --exclude='\.venv|__pycache__|\.git'
         isort --check-only . --skip-gitignore
         python scripts/dockerfile_lint.py

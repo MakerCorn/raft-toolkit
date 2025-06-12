@@ -1,42 +1,8 @@
 [flake8]
-# Configuration for flake8 linting
-
-# Maximum line length
 max-line-length = 120
-
-# Select specific error types to check
-select = E9,F63,F7,F82,E101,E111,E112,E113,E121,E122,E125,E131,F401,F811,F841
-
-# Exclude directories and files
-exclude = 
-    .git,
-    __pycache__,
-    .venv,
-    env,
-    venv,
-    .env,
-    docs/,
-    build/,
-    dist/,
-    *.egg-info,
-    .tox,
-    .coverage,
-    .coverage.*,
-    coverage.xml,
-    *.cover,
-    .pytest_cache,
-    .mypy_cache
-
-# Ignore specific errors during security transition
-ignore = 
-    E501,  # Line too long (handled by black)
-    W503,  # Line break before binary operator
-    E203,  # Whitespace before ':' (conflicts with black)
-    F403,  # Star imports
-    F405,  # Star import usage
-
-# Per-file ignores
-per-file-ignores =
+exclude = .git,__pycache__,.venv,env,venv,.env,docs/,build/,dist/,*.egg-info,.tox,.coverage,.coverage.*,coverage.xml,*.cover,.pytest_cache,.mypy_cache
+ignore = E501,W503,E203,F403,F405,W293,W292,E302,E226,E305
+per-file-ignores = 
     __init__.py:F401
     tests/*:F401,F811
     tools/*:F401,E402
