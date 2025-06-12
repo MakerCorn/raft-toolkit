@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Critical Test Configuration Fix
 - **pytest.ini header format**: Fixed incorrect `[tool:pytest]` header to `[pytest]`. The `[tool:pytest]` format is for pyproject.toml files, not pytest.ini files. This was causing markers to not be registered properly, resulting in pytest exit code 5 when no tests were collected due to unrecognized markers.
 
+#### Docker Test Infrastructure Fix
+- **Docker disk space issues**: Fixed "no space left on device" errors in CI by optimizing Docker test workflow
+  - Removed multiple extended services that were building identical images simultaneously
+  - Added disk space cleanup step to free up GitHub Actions runner storage
+  - Changed to sequential test execution using single Docker image to reduce resource usage
+  - Improved Docker build caching to reduce build times and disk usage
+
 ### 📦 Dependencies
 
 ---

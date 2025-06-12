@@ -34,24 +34,11 @@ services:
       timeout: 3s
       retries: 3
 
-  # Run unit tests only
-  raft-test-unit:
-    extends: raft-test
-    command: ["python", "run_tests.py", "--unit"]
-
-  # Run integration tests only
-  raft-test-integration:
-    extends: raft-test
-    command: ["python", "run_tests.py", "--integration"]
-
-  # Run API tests only
-  raft-test-api:
-    extends: raft-test
-    command: ["python", "run_tests.py", "--api"]
-
-  # Run CLI tests only
-  raft-test-cli:
-    extends: raft-test
-    command: ["python", "run_tests.py", "--cli"]
+# Note: Extended services removed to avoid disk space issues in CI
+# For local testing of specific test types, use:
+# docker compose run --rm raft-test python run_tests.py --unit
+# docker compose run --rm raft-test python run_tests.py --integration  
+# docker compose run --rm raft-test python run_tests.py --api
+# docker compose run --rm raft-test python run_tests.py --cli
 
 # Using bind mounts to ./test-results and ./coverage-reports for easier access

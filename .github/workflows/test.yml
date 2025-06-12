@@ -265,6 +265,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
+    - name: Free up disk space
+      run: |
+        # Remove unnecessary packages and files to free up disk space
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker system prune -af
+        df -h
+    
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     
@@ -292,26 +302,59 @@ jobs:
         load: true
         tags: raft-toolkit:test
         cache-from: type=gha
+        cache-to: type=gha,mode=max
     
-    - name: Run tests in Docker
+    - name: Run tests in Docker (sequential)
       run: |
-        docker compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from raft-test
+        # Run tests sequentially to avoid disk space issues
+        echo "Running unit tests..."
+        docker run --rm \
+          -e TESTING=true \
+          -e OPENAI_API_KEY=test-key \
+          -e USE_MOCK_API=true \
+          -v "$PWD/test-results:/app/test-results" \
+          raft-toolkit:test \
+          python run_tests.py --unit --coverage --output-dir /app/test-results/unit
+        
+        echo "Running integration tests..."
+        docker run --rm \
+          -e TESTING=true \
+          -e OPENAI_API_KEY=test-key \
+          -e USE_MOCK_API=true \
+          -v "$PWD/test-results:/app/test-results" \
+          raft-toolkit:test \
+          python run_tests.py --integration --coverage --output-dir /app/test-results/integration
+        
+        echo "Running API tests..."
+        docker run --rm \
+          -e TESTING=true \
+          -e OPENAI_API_KEY=test-key \
+          -e USE_MOCK_API=true \
+          -v "$PWD/test-results:/app/test-results" \
+          raft-toolkit:test \
+          python run_tests.py --api --coverage --output-dir /app/test-results/api
+        
+        echo "Running CLI tests..."
+        docker run --rm \
+          -e TESTING=true \
+          -e OPENAI_API_KEY=test-key \
+          -e USE_MOCK_API=true \
+          -v "$PWD/test-results:/app/test-results" \
+          raft-toolkit:test \
+          python run_tests.py --cli --coverage --output-dir /app/test-results/cli
     
     - name: Prepare test results directory
       if: always()
       run: |
-        # Test results are in the configured directories due to bind mount
-        # Copy to expected CI directory structure
+        # Consolidate test results from all test suites
         mkdir -p docker-test-results
-        if [ -d "$HOST_TEST_RESULTS_DIR" ]; then
-          cp -r "$HOST_TEST_RESULTS_DIR"/* docker-test-results/ 2>/dev/null || true
+        if [ -d "test-results" ]; then
+          cp -r test-results/* docker-test-results/ 2>/dev/null || true
         fi
         
-        # Also copy coverage if available
-        if [ -d "$HOST_COVERAGE_DIR" ]; then
-          mkdir -p docker-test-results/coverage
-          cp -r "$HOST_COVERAGE_DIR"/* docker-test-results/coverage/ 2>/dev/null || true
-        fi
+        # List what we collected
+        echo "Docker test results structure:"
+        find docker-test-results -type f -name "*.xml" -o -name "*.html" | head -20
     
     - name: Upload Docker test results
       uses: actions/upload-artifact@v4
