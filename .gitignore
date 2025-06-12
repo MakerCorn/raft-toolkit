@@ -21,6 +21,10 @@ logs/
 *.log
 *.tmp
 test_*
+test_part_*.jsonl
+*_test.pdf
+config_test.pdf
+default_test.pdf
 
 # Distribution / packaging
 .Python
@@ -66,6 +70,15 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+
+# Test results and artifacts (local development)
+test-results/
+test_results/
+coverage-reports/
+junit.xml
+*.jsonl
+temp/
+docker-test-results/
 
 # Translations
 *.mo
