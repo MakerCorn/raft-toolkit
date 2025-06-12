@@ -76,6 +76,14 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-test.txt
     
+    - name: Clear pytest cache and verify configuration
+      run: |
+        # Clear any existing pytest cache
+        rm -rf .pytest_cache
+        
+        # Run comprehensive verification
+        python verify_pytest_config.py
+    
     - name: Run unit tests
       env:
         TESTING: true
@@ -131,6 +139,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
+    
+    - name: Clear pytest cache and verify configuration  
+      run: |
+        rm -rf .pytest_cache
+        echo "=== Integration test collection ==="
+        python -m pytest -m integration --collect-only --quiet | grep "collected" || echo "No integration tests collected!"
     
     - name: Run integration tests
       env:
@@ -188,6 +202,12 @@ jobs:
         pip install -r requirements-web.txt
         pip install -r requirements-test.txt
     
+    - name: Clear pytest cache and verify configuration
+      run: |
+        rm -rf .pytest_cache
+        echo "=== API test collection ==="
+        python -m pytest -m api --collect-only --quiet | grep "collected" || echo "No API tests collected!"
+    
     - name: Run API tests
       env:
         TESTING: true
@@ -233,6 +253,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
+    
+    - name: Clear pytest cache and verify configuration
+      run: |
+        rm -rf .pytest_cache
+        echo "=== CLI test collection ==="
+        python -m pytest -m cli --collect-only --quiet | grep "collected" || echo "No CLI tests collected!"
     
     - name: Run CLI tests
       env:
