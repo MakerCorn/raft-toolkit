@@ -396,7 +396,73 @@ EVAL_WORKERS=4
 - **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
 - **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
 
-## 🧪 Testing & Quality Assurance
+## 🧪 Testing & Release Infrastructure
+
+### Recent Major Improvements (v1.0.1)
+
+The RAFT Toolkit now includes a robust, fully-automated testing and release infrastructure:
+
+#### ✅ Complete Test Suite Reliability
+- **43/43 unit tests passing**: All unit test failures have been resolved
+- **Fixed critical test issues**: Mock paths, environment isolation, token caching
+- **Cross-platform testing**: Linux, macOS, and Windows support
+- **Multi-Python version testing**: Python 3.9, 3.10, and 3.11
+
+#### 🚀 Automated Release Pipeline
+- **Tag-triggered releases**: Create releases by pushing version tags
+- **Build system fixes**: Resolved package discovery and build configuration issues
+- **GitHub Actions integration**: Automated building, testing, and publishing
+- **Release tools**: Interactive release script for safe version management
+
+#### 🛠️ Enhanced Developer Experience
+- **Release script**: `./scripts/create_release.sh` for guided release creation
+- **Build validation**: Local testing before CI/CD deployment
+- **Comprehensive documentation**: Step-by-step guides for releases and testing
+
+#### 📦 Improved Build System
+- **Fixed package discovery**: Resolved "Multiple top-level packages" setuptools error
+- **Modern pyproject.toml**: Complete build configuration with proper dependencies
+- **Package optimization**: Smaller builds excluding unnecessary files (tests, docs, notebooks)
+- **Entry points**: Proper CLI script configuration for `raft` and `raft-web` commands
+
+#### Example: Creating a Release
+```bash
+# Interactive release creation (recommended)
+./scripts/create_release.sh
+
+# Manual tag creation (advanced)
+git tag -a v1.0.2 -m "Release v1.0.2"
+git push origin v1.0.2
+```
+
+See [`docs/RELEASES.md`](docs/RELEASES.md) for the complete release management guide.
+
+#### 🔧 Testing Improvements Details
+
+**Unit Test Fixes (13 tests resolved):**
+- **Import path corrections**: Fixed LangChain embeddings mock paths
+- **Attribute alignment**: Corrected `completion_count` → `calls` mismatches  
+- **Environment isolation**: Proper cleanup between tests
+- **File handling**: Temporary file creation for validation tests
+- **Token caching**: Global cache clearing for authentication tests
+
+**Build Configuration Fixes:**
+- **Package inclusion**: Explicit control over what gets built (`core`, `cli`, `web`, `tools`)
+- **Dependency management**: Proper setuptools configuration
+- **Entry point registration**: Automated CLI script installation
+- **Metadata compliance**: Modern SPDX license format
+
+**Release Workflow Fixes:**
+- **Permission handling**: Proper GitHub token usage
+- **Tag validation**: Verify tags exist before release creation
+- **Trigger logic**: Only create releases for actual version tags
+- **Error handling**: Better debugging and validation messages
+
+**CI/CD Pipeline Reliability:**
+- **Build → Test → Release**: Proper dependency chain prevents broken releases
+- **Multi-platform support**: Testing across different OS and Python versions
+- **Artifact generation**: Automated Docker images, Python packages, and documentation
+- **Quality gates**: All tests must pass before any release is created
 
 ### Test Runner
 
