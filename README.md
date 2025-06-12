@@ -269,41 +269,85 @@ RAFT takes an input document and creates a dataset of `{question, answer, docume
 
 ### Prerequisites
 
-- Python 3.8+ 
+- Python 3.9+ (3.11 recommended)
 - OpenAI API key (or Azure OpenAI credentials)
-- Optional: Docker for containerized deployment
+- Optional: Docker & Docker Compose for containerized deployment
 
-### Basic Installation
+### 🚀 Quick Start (Recommended)
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/your-repo/raft-toolkit.git
 cd raft-toolkit
 
-# Install core dependencies
+# Set up environment
+cp .env.example .env
+# Edit .env with your OpenAI API key
+
+# Install dependencies
 pip install -r requirements.txt
 
-# For web interface (optional)
-pip install -r requirements-web.txt
+# Test installation
+python run_tests.py --unit --fast
 
-# For evaluation tools (optional)
-pip install -r tools/requirements.txt
-
-# For testing (optional)
-pip install -r requirements-test.txt
+# Start web interface
+python run_web.py
+# Open http://localhost:8000
 ```
 
-### Docker Installation
+### 🐳 Docker Installation
 
 ```bash
-# Clone and set up environment
+# Clone and configure
+git clone https://github.com/your-repo/raft-toolkit.git
+cd raft-toolkit
 cp .env.example .env
 # Edit .env with your configuration
 
 # Run with Docker Compose
-docker-compose up -d
+docker compose up -d
 
-# Access web interface at http://localhost:8000
+# Access services
+# Web interface: http://localhost:8000
+# Redis dashboard: http://localhost:8081
+```
+
+### 📋 Detailed Installation
+
+#### Core Dependencies
+```bash
+# Essential packages for basic functionality
+pip install -r requirements.txt
+```
+
+#### Web Interface (Optional)
+```bash
+# For full web UI experience
+pip install -r requirements-web.txt
+```
+
+#### Development & Testing (Optional)
+```bash
+# For contributors and advanced users
+pip install -r requirements-test.txt
+
+# Run full test suite
+python run_tests.py --coverage --output-dir ./test-results
+```
+
+#### Multi-Target Docker Builds
+```bash
+# Production deployment
+docker build --target production -t raft-toolkit:prod .
+
+# Development with debugging
+docker build --target development -t raft-toolkit:dev .
+
+# CLI-only lightweight image
+docker build --target cli -t raft-toolkit:cli .
+
+# Testing environment
+docker build --target testing -t raft-toolkit:test .
 ```
 
 ### Environment Setup
@@ -351,6 +395,172 @@ EVAL_WORKERS=4
 - **`--use-azure-identity`**: Use Azure Default Credentials for token retrieval
 - **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
 - **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
+
+## 🧪 Testing & Quality Assurance
+
+### Test Runner
+
+The RAFT Toolkit includes a comprehensive test suite with configurable directories:
+
+```bash
+# Run all tests
+python run_tests.py
+
+# Run specific test types
+python run_tests.py --unit              # Unit tests only
+python run_tests.py --integration       # Integration tests
+python run_tests.py --api              # API tests
+python run_tests.py --cli              # CLI tests
+
+# With coverage reporting
+python run_tests.py --coverage --output-dir ./test-results
+
+# Fast tests (skip slow ones)
+python run_tests.py --fast
+
+# Parallel execution
+python run_tests.py --parallel 4
+```
+
+### Configurable Test Directories
+
+Configure test directories via CLI arguments or environment variables:
+
+```bash
+# Custom directories via CLI
+python run_tests.py --integration \
+  --output-dir ./ci-results \
+  --temp-dir /tmp/fast-ssd \
+  --coverage-dir ./coverage
+
+# Via environment variables
+export TEST_OUTPUT_DIR=./my-results
+export TEST_TEMP_DIR=/tmp/my-temp
+export TEST_COVERAGE_DIR=./coverage
+python run_tests.py --coverage
+
+# Docker testing with custom directories
+export HOST_TEST_RESULTS_DIR=/shared/test-results
+docker compose -f docker-compose.test.yml up
+```
+
+See [`docs/TEST_DIRECTORIES.md`](docs/TEST_DIRECTORIES.md) for complete configuration guide.
+
+### Docker Testing
+
+```bash
+# Run tests in Docker environment
+docker compose -f docker-compose.test.yml up --abort-on-container-exit
+
+# Specific test suites
+docker compose -f docker-compose.test.yml run raft-test-unit
+docker compose -f docker-compose.test.yml run raft-test-integration
+```
+
+### Code Quality
+
+```bash
+# Install code quality tools
+pip install -r requirements-test.txt
+
+# Run linting
+flake8 .
+black --check .
+isort --check-only .
+mypy .
+
+# Auto-format code
+black .
+isort .
+```
+
+### Security Scanning
+
+```bash
+# Install security tools
+pip install bandit safety
+
+# Run security scans
+bandit -r . -f json -o security-report.json
+safety scan -r requirements.txt
+```
+
+## 🚀 CI/CD Integration
+
+### GitHub Actions Workflows
+
+The project includes comprehensive CI/CD pipelines:
+
+**Build Pipeline** (`Build → Test → Release`):
+- 🔍 **Code Quality**: Linting with flake8, black, isort
+- 🏗️ **Multi-Target Builds**: Production, development, CLI, testing images
+- 🔒 **Security Scanning**: Bandit, Safety, Trivy vulnerability scans
+- 📦 **Container Registry**: Automatic publishing to GitHub Container Registry
+
+**Test Pipeline**:
+- 🧪 **Comprehensive Testing**: Unit, integration, API, CLI, Docker tests
+- 📊 **Coverage Reporting**: Codecov integration with detailed metrics
+- 🐍 **Multi-Python Support**: Testing on Python 3.9, 3.10, 3.11
+- ⚡ **Parallel Execution**: Optimized test execution with dependency management
+
+**Security Pipeline**:
+- 🛡️ **Dependency Scanning**: Daily automated vulnerability checks
+- 📋 **License Compliance**: Automated license compatibility verification
+- 🔄 **Auto-Updates**: Automated dependency update PRs
+
+### Environment Variables for CI/CD
+
+```bash
+# Test configuration
+TEST_OUTPUT_DIR=/workspace/test-results
+TEST_TEMP_DIR=/workspace/temp
+TEST_COVERAGE_DIR=/workspace/coverage
+
+# Docker configuration
+HOST_TEST_RESULTS_DIR=/tmp/ci-results
+HOST_COVERAGE_DIR=/tmp/ci-coverage
+HOST_TEMP_DIR=/tmp/ci-temp
+
+# Security scanning
+ENABLE_SECURITY_SCANS=true
+UPLOAD_SARIF=true
+```
+
+### Pipeline Configuration Examples
+
+**GitLab CI**:
+```yaml
+test:
+  script:
+    - pip install -r requirements-test.txt
+    - python run_tests.py --coverage --output-dir ./test-results
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: test-results/coverage.xml
+```
+
+**Jenkins**:
+```groovy
+pipeline {
+    agent any
+    environment {
+        TEST_OUTPUT_DIR = "${WORKSPACE}/test-results"
+        TEST_TEMP_DIR = "/tmp/jenkins-${BUILD_ID}"
+    }
+    stages {
+        stage('Test') {
+            steps {
+                sh 'python run_tests.py --coverage'
+                publishTestResults testResultsPattern: 'test-results/junit.xml'
+                publishCoverage adapters: [coberturaAdapter('test-results/coverage.xml')]
+            }
+        }
+    }
+}
+```
 
 ## 📝 Azure OpenAI Support
 
@@ -690,6 +900,269 @@ python3 raft.py \
 
 - Ollama's API is compatible with the OpenAI API, but some advanced features may not be supported.
 - You can specify different models by running `ollama run <model_name>` and setting the appropriate model in your RAFT command if needed.
+
+## 🏗️ Project Structure
+
+```
+raft-toolkit/
+├── 📁 core/                      # Core business logic
+│   ├── clients/                  # External API clients
+│   ├── config.py                 # Configuration management
+│   ├── formatters/               # Dataset format converters
+│   ├── models.py                 # Data models and schemas
+│   ├── raft_engine.py           # Main orchestration engine
+│   ├── security.py              # Security utilities
+│   └── services/                 # Business services
+│       ├── dataset_service.py    # Dataset operations
+│       ├── document_service.py   # Document processing
+│       └── llm_service.py       # LLM interactions
+├── 📁 cli/                       # Command-line interface
+│   └── main.py                   # CLI entry point
+├── 📁 web/                       # Web interface
+│   ├── app.py                    # FastAPI application
+│   └── static/                   # Frontend assets
+├── 📁 tools/                     # Standalone evaluation tools
+│   ├── eval.py                   # Dataset evaluation
+│   ├── answer.py                 # Answer generation
+│   └── pfeval_*.py              # PromptFlow evaluations
+├── 📁 tests/                     # Comprehensive test suite
+│   ├── unit/                     # Unit tests
+│   ├── integration/              # Integration tests
+│   ├── api/                      # API tests
+│   └── cli/                      # CLI tests
+├── 📁 docs/                      # Documentation
+│   ├── WEB_INTERFACE.md          # Web UI guide
+│   ├── DEPLOYMENT.md             # Deployment instructions
+│   ├── CONFIGURATION.md          # Configuration reference
+│   └── TEST_DIRECTORIES.md      # Test configuration guide
+├── 📁 .github/                   # CI/CD workflows
+│   └── workflows/
+│       ├── build.yml             # Build & code quality
+│       ├── test.yml              # Comprehensive testing
+│       ├── release.yml           # Release automation
+│       └── security.yml          # Security scanning
+├── 🐳 docker-compose.yml         # Multi-service orchestration
+├── 🐳 docker-compose.test.yml    # Testing environment
+├── 🐳 Dockerfile                 # Multi-stage container builds
+├── 🔧 requirements*.txt          # Python dependencies
+├── ⚙️ .env.example              # Environment template
+├── ⚙️ .env.test.example         # Test configuration template
+├── 🧪 run_tests.py              # Test runner with configurable directories
+├── 🌐 run_web.py                # Web server launcher
+├── 📋 raft.py                   # Legacy CLI entry point
+└── 📖 README.md                 # This documentation
+```
+
+## 🚀 Deployment
+
+### 🐳 Docker Deployment
+
+**Production Deployment:**
+```bash
+# Build production image
+docker build --target production -t raft-toolkit:latest .
+
+# Run with environment file
+docker run -d \
+  --name raft-toolkit \
+  --env-file .env \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/outputs:/app/outputs \
+  raft-toolkit:latest
+```
+
+**Docker Compose (Recommended):**
+```bash
+# Production stack with Redis and monitoring
+docker compose -f docker-compose.yml up -d
+
+# Development with hot reload
+docker compose -f docker-compose.dev.yml up -d
+
+# Testing environment
+docker compose -f docker-compose.test.yml up
+```
+
+### ☁️ Cloud Deployment
+
+**Kubernetes:**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raft-toolkit
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: raft-toolkit
+  template:
+    metadata:
+      labels:
+        app: raft-toolkit
+    spec:
+      containers:
+      - name: raft-toolkit
+        image: ghcr.io/your-org/raft-toolkit:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: raft-secrets
+              key: openai-api-key
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+```
+
+**Helm Chart** (Advanced users):
+```bash
+# Add repository (when available)
+helm repo add raft-toolkit https://charts.raft-toolkit.com
+helm repo update
+
+# Install with custom values
+helm install raft-toolkit raft-toolkit/raft-toolkit \
+  --set openai.apiKey="your-api-key" \
+  --set scaling.replicas=3 \
+  --set persistence.enabled=true
+```
+
+### 🔧 Environment Configuration
+
+**Production `.env`:**
+```bash
+# Core Configuration
+OPENAI_API_KEY=your_production_api_key
+RAFT_ENV=production
+LOG_LEVEL=INFO
+
+# Web Server
+WEB_HOST=0.0.0.0
+WEB_PORT=8000
+WEB_WORKERS=4
+
+# Database
+REDIS_URL=redis://redis:6379
+
+# Security
+CORS_ORIGINS=https://your-domain.com
+ENABLE_AUTH=true
+JWT_SECRET=your_jwt_secret
+
+# Monitoring
+ENABLE_METRICS=true
+METRICS_PORT=9090
+
+# Storage
+UPLOAD_PATH=/app/uploads
+OUTPUT_PATH=/app/outputs
+MAX_FILE_SIZE=100MB
+```
+
+### 📊 Monitoring & Observability
+
+**Health Checks:**
+```bash
+# Application health
+curl http://localhost:8000/health
+
+# Detailed metrics
+curl http://localhost:8000/metrics
+
+# System status
+docker compose exec raft-toolkit python -c "
+import sys
+from core.config import RaftConfig
+config = RaftConfig()
+print(f'Status: OK')
+print(f'Version: {config.version}')
+print(f'Environment: {config.env}')
+"
+```
+
+**Log Aggregation:**
+```yaml
+# docker-compose.override.yml
+version: '3.8'
+services:
+  raft-toolkit:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=raft-toolkit,environment=production"
+```
+
+### 🔒 Security Best Practices
+
+**Container Security:**
+```bash
+# Run security scan
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd):/code aquasec/trivy fs /code
+
+# Check for vulnerabilities in image
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy image raft-toolkit:latest
+```
+
+**Network Security:**
+```yaml
+# docker-compose.security.yml
+version: '3.8'
+networks:
+  raft-network:
+    driver: bridge
+    internal: true
+  web-network:
+    driver: bridge
+
+services:
+  raft-toolkit:
+    networks:
+      - raft-network
+      - web-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+**Development Setup:**
+```bash
+# Clone and setup
+git clone https://github.com/your-org/raft-toolkit.git
+cd raft-toolkit
+
+# Install development dependencies
+pip install -r requirements-test.txt
+
+# Run tests
+python run_tests.py --coverage
+
+# Run code quality checks
+flake8 .
+black --check .
+isort --check-only .
+
+# Pre-commit hooks (optional)
+pre-commit install
+```
 
 ## 📄 License
 

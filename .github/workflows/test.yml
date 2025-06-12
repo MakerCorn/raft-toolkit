@@ -268,6 +268,22 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     
+    - name: Prepare test directories
+      run: |
+        # Configure directories with defaults
+        export HOST_TEST_RESULTS_DIR="${HOST_TEST_RESULTS_DIR:-./test-results}"
+        export HOST_COVERAGE_DIR="${HOST_COVERAGE_DIR:-./coverage-reports}"
+        export HOST_TEMP_DIR="${HOST_TEMP_DIR:-./temp}"
+        
+        # Clean and create test result directories
+        rm -rf "$HOST_TEST_RESULTS_DIR" docker-test-results "$HOST_COVERAGE_DIR" "$HOST_TEMP_DIR"
+        mkdir -p "$HOST_TEST_RESULTS_DIR" docker-test-results "$HOST_COVERAGE_DIR" "$HOST_TEMP_DIR"
+        
+        # Export for subsequent steps
+        echo "HOST_TEST_RESULTS_DIR=$HOST_TEST_RESULTS_DIR" >> $GITHUB_ENV
+        echo "HOST_COVERAGE_DIR=$HOST_COVERAGE_DIR" >> $GITHUB_ENV
+        echo "HOST_TEMP_DIR=$HOST_TEMP_DIR" >> $GITHUB_ENV
+    
     - name: Build test image
       uses: docker/build-push-action@v5
       with:
@@ -279,14 +295,23 @@ jobs:
     
     - name: Run tests in Docker
       run: |
-        docker-compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from raft-test
+        docker compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from raft-test
     
-    - name: Copy test results from container
+    - name: Prepare test results directory
       if: always()
       run: |
-        docker create --name test-container raft-toolkit:test
-        docker cp test-container:/app/test-results ./docker-test-results
-        docker rm test-container
+        # Test results are in the configured directories due to bind mount
+        # Copy to expected CI directory structure
+        mkdir -p docker-test-results
+        if [ -d "$HOST_TEST_RESULTS_DIR" ]; then
+          cp -r "$HOST_TEST_RESULTS_DIR"/* docker-test-results/ 2>/dev/null || true
+        fi
+        
+        # Also copy coverage if available
+        if [ -d "$HOST_COVERAGE_DIR" ]; then
+          mkdir -p docker-test-results/coverage
+          cp -r "$HOST_COVERAGE_DIR"/* docker-test-results/coverage/ 2>/dev/null || true
+        fi
     
     - name: Upload Docker test results
       uses: actions/upload-artifact@v4

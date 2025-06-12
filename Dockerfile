@@ -72,19 +72,31 @@ FROM development as testing
 # Switch back to root for test setup
 USER root
 
+# Create configurable test directories with defaults
+ENV TEST_OUTPUT_DIR=/app/test-results \
+    TEST_TEMP_DIR=/tmp/test-temp \
+    TEST_COVERAGE_DIR=/app/coverage-reports
+
 # Ensure test directories exist
-RUN mkdir -p /app/test-results /app/coverage-reports && \
-    chown -R raft:raft /app/test-results /app/coverage-reports
+RUN mkdir -p $TEST_OUTPUT_DIR $TEST_TEMP_DIR $TEST_COVERAGE_DIR && \
+    chown -R raft:raft $TEST_OUTPUT_DIR $TEST_TEMP_DIR $TEST_COVERAGE_DIR && \
+    # Make temp directory sticky for multi-user access
+    chmod 1777 $TEST_TEMP_DIR
 
 # Switch to app user
 USER raft
 
 # Set test environment variables
-ENV TESTING=true
-ENV LOG_LEVEL=DEBUG
+ENV TESTING=true \
+    LOG_LEVEL=DEBUG \
+    PYTHONPATH=/app
 
-# Run tests by default
-CMD ["python", "run_tests.py", "--coverage", "--output-dir", "/app/test-results"]
+# Health check for testing container
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
+    CMD python -c "import sys; sys.exit(0)" || exit 1
+
+# Run tests by default - uses environment variables for directory configuration
+CMD ["python", "run_tests.py", "--coverage"]
 
 # Stage 5: Production
 FROM dependencies as production

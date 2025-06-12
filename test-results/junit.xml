@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="2" failures="0" skipped="1" tests="3" time="10.247" timestamp="2025-06-12T09:31:39.180428" hostname="macpro.local"><testcase classname="" name="tests.api.test_web_app" time="0.000"><error message="collection failure">ImportError while importing test module '/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/api/test_web_app.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/api/test_web_app.py:11: in &lt;module&gt;
+    from web.app import app, job_manager
+E   ImportError: cannot import name 'job_manager' from 'web.app' (/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/web/app.py)</error></testcase><testcase classname="" name="tests.cli.test_eval_tool" time="0.000"><skipped message="collection skipped">('/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/cli/test_eval_tool.py', 20, 'Skipped: eval tool not available')</skipped></testcase><testcase classname="" name="tests.unit.test_utils" time="0.000"><error message="collection failure">ImportError while importing test module '/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/unit/test_utils.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests/unit/test_utils.py:11: in &lt;module&gt;
+    from core.utils.file_utils import (
+E   ImportError: cannot import name 'ensure_directory_exists' from 'core.utils.file_utils' (/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/core/utils/file_utils.py)</error></testcase></testsuite></testsuites>

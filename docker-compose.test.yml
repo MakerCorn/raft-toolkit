@@ -11,14 +11,19 @@ services:
       - OPENAI_API_KEY=test-key
       - USE_MOCK_API=true
       - REDIS_URL=redis://redis-test:6379
+      # Configurable test directories
+      - TEST_OUTPUT_DIR=${TEST_OUTPUT_DIR:-/app/test-results}
+      - TEST_TEMP_DIR=${TEST_TEMP_DIR:-/tmp/test-temp}
+      - TEST_COVERAGE_DIR=${TEST_COVERAGE_DIR:-/app/coverage-reports}
     volumes:
-      - raft_test_results:/app/test-results
-      - raft_test_coverage:/app/coverage-reports
+      - ${HOST_TEST_RESULTS_DIR:-./test-results}:${TEST_OUTPUT_DIR:-/app/test-results}
+      - ${HOST_COVERAGE_DIR:-./coverage-reports}:${TEST_COVERAGE_DIR:-/app/coverage-reports}
+      - ${HOST_TEMP_DIR:-./temp}:${TEST_TEMP_DIR:-/tmp/test-temp}
     depends_on:
       redis-test:
         condition: service_healthy
-    # Override to run specific test suites
-    command: ["python", "run_tests.py", "--coverage", "--output-dir", "/app/test-results"]
+    # Override to run specific test suites - uses environment variables for directory configuration
+    command: ["python", "run_tests.py", "--coverage"]
 
   redis-test:
     image: redis:7-alpine
@@ -32,25 +37,21 @@ services:
   # Run unit tests only
   raft-test-unit:
     extends: raft-test
-    command: ["python", "run_tests.py", "--unit", "--output-dir", "/app/test-results"]
+    command: ["python", "run_tests.py", "--unit"]
 
   # Run integration tests only
   raft-test-integration:
     extends: raft-test
-    command: ["python", "run_tests.py", "--integration", "--output-dir", "/app/test-results"]
+    command: ["python", "run_tests.py", "--integration"]
 
   # Run API tests only
   raft-test-api:
     extends: raft-test
-    command: ["python", "run_tests.py", "--api", "--output-dir", "/app/test-results"]
+    command: ["python", "run_tests.py", "--api"]
 
   # Run CLI tests only
   raft-test-cli:
     extends: raft-test
-    command: ["python", "run_tests.py", "--cli", "--output-dir", "/app/test-results"]
+    command: ["python", "run_tests.py", "--cli"]
 
-volumes:
-  raft_test_results:
-    driver: local
-  raft_test_coverage:
-    driver: local
+# Using bind mounts to ./test-results and ./coverage-reports for easier access

@@ -40,7 +40,7 @@ jobs:
         for req_file in requirements*.txt; do
           if [[ -f "$req_file" ]]; then
             echo "### Scanning $req_file" >> $GITHUB_STEP_SUMMARY
-            if safety check -r "$req_file" --json --output safety-report-$(basename $req_file .txt).json; then
+            if safety scan -r "$req_file" --json --output safety-report-$(basename $req_file .txt).json; then
               echo "✅ No vulnerabilities found in $req_file" >> $GITHUB_STEP_SUMMARY
             else
               echo "❌ Vulnerabilities found in $req_file" >> $GITHUB_STEP_SUMMARY

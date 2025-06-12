@@ -110,7 +110,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security Updates**: Upgraded vulnerable dependencies
   - `transformers==4.37.2` → `transformers>=4.44.0,<5.0.0` (fixed 7 CVEs)
   - `PyPDF2==3.0.1` → `pypdf>=4.0.0,<5.0.0` (fixed 1 CVE)
-  - `langchain-experimental` → `>=0.3.3,<0.4.0` (mitigated CVE-2024-21513, CVE-2024-46946)
+  - `langchain-experimental` → `==0.3.4` (resolved CVE-2024-46946 completely)
+- **Final Security Remediation**: Addressed remaining vulnerability
+  - **CVE-2024-46946**: Pinned `langchain-experimental==0.3.4` (safe version, vulnerability only affects LLMSymbolicMathChain not SemanticChunker)
+  - **Safety CLI**: Updated from deprecated `safety check` to `safety scan` command
 - **Dependency Resolution**: Fixed OpenAI version conflicts
   - `openai==1.30.1` → `openai>=1.68.2,<2.0.0` (compatible with langchain-openai)
   - Added upper bounds to prevent breaking changes
@@ -172,6 +175,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Workflow robustness**: Added fallback scanning and continue-on-error for security transitions
 - **Linting tools**: Added missing flake8, black, isort, mypy to requirements-test.txt
 - **Code quality config**: Added .flake8 and pyproject.toml for consistent formatting and linting
+- **Docker Compose compatibility**: Updated workflows to use `docker compose` instead of deprecated `docker-compose`
+- **Test runner enhancement**: Added `--output-dir` support and improved Python executable detection
+- **Docker test volumes**: Simplified using bind mounts for easier CI/CD result extraction
+- **Configurable test directories**: Added support for custom temp, output, and coverage directories via CLI args and environment variables
+  - Added `--temp-dir`, `--coverage-dir` parameters to test runner
+  - Added `TEST_OUTPUT_DIR`, `TEST_TEMP_DIR`, `TEST_COVERAGE_DIR` environment variable support
+  - Added `HOST_TEST_RESULTS_DIR`, `HOST_COVERAGE_DIR`, `HOST_TEMP_DIR` for Docker environments
+  - Created `.env.test.example` and `docs/TEST_DIRECTORIES.md` for configuration guidance
+- **Enhanced documentation**: Comprehensive updates to README.md and project documentation
+  - Added detailed testing and CI/CD integration sections
+  - Included deployment guides for Docker, Kubernetes, and cloud platforms
+  - Added security best practices and monitoring guidance
+  - Updated installation instructions with multi-target Docker builds
+  - Enhanced project structure documentation with clear file organization
 
 #### Documentation Issues
 - **Mermaid diagram**: Improved readability with black text on light backgrounds
