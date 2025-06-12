@@ -76,13 +76,10 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-test.txt
     
-    - name: Clear pytest cache and verify configuration
+    - name: Clear pytest cache
       run: |
         # Clear any existing pytest cache
         rm -rf .pytest_cache
-        
-        # Run comprehensive verification
-        python verify_pytest_config.py
     
     - name: Run unit tests
       env:
