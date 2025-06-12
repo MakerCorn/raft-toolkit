@@ -10,11 +10,29 @@ from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
-import pypdf
-from pptx import Presentation
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_openai.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
-from tqdm import tqdm
+try:
+    import pypdf
+except ImportError:
+    pypdf = None
+
+try:
+    from pptx import Presentation
+except ImportError:
+    Presentation = None
+
+try:
+    from langchain_experimental.text_splitter import SemanticChunker
+    from langchain_openai.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
+except ImportError:
+    SemanticChunker = None
+    OpenAIEmbeddings = None
+    AzureOpenAIEmbeddings = None
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(iterable, *args, **kwargs):
+        return iterable
 
 from ..models import DocumentChunk, DocType, ChunkingStrategy
 from ..config import RaftConfig

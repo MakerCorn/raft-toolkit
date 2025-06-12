@@ -6,10 +6,27 @@ import secrets
 import time
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(iterable, *args, **kwargs):
+        return iterable
 
-from tenacity import retry, wait_exponential, retry_if_exception_type
-from openai import RateLimitError
+try:
+    from tenacity import retry, wait_exponential, retry_if_exception_type
+except ImportError:
+    def retry(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    wait_exponential = None
+    retry_if_exception_type = None
+
+try:
+    from openai import RateLimitError
+except ImportError:
+    class RateLimitError(Exception):
+        pass
 
 from ..models import DocumentChunk, Question, QADataPoint, ProcessingJob, ProcessingResult, DocType
 from ..config import RaftConfig

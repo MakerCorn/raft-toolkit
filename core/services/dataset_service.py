@@ -4,9 +4,17 @@ Dataset service for formatting and exporting datasets.
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-import datasets
-from datasets import Dataset
-import pyarrow as pa
+try:
+    import datasets
+    from datasets import Dataset
+except ImportError:
+    datasets = None
+    Dataset = None
+
+try:
+    import pyarrow as pa
+except ImportError:
+    pa = None
 
 from ..models import QADataPoint, ProcessingResult
 from ..config import RaftConfig

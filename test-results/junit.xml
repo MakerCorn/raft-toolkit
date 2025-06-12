@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="3" skipped="1" tests="20" time="1.204" timestamp="2025-06-12T12:15:16.329850" hostname="macpro.local"><testcase classname="" name="tests.cli.test_eval_tool" time="0.000"><skipped message="collection skipped">('/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/cli/test_eval_tool.py', 20, 'Skipped: eval tool not available')</skipped></testcase><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_parser_creation" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_required_arguments" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_default_values" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_all_arguments" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_basic_args" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_only_changed_values" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_chunking_params" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_invalid_chunking_params_json" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_success" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestShowPreview object at 0x10ad8af40&gt;
-capsys = &lt;_pytest.capture.CaptureFixture object at 0x119582d00&gt;
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="3" skipped="1" tests="20" time="1.421" timestamp="2025-06-12T12:50:09.529034" hostname="macpro.local"><testcase classname="" name="tests.cli.test_eval_tool" time="0.000"><skipped message="collection skipped">('/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/cli/test_eval_tool.py', 20, 'Skipped: eval tool not available')</skipped></testcase><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_parser_creation" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_required_arguments" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_default_values" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_all_arguments" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_basic_args" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_only_changed_values" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_chunking_params" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_invalid_chunking_params_json" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_success" time="0.001"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestShowPreview object at 0x10bbacf40&gt;
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x11a335d60&gt;
 
     @pytest.mark.cli
     def test_show_preview_success(self, capsys):
@@ -10,7 +10,7 @@ capsys = &lt;_pytest.capture.CaptureFixture object at 0x119582d00&gt;
 tests/cli/test_cli_main.py:197: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = &lt;Mock spec='RaftEngine' id='4720176432'&gt;, name = 'config'
+self = &lt;Mock spec='RaftEngine' id='4734541200'&gt;, name = 'config'
 
     def __getattr__(self, name):
         if name in {'_mock_methods', '_mock_unsafe'}:
@@ -20,8 +20,8 @@ self = &lt;Mock spec='RaftEngine' id='4720176432'&gt;, name = 'config'
 &gt;               raise AttributeError("Mock object has no attribute %r" % name)
 E               AttributeError: Mock object has no attribute 'config'
 
-/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_many_files" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestShowPreview object at 0x10ad86b20&gt;
-capsys = &lt;_pytest.capture.CaptureFixture object at 0x119743970&gt;
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_many_files" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestShowPreview object at 0x10bba9b20&gt;
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x11a3c3940&gt;
 
     @pytest.mark.cli
     def test_show_preview_many_files(self, capsys):
@@ -32,7 +32,7 @@ capsys = &lt;_pytest.capture.CaptureFixture object at 0x119743970&gt;
 tests/cli/test_cli_main.py:224: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = &lt;Mock spec='RaftEngine' id='4722014288'&gt;, name = 'config'
+self = &lt;Mock spec='RaftEngine' id='4735121632'&gt;, name = 'config'
 
     def __getattr__(self, name):
         if name in {'_mock_methods', '_mock_unsafe'}:
@@ -42,8 +42,8 @@ self = &lt;Mock spec='RaftEngine' id='4722014288'&gt;, name = 'config'
 &gt;               raise AttributeError("Mock object has no attribute %r" % name)
 E               AttributeError: Mock object has no attribute 'config'
 
-/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_error" time="0.000" /><testcase classname="tests.cli.test_cli_main.TestValidateOnly" name="test_validate_only_success" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestValidateOnly object at 0x10ac280a0&gt;
-capsys = &lt;_pytest.capture.CaptureFixture object at 0x119554880&gt;
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_error" time="0.000" /><testcase classname="tests.cli.test_cli_main.TestValidateOnly" name="test_validate_only_success" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestValidateOnly object at 0x10bbbc0a0&gt;
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x11a324310&gt;
 
     @pytest.mark.cli
     def test_validate_only_success(self, capsys):
@@ -54,7 +54,7 @@ capsys = &lt;_pytest.capture.CaptureFixture object at 0x119554880&gt;
 tests/cli/test_cli_main.py:264: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-self = &lt;Mock spec='RaftEngine' id='4719986528'&gt;, name = 'config'
+self = &lt;Mock spec='RaftEngine' id='4734469312'&gt;, name = 'config'
 
     def __getattr__(self, name):
         if name in {'_mock_methods', '_mock_unsafe'}:
@@ -64,4 +64,4 @@ self = &lt;Mock spec='RaftEngine' id='4719986528'&gt;, name = 'config'
 &gt;               raise AttributeError("Mock object has no attribute %r" % name)
 E               AttributeError: Mock object has no attribute 'config'
 
-/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestValidateOnly" name="test_validate_only_error" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_preview_mode" time="0.008" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_validate_mode" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_normal_processing" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_keyboard_interrupt" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_general_error" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_with_env_file" time="0.003" /></testsuite></testsuites>
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestValidateOnly" name="test_validate_only_error" time="0.000" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_preview_mode" time="0.007" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_validate_mode" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_normal_processing" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_keyboard_interrupt" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_general_error" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_with_env_file" time="0.003" /></testsuite></testsuites>
