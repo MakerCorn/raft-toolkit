@@ -102,6 +102,108 @@ python raft.py --datapath documents/ --output training_data/
 - **Distractor Addition**: Include irrelevant documents to improve robustness
 - **Format Conversion**: Export in format suitable for fine-tuning platforms
 
+#### Chunking Strategies & Configuration
+
+Effective chunking is critical for RAFT success. Choose your strategy based on document type and use case:
+
+##### **📏 Chunk Size Guidelines**
+
+| **Document Type** | **Recommended Chunk Size** | **Reasoning** |
+|------------------|---------------------------|----------------|
+| **Technical Documentation** | 300-512 tokens | Preserves complete concepts and code examples |
+| **Legal Documents** | 512-768 tokens | Maintains clause/section coherence |
+| **Medical Literature** | 256-512 tokens | Balances detail with focused topics |
+| **Research Papers** | 512-1024 tokens | Captures complete paragraphs and findings |
+| **FAQ/Knowledge Base** | 128-256 tokens | Each chunk = one question/topic |
+| **News Articles** | 256-512 tokens | Preserves story coherence |
+
+##### **🔄 Overlap Strategy**
+
+| **Overlap %** | **Use Case** | **Trade-offs** |
+|--------------|-------------|----------------|
+| **0%** | Distinct topics, FAQ | Clean separation, no redundancy |
+| **10-20%** | Technical docs | Minimal context preservation |
+| **20-40%** | Narrative content | Good context flow, some redundancy |
+| **40-60%** | Complex topics | Maximum context, high redundancy |
+
+```bash
+# Low overlap for distinct topics
+--chunking-params '{"overlap": 0}'
+
+# Medium overlap for connected content  
+--chunking-params '{"overlap": 100}'  # ~20% of 512 tokens
+
+# High overlap for complex documents
+--chunking-params '{"overlap": 200}'  # ~40% of 512 tokens
+```
+
+##### **❓ Questions Per Chunk**
+
+| **Questions/Chunk** | **Use Case** | **Quality vs Quantity** |
+|-------------------|-------------|------------------------|
+| **1-2** | High-quality, focused datasets | Maximum quality, minimal redundancy |
+| **3-5** | Balanced approach (recommended) | Good quality, reasonable coverage |
+| **6-10** | Comprehensive coverage | Risk of lower quality questions |
+
+```bash
+# Focused, high-quality
+--questions 2 --chunk_size 512
+
+# Balanced approach (recommended)
+--questions 5 --chunk_size 384
+
+# Comprehensive coverage
+--questions 8 --chunk_size 256
+```
+
+##### **🎭 Distractor Configuration**
+
+| **Distractors** | **Training Benefit** | **Dataset Size Impact** |
+|----------------|---------------------|------------------------|
+| **2-3** | Basic robustness | Moderate increase |
+| **4-6** | Strong robustness (recommended) | 5-7x dataset size |
+| **7-10** | Maximum robustness | 8-11x dataset size |
+
+```bash
+# Recommended configuration
+--distractors 4 --questions 5 --chunk_size 512
+
+# Resource-constrained
+--distractors 2 --questions 3 --chunk_size 384
+
+# Maximum robustness
+--distractors 6 --questions 3 --chunk_size 256
+```
+
+##### **⚙️ Strategy-Specific Recommendations**
+
+**🧠 Semantic Chunking** (Recommended)
+```bash
+--chunking-strategy semantic --chunk_size 512 \
+--chunking-params '{"overlap": 50, "min_chunk_size": 200}'
+```
+- **Best for**: Most document types, preserves meaning
+- **Overlap**: 50-100 tokens for context preservation
+- **Min size**: 200 tokens to ensure meaningful chunks
+
+**📐 Fixed Chunking**
+```bash
+--chunking-strategy fixed --chunk_size 384 \
+--chunking-params '{"overlap": 75}'
+```
+- **Best for**: Consistent processing, structured documents
+- **Overlap**: 15-25% of chunk size
+- **Use when**: Semantic understanding less critical
+
+**📝 Sentence Chunking**
+```bash
+--chunking-strategy sentence --chunk_size 256 \
+--chunking-params '{"overlap": 0}'
+```
+- **Best for**: Natural language, narrative content
+- **Overlap**: Usually 0 (sentence boundaries are natural breaks)
+- **Chunk size**: Maximum tokens per chunk (actual size varies)
+
 #### 2. **Model Fine-Tuning**
 ```bash
 # Example with OpenAI fine-tuning

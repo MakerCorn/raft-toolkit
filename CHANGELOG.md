@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📚 Complete documentation overhaul**:
   - **RAFT methodology explanation** with pros/cons vs traditional RAG
   - **Fine-tuning process documentation** with best practices
+  - **Chunking strategies guide** with document-type recommendations, overlap guidance, and configuration examples
   - **Web Interface Guide** (`docs/WEB_INTERFACE.md`)
   - **Deployment Guide** (`docs/DEPLOYMENT.md`) with cloud platform instructions
   - **Configuration Reference** (`docs/CONFIGURATION.md`)
