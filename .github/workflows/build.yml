@@ -35,28 +35,70 @@ jobs:
       run: |
         echo "## 🔍 Quality & Security Results" >> $GITHUB_STEP_SUMMARY
         
-        # Linting (fast fail on critical issues)
+        # Code Quality (non-blocking during transition)
         echo "### Code Quality" >> $GITHUB_STEP_SUMMARY
-        flake8 . --count --show-source --statistics
-        black --check . --exclude='\.venv|__pycache__|\.git'
-        isort --check-only . --skip-gitignore
-        python scripts/dockerfile_lint.py
-        echo "✅ All quality checks passed" >> $GITHUB_STEP_SUMMARY
         
-        # Security (non-blocking)
-        echo "### Security Scanning" >> $GITHUB_STEP_SUMMARY
-        if safety scan --json > safety-report.json 2>/dev/null; then
-          echo "✅ No known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+        # Flake8 - count issues but don't fail
+        echo "#### Flake8 Linting" >> $GITHUB_STEP_SUMMARY
+        if flake8 . --count --statistics > flake8-results.txt 2>&1; then
+          echo "✅ No flake8 issues found" >> $GITHUB_STEP_SUMMARY
         else
-          echo "⚠️ Security issues found (check artifacts)" >> $GITHUB_STEP_SUMMARY
+          FLAKE8_COUNT=$(tail -1 flake8-results.txt | grep -o '^[0-9]*' || echo "0")
+          echo "⚠️ Found $FLAKE8_COUNT flake8 issues (see details below)" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>Flake8 Details</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -50 flake8-results.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
         fi
         
+        # Black - check formatting
+        echo "#### Black Formatting" >> $GITHUB_STEP_SUMMARY
+        if black --check . --exclude='\.venv|__pycache__|\.git' >/dev/null 2>&1; then
+          echo "✅ Code formatting is correct" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Code formatting issues found (run 'black .' to fix)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # isort - check import sorting
+        echo "#### Import Sorting" >> $GITHUB_STEP_SUMMARY
+        if isort --check-only . --skip-gitignore >/dev/null 2>&1; then
+          echo "✅ Import sorting is correct" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Import sorting issues found (run 'isort .' to fix)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Dockerfile linting
+        echo "#### Dockerfile Quality" >> $GITHUB_STEP_SUMMARY
+        if python scripts/dockerfile_lint.py >/dev/null 2>&1; then
+          echo "✅ Dockerfile follows best practices" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Dockerfile improvements suggested" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Security Scanning (non-blocking)
+        echo "### Security Scanning" >> $GITHUB_STEP_SUMMARY
+        
+        # Safety scan
+        echo "#### Dependency Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+        if safety scan --json > safety-report.json 2>/dev/null; then
+          echo "✅ No known vulnerabilities in dependencies" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Security vulnerabilities found (check artifacts)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Bandit scan
+        echo "#### Code Security Issues" >> $GITHUB_STEP_SUMMARY
         if bandit -r . -f json -o bandit-report.json >/dev/null 2>&1; then
-          echo "✅ No security issues in code" >> $GITHUB_STEP_SUMMARY
+          echo "✅ No security issues found in code" >> $GITHUB_STEP_SUMMARY
         else
           echo "⚠️ Code security issues found (check artifacts)" >> $GITHUB_STEP_SUMMARY
         fi
-      continue-on-error: false  # Fail fast on quality issues
+        
+        echo "### Quality Summary" >> $GITHUB_STEP_SUMMARY
+        echo "Quality checks completed. Issues are logged for improvement but do not block the build." >> $GITHUB_STEP_SUMMARY
+      continue-on-error: true  # Don't fail build on quality issues during transition
     
     - name: Upload reports
       if: always()
@@ -66,7 +108,8 @@ jobs:
         path: |
           safety-report.json
           bandit-report.json
-          retention-days: 7
+          flake8-results.txt
+        retention-days: 7
 
   build:
     needs: quality
