@@ -4,7 +4,11 @@ OpenAI and Azure OpenAI client management.
 import logging
 from typing import Any
 from os import environ
-from openai import AzureOpenAI, OpenAI
+try:
+    from openai import AzureOpenAI, OpenAI
+except ImportError:
+    AzureOpenAI = None
+    OpenAI = None
 
 from ..utils.env_config import read_env_config, set_env
 
