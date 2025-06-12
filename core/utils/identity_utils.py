@@ -1,4 +1,13 @@
-from azure.identity import DefaultAzureCredential, CredentialUnavailableError
+try:
+    from azure.identity import DefaultAzureCredential, CredentialUnavailableError
+    credential = DefaultAzureCredential()
+    AZURE_AVAILABLE = True
+except ImportError:
+    DefaultAzureCredential = None
+    CredentialUnavailableError = Exception
+    credential = None
+    AZURE_AVAILABLE = False
+
 import logging
 import time
 from datetime import datetime, timezone
@@ -7,7 +16,6 @@ from typing import Optional
 log = logging.getLogger(__name__)
 
 tokens = {}
-credential = DefaultAzureCredential()
 
 def get_db_token() -> Optional[str]:
     """Retrieves a token for database access using Azure Entra ID.
@@ -47,6 +55,10 @@ def _get_token(token_key, resource) -> Optional[str]:
     Returns:
         Optional[str]: The Azure AD token, or None if unavailable.
     """
+    if not AZURE_AVAILABLE or credential is None:
+        log.warning("Azure identity libraries not available, returning None for token")
+        return None
+        
     now = int(time.time())
     global tokens
     token = tokens.get(token_key)

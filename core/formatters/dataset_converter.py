@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import argparse
 from datasets import Dataset, load_dataset
 from typing import Dict, Literal, Any, get_args
-from logconf import log_setup
+from ..logging.setup import log_setup
 import logging
 
 """

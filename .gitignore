@@ -6,6 +6,22 @@ __pycache__/
 # C extensions
 *.so
 
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+
+# Runtime directories
+uploads/
+outputs/
+logs/
+*-checkpoints/
+
+# Temporary files
+*.log
+*.tmp
+test_*
+
 # Distribution / packaging
 .Python
 build/
@@ -167,3 +183,5 @@ cython_debug/
 # VS Code
 .vscode/
 
+.claude
+.claude/

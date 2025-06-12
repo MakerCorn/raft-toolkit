@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAFT Toolkit - Dataset Generator & Analysis Tools</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .tool-card {
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .tool-card:hover {
+            border-left-color: #3b82f6;
+            background-color: #f8fafc;
+        }
+        .status-indicator {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div x-data="raftApp()" class="min-h-screen">
+        <!-- Header -->
+        <header class="gradient-bg text-white shadow-lg">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-rocket text-3xl mr-4"></i>
+                        <div>
+                            <h1 class="text-3xl font-bold">RAFT Toolkit</h1>
+                            <p class="text-blue-100">Retrieval Augmentation Fine-Tuning Platform</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-sm text-blue-100">Active Jobs</div>
+                            <div class="text-xl font-bold" x-text="jobs.filter(j => j.status === 'processing').length"></div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-blue-100">Completed</div>
+                            <div class="text-xl font-bold" x-text="jobs.filter(j => j.status === 'completed').length"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-white shadow-md border-b">
+            <div class="container mx-auto px-4">
+                <div class="flex space-x-8">
+                    <button @click="activeTab = 'upload'" 
+                            :class="activeTab === 'upload' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'"
+                            class="px-4 py-4 font-medium transition-colors">
+                        <i class="fas fa-upload mr-2"></i>Dataset Generation
+                    </button>
+                    <button @click="activeTab = 'tools'" 
+                            :class="activeTab === 'tools' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'"
+                            class="px-4 py-4 font-medium transition-colors">
+                        <i class="fas fa-tools mr-2"></i>Analysis Tools
+                    </button>
+                    <button @click="activeTab = 'jobs'" 
+                            :class="activeTab === 'jobs' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600 hover:text-blue-600'"
+                            class="px-4 py-4 font-medium transition-colors">
+                        <i class="fas fa-tasks mr-2"></i>Jobs
+                        <span x-show="jobs.filter(j => j.status === 'processing').length > 0" 
+                              class="ml-1 bg-blue-600 text-white text-xs px-2 py-1 rounded-full status-indicator"
+                              x-text="jobs.filter(j => j.status === 'processing').length"></span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="container mx-auto px-4 py-8">
+            <!-- Dataset Generation Tab -->
+            <div x-show="activeTab === 'upload'" class="max-w-4xl mx-auto">
+                <div class="bg-white rounded-xl shadow-lg card-hover p-8">
+                    <!-- File Upload Section -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-6">
+                            <i class="fas fa-file-upload text-blue-600 mr-3"></i>
+                            Upload Document
+                        </h2>
+                        
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-400 transition-colors bg-gray-50">
+                            <input type="file" id="fileInput" @change="handleFileUpload" class="hidden" 
+                                   accept=".pdf,.txt,.json,.pptx">
+                            <label for="fileInput" class="cursor-pointer block">
+                                <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+                                <p class="text-xl text-gray-700 mb-2 font-medium">Drop files here or click to upload</p>
+                                <p class="text-gray-500">Supports PDF, TXT, JSON, PPTX files up to 50MB</p>
+                            </label>
+                        </div>
+
+                        <div x-show="uploadedFile" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-green-600 text-xl mr-3"></i>
+                                <div>
+                                    <p class="text-green-800 font-medium">File uploaded successfully</p>
+                                    <p class="text-green-600 text-sm" x-text="uploadedFile?.filename"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration Section -->
+                    <div x-show="uploadedFile" x-transition>
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-6">
+                            <i class="fas fa-cogs text-blue-600 mr-3"></i>
+                            Configuration
+                        </h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                            <!-- Core Settings -->
+                            <div class="space-y-4">
+                                <h3 class="font-medium text-gray-900 border-b pb-2">Core Settings</h3>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
+                                    <select x-model="config.doctype" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="pdf">📄 PDF Document</option>
+                                        <option value="txt">📝 Text File</option>
+                                        <option value="json">🗂️ JSON Data</option>
+                                        <option value="api">🔌 API Documentation</option>
+                                        <option value="pptx">📊 PowerPoint</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Questions per Chunk</label>
+                                    <input type="number" x-model="config.questions" min="1" max="20" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Chunk Size (tokens)</label>
+                                    <input type="number" x-model="config.chunk_size" min="100" max="2048" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+
+                            <!-- Processing Settings -->
+                            <div class="space-y-4">
+                                <h3 class="font-medium text-gray-900 border-b pb-2">Processing</h3>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Distractor Documents</label>
+                                    <input type="number" x-model="config.distractors" min="0" max="10" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Oracle Probability</label>
+                                    <input type="number" x-model="config.p" min="0" max="1" step="0.1" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Chunking Strategy</label>
+                                    <select x-model="config.chunking_strategy" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="semantic">🧠 Semantic</option>
+                                        <option value="fixed">📏 Fixed Size</option>
+                                        <option value="sentence">📝 Sentence Based</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Output Settings -->
+                            <div class="space-y-4">
+                                <h3 class="font-medium text-gray-900 border-b pb-2">Output</h3>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Output Format</label>
+                                    <select x-model="config.output_format" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="hf">🤗 HuggingFace</option>
+                                        <option value="completion">🔧 OpenAI Completion</option>
+                                        <option value="chat">💬 OpenAI Chat</option>
+                                        <option value="eval">📊 Evaluation</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Output Type</label>
+                                    <select x-model="config.output_type" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="jsonl">📋 JSONL</option>
+                                        <option value="parquet">🗃️ Parquet</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Worker Threads</label>
+                                    <input type="number" x-model="config.workers" min="1" max="8" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Configuration -->
+                        <div class="border-t pt-6">
+                            <button @click="showAdvanced = !showAdvanced" 
+                                    class="flex items-center text-blue-600 hover:text-blue-800 font-medium mb-4">
+                                <i :class="showAdvanced ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="mr-2"></i>
+                                Advanced Configuration
+                            </button>
+                            
+                            <div x-show="showAdvanced" x-transition class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Completion Model</label>
+                                    <input type="text" x-model="config.completion_model" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Embedding Model</label>
+                                    <input type="text" x-model="config.embedding_model" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+
+                                <div x-show="config.output_format === 'chat'" class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">System Prompt</label>
+                                    <textarea x-model="config.output_chat_system_prompt" rows="3"
+                                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-wrap gap-4 mt-8">
+                            <button @click="getPreview" :disabled="isLoading" 
+                                    class="bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-medium hover:bg-blue-200 transition-colors disabled:opacity-50">
+                                <i class="fas fa-eye mr-2"></i>
+                                Preview Processing
+                            </button>
+                            
+                            <button @click="startProcessing" :disabled="isLoading || !uploadedFile" 
+                                    class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
+                                <i class="fas fa-play mr-2"></i>
+                                Start Processing
+                            </button>
+                        </div>
+
+                        <!-- Preview Results -->
+                        <div x-show="preview" x-transition class="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                            <h3 class="text-lg font-semibold text-blue-900 mb-4">
+                                <i class="fas fa-chart-bar mr-2"></i>
+                                Processing Preview
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="text-center p-4 bg-white rounded-lg">
+                                    <div class="text-3xl font-bold text-blue-600" x-text="preview?.estimated_chunks || 0"></div>
+                                    <div class="text-sm text-blue-800 font-medium">Estimated Chunks</div>
+                                </div>
+                                <div class="text-center p-4 bg-white rounded-lg">
+                                    <div class="text-3xl font-bold text-green-600" x-text="preview?.estimated_qa_points || 0"></div>
+                                    <div class="text-sm text-green-800 font-medium">Estimated QA Points</div>
+                                </div>
+                                <div class="text-center p-4 bg-white rounded-lg">
+                                    <div class="text-3xl font-bold text-purple-600" x-text="preview?.files_to_process?.length || 0"></div>
+                                    <div class="text-sm text-purple-800 font-medium">Files to Process</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Tools Tab -->
+            <div x-show="activeTab === 'tools'" class="max-w-7xl mx-auto">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Analysis Tools</h2>
+                    <p class="text-gray-600">Comprehensive evaluation and analysis tools for your RAFT-generated datasets</p>
+                </div>
+
+                <!-- Tools Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                    <!-- Dataset Evaluation Tool -->
+                    <div class="bg-white rounded-xl shadow-lg card-hover tool-card p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-blue-100 p-3 rounded-lg mr-4">
+                                <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Dataset Evaluation</h3>
+                        </div>
+                        <p class="text-gray-600 mb-6">Evaluate model performance on generated datasets with comprehensive metrics and analytics.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Question File (JSONL)</label>
+                                <input type="file" @change="handleEvalFileUpload($event, 'questions')" 
+                                       accept=".jsonl" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Model for Evaluation</label>
+                                <select x-model="evalConfig.model" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="gpt-4">GPT-4</option>
+                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    <option value="gpt-4-0125-preview">GPT-4 Preview</option>
+                                </select>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Workers</label>
+                                    <input type="number" x-model="evalConfig.workers" min="1" max="8" 
+                                           class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Input Key</label>
+                                    <input type="text" x-model="evalConfig.inputKey" 
+                                           class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button @click="runEvaluation" :disabled="!evalFiles.questions || toolsLoading.eval" 
+                                class="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
+                            <i :class="toolsLoading.eval ? 'fas fa-spinner fa-spin' : 'fas fa-play'" class="mr-2"></i>
+                            <span x-text="toolsLoading.eval ? 'Processing...' : 'Run Evaluation'"></span>
+                        </button>
+                    </div>
+
+                    <!-- Answer Generation Tool -->
+                    <div class="bg-white rounded-xl shadow-lg card-hover tool-card p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-green-100 p-3 rounded-lg mr-4">
+                                <i class="fas fa-robot text-green-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Answer Generation</h3>
+                        </div>
+                        <p class="text-gray-600 mb-6">Generate high-quality answers for evaluation datasets using various language models.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Input Questions (JSONL)</label>
+                                <input type="file" @change="handleAnswerFileUpload($event, 'input')" 
+                                       accept=".jsonl" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Generation Model</label>
+                                <select x-model="answerConfig.model" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="gpt-4">GPT-4</option>
+                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Worker Threads</label>
+                                <input type="number" x-model="answerConfig.workers" min="1" max="10" 
+                                       class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Output Filename</label>
+                                <input type="text" x-model="answerConfig.outputName" placeholder="answers.jsonl"
+                                       class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                        </div>
+                        
+                        <button @click="generateAnswers" :disabled="!answerFiles.input || toolsLoading.answer" 
+                                class="w-full mt-6 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50">
+                            <i :class="toolsLoading.answer ? 'fas fa-spinner fa-spin' : 'fas fa-magic'" class="mr-2"></i>
+                            <span x-text="toolsLoading.answer ? 'Generating...' : 'Generate Answers'"></span>
+                        </button>
+                    </div>
+
+                    <!-- PromptFlow Evaluation -->
+                    <div class="bg-white rounded-xl shadow-lg card-hover tool-card p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-purple-100 p-3 rounded-lg mr-4">
+                                <i class="fas fa-microscope text-purple-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">PromptFlow Analysis</h3>
+                        </div>
+                        <p class="text-gray-600 mb-6">Advanced multi-dimensional evaluation using Microsoft PromptFlow framework.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Dataset with Answers (JSONL)</label>
+                                <input type="file" @change="handlePromptFlowFileUpload($event, 'dataset')" 
+                                       accept=".jsonl" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Evaluation Type</label>
+                                <select x-model="promptFlowConfig.type" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="chat">Chat Format</option>
+                                    <option value="completion">Completion Format</option>
+                                    <option value="local">Local (No API)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Evaluation Mode</label>
+                                <select x-model="promptFlowConfig.mode" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="local">Local Processing</option>
+                                    <option value="remote">Remote Processing</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Evaluation Metrics -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Metrics</label>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="promptFlowConfig.metrics.relevance" class="mr-2">
+                                        <span>Relevance</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="promptFlowConfig.metrics.groundedness" class="mr-2">
+                                        <span>Groundedness</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="promptFlowConfig.metrics.fluency" class="mr-2">
+                                        <span>Fluency</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="promptFlowConfig.metrics.coherence" class="mr-2">
+                                        <span>Coherence</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button @click="runPromptFlowEvaluation" :disabled="!promptFlowFiles.dataset || toolsLoading.promptflow" 
+                                class="w-full mt-6 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50">
+                            <i :class="toolsLoading.promptflow ? 'fas fa-spinner fa-spin' : 'fas fa-search'" class="mr-2"></i>
+                            <span x-text="toolsLoading.promptflow ? 'Analyzing...' : 'Run Analysis'"></span>
+                        </button>
+                    </div>
+
+                    <!-- Dataset Analysis Tool -->
+                    <div class="bg-white rounded-xl shadow-lg card-hover tool-card p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-yellow-100 p-3 rounded-lg mr-4">
+                                <i class="fas fa-chart-bar text-yellow-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Dataset Analysis</h3>
+                        </div>
+                        <p class="text-gray-600 mb-6">Analyze dataset statistics, quality metrics, and generate comprehensive reports.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Dataset File (JSONL)</label>
+                                <input type="file" @change="handleAnalysisFileUpload($event, 'dataset')" 
+                                       accept=".jsonl" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Analysis Type</label>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="analysisConfig.includeStats" class="mr-2">
+                                        <span>Basic Statistics</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="analysisConfig.includeQuality" class="mr-2">
+                                        <span>Quality Metrics</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="analysisConfig.includeDistribution" class="mr-2">
+                                        <span>Length Distribution</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="analysisConfig.includeSamples" class="mr-2">
+                                        <span>Sample Examples</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Report Format</label>
+                                <select x-model="analysisConfig.format" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="json">JSON Report</option>
+                                    <option value="html">HTML Report</option>
+                                    <option value="csv">CSV Export</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button @click="runDatasetAnalysis" :disabled="!analysisFiles.dataset || toolsLoading.analysis" 
+                                class="w-full mt-6 bg-yellow-600 text-white py-3 rounded-lg font-medium hover:bg-yellow-700 transition-colors disabled:opacity-50">
+                            <i :class="toolsLoading.analysis ? 'fas fa-spinner fa-spin' : 'fas fa-analytics'" class="mr-2"></i>
+                            <span x-text="toolsLoading.analysis ? 'Analyzing...' : 'Analyze Dataset'"></span>
+                        </button>
+                    </div>
+
+                    <!-- Model Comparison Tool -->
+                    <div class="bg-white rounded-xl shadow-lg card-hover tool-card p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-red-100 p-3 rounded-lg mr-4">
+                                <i class="fas fa-balance-scale text-red-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Model Comparison</h3>
+                        </div>
+                        <p class="text-gray-600 mb-6">Compare performance across different models with side-by-side analysis and metrics.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Model A Results (JSONL)</label>
+                                <input type="file" @change="handleComparisonFileUpload($event, 'modelA')" 
+                                       accept=".jsonl" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Model B Results (JSONL)</label>
+                                <input type="file" @change="handleComparisonFileUpload($event, 'modelB')" 
+                                       accept=".jsonl" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Model A Name</label>
+                                    <input type="text" x-model="comparisonConfig.modelAName" placeholder="GPT-4"
+                                           class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Model B Name</label>
+                                    <input type="text" x-model="comparisonConfig.modelBName" placeholder="GPT-3.5"
+                                           class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Comparison Metrics</label>
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="comparisonConfig.metrics.length" class="mr-2">
+                                        <span>Response Length</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="comparisonConfig.metrics.speed" class="mr-2">
+                                        <span>Response Speed</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="comparisonConfig.metrics.tokens" class="mr-2">
+                                        <span>Token Usage</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button @click="runModelComparison" :disabled="!comparisonFiles.modelA || !comparisonFiles.modelB || toolsLoading.comparison" 
+                                class="w-full mt-6 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50">
+                            <i :class="toolsLoading.comparison ? 'fas fa-spinner fa-spin' : 'fas fa-chart-line'" class="mr-2"></i>
+                            <span x-text="toolsLoading.comparison ? 'Comparing...' : 'Compare Models'"></span>
+                        </button>
+                    </div>
+
+                    <!-- Batch Processing Tool -->
+                    <div class="bg-white rounded-xl shadow-lg card-hover tool-card p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="bg-indigo-100 p-3 rounded-lg mr-4">
+                                <i class="fas fa-layer-group text-indigo-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Batch Processing</h3>
+                        </div>
+                        <p class="text-gray-600 mb-6">Process multiple datasets with automated workflows and scheduled operations.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Upload Multiple Files</label>
+                                <input type="file" @change="handleBatchFileUpload($event)" multiple
+                                       accept=".jsonl" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                            
+                            <div x-show="batchFiles.length > 0">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Files Selected (<span x-text="batchFiles.length"></span>)
+                                </label>
+                                <div class="max-h-20 overflow-y-auto text-xs text-gray-600">
+                                    <template x-for="file in batchFiles" :key="file.name">
+                                        <div x-text="file.name" class="py-1"></div>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Operation</label>
+                                <select x-model="batchConfig.operation" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="evaluate">Evaluate All</option>
+                                    <option value="analyze">Analyze All</option>
+                                    <option value="generate">Generate Answers</option>
+                                    <option value="convert">Convert Format</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Parallel Jobs</label>
+                                <input type="number" x-model="batchConfig.parallelJobs" min="1" max="5" 
+                                       class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                            </div>
+                        </div>
+                        
+                        <button @click="runBatchProcessing" :disabled="batchFiles.length === 0 || toolsLoading.batch" 
+                                class="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                            <i :class="toolsLoading.batch ? 'fas fa-spinner fa-spin' : 'fas fa-tasks'" class="mr-2"></i>
+                            <span x-text="toolsLoading.batch ? 'Processing...' : 'Start Batch Process'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tools Results Section -->
+                <div x-show="toolResults && Object.keys(toolResults).length > 0" class="mt-12">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6">Results</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <template x-for="(result, toolName) in toolResults" :key="toolName">
+                            <div class="bg-white rounded-xl shadow-lg p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-lg font-semibold text-gray-900 capitalize" x-text="toolName + ' Results'"></h4>
+                                    <button @click="downloadToolResult(toolName, result)" 
+                                            class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                                        <i class="fas fa-download mr-1"></i>Download
+                                    </button>
+                                </div>
+                                
+                                <div class="space-y-2 text-sm">
+                                    <template x-for="(value, key) in result.summary || {}" :key="key">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 capitalize" x-text="key.replace('_', ' ')"></span>
+                                            <span class="font-medium" x-text="value"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                                
+                                <div x-show="result.status" class="mt-4 text-xs text-gray-500" x-text="'Status: ' + result.status"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jobs Tab -->
+            <div x-show="activeTab === 'jobs'" class="max-w-6xl mx-auto">
+                <div class="bg-white rounded-xl shadow-lg">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-2xl font-semibold text-gray-900">
+                                    <i class="fas fa-tasks text-blue-600 mr-2"></i>
+                                    Processing Jobs
+                                </h2>
+                                <p class="text-gray-600 mt-1">Monitor dataset generation and analysis tasks</p>
+                            </div>
+                            <button @click="refreshJobs" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        <div x-show="jobs.length === 0" class="text-center py-16 text-gray-500">
+                            <i class="fas fa-inbox text-6xl mb-4 text-gray-300"></i>
+                            <p class="text-xl font-medium">No jobs yet</p>
+                            <p class="text-gray-400">Upload a document or run analysis tools to get started</p>
+                        </div>
+
+                        <div x-show="jobs.length > 0" class="space-y-6">
+                            <template x-for="job in jobs" :key="job.job_id">
+                                <div class="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex-1">
+                                            <div class="flex items-center mb-2">
+                                                <span class="text-lg font-semibold text-gray-900" x-text="job.job_id.substring(0, 8)"></span>
+                                                <span :class="getStatusColor(job.status)" 
+                                                      class="ml-3 px-3 py-1 rounded-full text-sm font-medium">
+                                                    <i :class="getStatusIcon(job.status)" class="mr-1"></i>
+                                                    <span x-text="job.status"></span>
+                                                </span>
+                                                <span x-show="job.type" class="ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                                                    <span x-text="job.type"></span>
+                                                </span>
+                                            </div>
+                                            <p class="text-gray-600" x-text="job.message || 'Processing dataset...'"></p>
+                                            <p class="text-xs text-gray-400 mt-1" x-text="'Started: ' + (job.created_at || 'Unknown')"></p>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button x-show="job.status === 'completed'" @click="downloadResult(job.job_id)"
+                                                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                                <i class="fas fa-download mr-2"></i>
+                                                Download
+                                            </button>
+                                            <button @click="deleteJob(job.job_id)"
+                                                    class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                                                <i class="fas fa-trash mr-2"></i>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Progress Bar -->
+                                    <div x-show="job.status === 'processing'" class="mb-4">
+                                        <div class="bg-gray-200 rounded-full h-3">
+                                            <div class="bg-blue-600 h-3 rounded-full transition-all duration-500" 
+                                                 :style="`width: ${(job.progress || 0) * 100}%`"></div>
+                                        </div>
+                                        <div class="text-sm text-gray-600 mt-1" x-text="`${Math.round((job.progress || 0) * 100)}% complete`"></div>
+                                    </div>
+
+                                    <!-- Stats -->
+                                    <div x-show="job.stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div class="bg-gray-50 p-3 rounded-lg">
+                                            <div class="font-medium text-gray-700">QA Points</div>
+                                            <div class="text-lg font-semibold text-blue-600" x-text="job.stats?.total_qa_points || 0"></div>
+                                        </div>
+                                        <div class="bg-gray-50 p-3 rounded-lg">
+                                            <div class="font-medium text-gray-700">Processing Time</div>
+                                            <div class="text-lg font-semibold text-green-600" x-text="`${(job.stats?.total_processing_time || 0).toFixed(1)}s`"></div>
+                                        </div>
+                                        <div class="bg-gray-50 p-3 rounded-lg">
+                                            <div class="font-medium text-gray-700">Tokens Used</div>
+                                            <div class="text-lg font-semibold text-purple-600" x-text="(job.stats?.token_usage?.total_tokens || 0).toLocaleString()"></div>
+                                        </div>
+                                        <div class="bg-gray-50 p-3 rounded-lg">
+                                            <div class="font-medium text-gray-700">Tokens/sec</div>
+                                            <div class="text-lg font-semibold text-orange-600" x-text="(job.stats?.token_usage?.tokens_per_second || 0).toFixed(1)"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div x-show="isLoading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl p-8 text-center max-w-sm">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                <p class="text-lg font-medium mb-2">Processing...</p>
+                <p class="text-gray-600 text-sm">This may take a few minutes</p>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="fixed top-4 right-4 z-40 space-y-4">
+            <template x-for="toast in toasts" :key="toast.id">
+                <div :class="toast.type === 'error' ? 'bg-red-500' : toast.type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'" 
+                     class="text-white px-6 py-4 rounded-xl shadow-lg max-w-sm transform transition-all duration-300"
+                     x-show="toast.visible" x-transition>
+                    <div class="flex items-center">
+                        <i :class="toast.type === 'error' ? 'fas fa-exclamation-circle' : toast.type === 'warning' ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle'" class="mr-3 text-xl"></i>
+                        <div>
+                            <div class="font-medium" x-text="toast.title || (toast.type === 'error' ? 'Error' : toast.type === 'warning' ? 'Warning' : 'Success')"></div>
+                            <div class="text-sm opacity-90" x-text="toast.message"></div>
+                        </div>
+                        <button @click="removeToast(toast.id)" class="ml-4 text-white hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

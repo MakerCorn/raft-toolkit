@@ -1,0 +1,422 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["Test"]
+    types:
+      - completed
+    branches: [ main ]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Only run release if test workflow succeeded
+  check-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      tests-passed: ${{ steps.check.outputs.success }}
+      should-release: ${{ steps.check.outputs.should-release }}
+    steps:
+    - name: Check test workflow status
+      id: check
+      run: |
+        # Check if triggered by successful test workflow or manual dispatch or tag push
+        if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]] || \
+           [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
+           [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo "should-release=true" >> $GITHUB_OUTPUT
+        else
+          echo "success=false" >> $GITHUB_OUTPUT
+          echo "should-release=false" >> $GITHUB_OUTPUT
+          echo "Tests failed or were cancelled. Skipping release."
+          exit 1
+        fi
+
+  create-release:
+    needs: check-tests
+    if: needs.check-tests.outputs.should-release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    outputs:
+      release-tag: ${{ steps.tag.outputs.tag }}
+      release-version: ${{ steps.version.outputs.version }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate version and tag
+      id: tag
+      run: |
+        if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          # Use existing tag
+          TAG=${{ github.ref_name }}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+        else
+          # Generate new tag based on commit
+          if git describe --tags --exact-match HEAD 2>/dev/null; then
+            TAG=$(git describe --tags --exact-match HEAD)
+          else
+            # Get latest tag and increment patch version
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            MAJOR=$(echo $LATEST_TAG | cut -d. -f1 | sed 's/v//')
+            MINOR=$(echo $LATEST_TAG | cut -d. -f2)
+            PATCH=$(echo $LATEST_TAG | cut -d. -f3)
+            PATCH=$((PATCH + 1))
+            TAG="v$MAJOR.$MINOR.$PATCH"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Create and push tag
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag $TAG
+          git push origin $TAG
+        fi
+
+    - name: Extract version
+      id: version
+      run: |
+        TAG=${{ steps.tag.outputs.tag }}
+        VERSION=${TAG#v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Update changelog for release
+      id: update_changelog
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        TAG=${{ steps.tag.outputs.tag }}
+        
+        if [[ -f CHANGELOG.md ]]; then
+          echo "Updating CHANGELOG.md for release $TAG"
+          
+          # Check if there's an [Unreleased] section to process
+          if grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo "Found [Unreleased] section, converting to version $VERSION"
+            
+            # Replace [Unreleased] with the version and add date
+            sed -i "s/## \[Unreleased\]/## [$VERSION] - $(date +%Y-%m-%d)/" CHANGELOG.md
+            
+            # Add a new [Unreleased] section at the top
+            sed -i "/^## \[$VERSION\]/i\\## [Unreleased]\\n\\n### 🚀 Added\\n\\n### 🔧 Enhanced\\n\\n### 🐛 Fixed\\n\\n### 📦 Dependencies\\n\\n---\\n" CHANGELOG.md
+          fi
+          
+          # Commit the changelog update
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add CHANGELOG.md
+          git commit -m "chore: update changelog for release $TAG" || echo "No changelog changes to commit"
+          git push origin main || echo "No changes to push"
+        else
+          echo "Warning: No CHANGELOG.md found"
+        fi
+
+    - name: Generate release notes
+      id: changelog
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        
+        if [[ -f CHANGELOG.md ]]; then
+          echo "Extracting changelog for version $VERSION"
+          
+          # Extract changelog for this specific version
+          # Look for the version section and extract until the next version section
+          awk "/^## \[$VERSION\]/{flag=1; next} /^## \[[0-9]/{flag=0} flag && !/^---$/" CHANGELOG.md > current_changelog.md
+          
+          if [[ -s current_changelog.md ]]; then
+            echo "✅ Found changelog for version $VERSION"
+            echo "Release notes preview:"
+            head -20 current_changelog.md
+          else
+            echo "⚠️ No specific changelog found for version $VERSION, using [Unreleased] section"
+            
+            # Try to extract [Unreleased] section as fallback
+            awk '/^## \[Unreleased\]/{flag=1; next} /^## \[/{flag=0} flag && !/^---$/' CHANGELOG.md > current_changelog.md
+            
+            if [[ ! -s current_changelog.md ]]; then
+              echo "📝 No changelog sections found, generating from recent commits"
+              git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "HEAD~10")..HEAD > current_changelog.md
+            fi
+          fi
+        else
+          echo "📝 No CHANGELOG.md found, generating release notes from commits"
+          git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "HEAD~10")..HEAD > current_changelog.md
+        fi
+        
+        # Ensure we have some content
+        if [[ ! -s current_changelog.md ]]; then
+          echo "## What's Changed" > current_changelog.md
+          echo "" >> current_changelog.md
+          echo "This release includes various improvements and bug fixes." >> current_changelog.md
+          echo "" >> current_changelog.md
+          echo "See the full changelog at: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md" >> current_changelog.md
+        fi
+        
+        # Add footer with additional information
+        echo "" >> current_changelog.md
+        echo "---" >> current_changelog.md
+        echo "" >> current_changelog.md
+        echo "## 📦 Installation" >> current_changelog.md
+        echo "" >> current_changelog.md
+        echo "### Docker" >> current_changelog.md
+        echo "\`\`\`bash" >> current_changelog.md
+        echo "docker pull ghcr.io/${{ github.repository }}:$VERSION-production" >> current_changelog.md
+        echo "\`\`\`" >> current_changelog.md
+        echo "" >> current_changelog.md
+        echo "### Python Package" >> current_changelog.md
+        echo "\`\`\`bash" >> current_changelog.md
+        echo "pip install raft-toolkit==$VERSION" >> current_changelog.md
+        echo "\`\`\`" >> current_changelog.md
+        echo "" >> current_changelog.md
+        echo "## 🔗 Links" >> current_changelog.md
+        echo "" >> current_changelog.md
+        echo "- [Documentation](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }})" >> current_changelog.md
+        echo "- [Docker Images](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})" >> current_changelog.md
+        echo "- [Full Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)" >> current_changelog.md
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        release_name: "🚀 RAFT Toolkit ${{ steps.tag.outputs.tag }}"
+        body_path: current_changelog.md
+        draft: false
+        prerelease: ${{ contains(steps.tag.outputs.tag, '-') || contains(steps.tag.outputs.tag, 'alpha') || contains(steps.tag.outputs.tag, 'beta') || contains(steps.tag.outputs.tag, 'rc') }}
+
+  build-release-images:
+    needs: [check-tests, create-release]
+    if: needs.check-tests.outputs.should-release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        target: [production, cli]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for release
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        flavor: |
+          latest=auto
+          suffix=-${{ matrix.target }}
+        tags: |
+          type=ref,event=tag
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push release image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: ${{ matrix.target }}
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          VERSION=${{ needs.create-release.outputs.release-version }}
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          VCS_REF=${{ github.sha }}
+
+    - name: Generate SBOM
+      if: matrix.target == 'production'
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ steps.meta.outputs.tags }}
+        format: spdx-json
+        output-file: sbom.spdx.json
+
+    - name: Upload SBOM to release
+      if: matrix.target == 'production'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: sbom.spdx.json
+        asset_name: sbom.spdx.json
+        asset_content_type: application/json
+
+  publish-packages:
+    needs: [check-tests, create-release]
+    if: needs.check-tests.outputs.should-release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Update version in setup files
+      run: |
+        VERSION=${{ needs.create-release.outputs.release-version }}
+        # Update version in setup.py or pyproject.toml if they exist
+        if [[ -f setup.py ]]; then
+          sed -i "s/version=['\"][^'\"]*['\"]/version='$VERSION'/g" setup.py
+        fi
+        if [[ -f pyproject.toml ]]; then
+          sed -i "s/version = ['\"][^'\"]*['\"]/version = \"$VERSION\"/g" pyproject.toml
+        fi
+
+    - name: Build Python package
+      run: python -m build
+
+    - name: Publish to PyPI
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Upload packages to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/
+        asset_name: python-packages
+        asset_content_type: application/zip
+
+  update-documentation:
+    needs: [check-tests, create-release, build-release-images]
+    if: needs.check-tests.outputs.should-release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install documentation dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mkdocs mkdocs-material mkdocs-mermaid2-plugin
+
+    - name: Build documentation
+      run: |
+        # Create mkdocs.yml if it doesn't exist
+        if [[ ! -f mkdocs.yml ]]; then
+          cat > mkdocs.yml << EOF
+        site_name: RAFT Toolkit Documentation
+        site_description: Retrieval Augmentation Fine-Tuning Toolkit
+        site_url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        
+        theme:
+          name: material
+          features:
+            - navigation.tabs
+            - navigation.sections
+            - toc.integrate
+            - navigation.top
+            - search.suggest
+            - search.highlight
+            - content.tabs.link
+            - content.code.annotation
+            - content.code.copy
+        
+        plugins:
+          - search
+          - mermaid2
+        
+        nav:
+          - Home: README.md
+          - Web Interface: docs/WEB_INTERFACE.md
+          - Configuration: docs/CONFIGURATION.md
+          - Deployment: docs/DEPLOYMENT.md
+          - Tools: tools/README.md
+          - Testing: TESTING.md
+          - Architecture: ARCHITECTURE.md
+        EOF
+        fi
+        
+        mkdocs build
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: site/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+
+  notify-completion:
+    needs: [create-release, build-release-images, publish-packages, update-documentation]
+    if: always() && needs.check-tests.outputs.should-release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Generate release summary
+      run: |
+        echo "## 🚀 Release ${{ needs.create-release.outputs.release-tag }} Complete!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Artifacts Created:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Docker Images**: Available in GitHub Container Registry" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.release-version }}-production\`" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.release-version }}-cli\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Python Package**: ${{ needs.publish-packages.result == 'success' && 'Published to PyPI ✅' || 'Build only 📦' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Documentation**: ${{ needs.update-documentation.result == 'success' && 'Updated on GitHub Pages ✅' || 'Update failed ❌' }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
+        echo "- [Release Notes](https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-release.outputs.release-tag }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Docker Images](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Documentation](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }})" >> $GITHUB_STEP_SUMMARY
+
+    - name: Send notification (if configured)
+      if: vars.SLACK_WEBHOOK_URL != ''
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚀 RAFT Toolkit ${{ needs.create-release.outputs.release-tag }} has been released!\"}" \
+          ${{ vars.SLACK_WEBHOOK_URL }}

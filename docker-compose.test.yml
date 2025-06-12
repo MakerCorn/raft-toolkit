@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  raft-test:
+    build:
+      context: .
+      target: testing
+    environment:
+      - TESTING=true
+      - LOG_LEVEL=DEBUG
+      - OPENAI_API_KEY=test-key
+      - USE_MOCK_API=true
+      - REDIS_URL=redis://redis-test:6379
+    volumes:
+      - raft_test_results:/app/test-results
+      - raft_test_coverage:/app/coverage-reports
+    depends_on:
+      redis-test:
+        condition: service_healthy
+    # Override to run specific test suites
+    command: ["python", "run_tests.py", "--coverage", "--output-dir", "/app/test-results"]
+
+  redis-test:
+    image: redis:7-alpine
+    command: redis-server --appendonly no --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Run unit tests only
+  raft-test-unit:
+    extends: raft-test
+    command: ["python", "run_tests.py", "--unit", "--output-dir", "/app/test-results"]
+
+  # Run integration tests only
+  raft-test-integration:
+    extends: raft-test
+    command: ["python", "run_tests.py", "--integration", "--output-dir", "/app/test-results"]
+
+  # Run API tests only
+  raft-test-api:
+    extends: raft-test
+    command: ["python", "run_tests.py", "--api", "--output-dir", "/app/test-results"]
+
+  # Run CLI tests only
+  raft-test-cli:
+    extends: raft-test
+    command: ["python", "run_tests.py", "--cli", "--output-dir", "/app/test-results"]
+
+volumes:
+  raft_test_results:
+    driver: local
+  raft_test_coverage:
+    driver: local

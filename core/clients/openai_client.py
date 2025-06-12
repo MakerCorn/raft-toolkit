@@ -1,15 +1,14 @@
-from abc import ABC
-from typing import Any
-from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
-from openai import AzureOpenAI, OpenAI
+"""
+OpenAI and Azure OpenAI client management.
+"""
 import logging
-from env_config import read_env_config, set_env
+from typing import Any
 from os import environ
-import time
-from threading import Lock
-from clients.stats import UsageStats, StatsCompleter, ChatCompleter, CompletionsCompleter
+from openai import AzureOpenAI, OpenAI
 
-logger = logging.getLogger("client_utils")
+from ..utils.env_config import read_env_config, set_env
+
+logger = logging.getLogger(__name__)
 
 def is_azure() -> bool:
     """Check if the environment is configured for Azure OpenAI.
@@ -41,3 +40,30 @@ def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> OpenAI
             return AzureOpenAI(**kwargs)
         else:
             return OpenAI(**kwargs)
+
+def build_langchain_embeddings(**kwargs):
+    """Build LangChain embeddings for semantic chunking.
+    
+    Args:
+        **kwargs: Additional arguments for embeddings initialization.
+        
+    Returns:
+        Embeddings instance for LangChain.
+    """
+    try:
+        from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
+        
+        if is_azure():
+            return AzureOpenAIEmbeddings(**kwargs)
+        else:
+            return OpenAIEmbeddings(**kwargs)
+    except ImportError:
+        # Mock implementation for demo purposes
+        class MockEmbeddings:
+            def embed_documents(self, texts):
+                return [[0.1, 0.2, 0.3] for _ in texts]
+            
+            def embed_query(self, text):
+                return [0.1, 0.2, 0.3]
+        
+        return MockEmbeddings()

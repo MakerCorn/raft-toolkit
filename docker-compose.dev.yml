@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  raft-web:
+    build:
+      context: .
+      target: development
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugpy port
+    environment:
+      - WEB_HOST=0.0.0.0
+      - WEB_PORT=8000
+      - WEB_DEBUG=true
+      - WEB_RELOAD=true
+      - WEB_WORKERS=1
+      - LOG_LEVEL=DEBUG
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env
+    volumes:
+      # Mount source code for development
+      - .:/app
+      - /app/__pycache__  # Exclude pycache
+      - raft_dev_data:/app/data
+      - raft_dev_outputs:/app/outputs
+      - raft_dev_uploads:/app/uploads
+      - raft_dev_logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Override command to not wait for debugger by default
+    command: ["python", "run_web.py", "--host", "0.0.0.0", "--debug", "--reload"]
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  raft_dev_data:
+    driver: local
+  raft_dev_outputs:
+    driver: local
+  raft_dev_uploads:
+    driver: local
+  raft_dev_logs:
+    driver: local
+  redis_dev_data:
+    driver: local

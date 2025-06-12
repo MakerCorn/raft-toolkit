@@ -1,0 +1,323 @@
+name: Test
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types:
+      - completed
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Only run tests if build workflow succeeded
+  check-build:
+    runs-on: ubuntu-latest
+    outputs:
+      build-success: ${{ steps.check.outputs.success }}
+    steps:
+    - name: Check build workflow status
+      id: check
+      run: |
+        if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "success=true" >> $GITHUB_OUTPUT
+        else
+          echo "success=false" >> $GITHUB_OUTPUT
+          echo "Build workflow failed or was cancelled. Skipping tests."
+          exit 1
+        fi
+
+  unit-tests:
+    needs: check-build
+    if: needs.check-build.outputs.build-success == 'true'
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+    
+    - name: Run unit tests
+      env:
+        TESTING: true
+        OPENAI_API_KEY: test-key
+        USE_MOCK_API: true
+        REDIS_URL: redis://localhost:6379
+      run: |
+        python run_tests.py --unit --coverage --output-dir test-results
+    
+    - name: Upload unit test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: unit-test-results-py${{ matrix.python-version }}
+        path: test-results/
+    
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        file: test-results/coverage.xml
+        flags: unit
+        name: unit-tests
+
+  integration-tests:
+    needs: check-build
+    if: needs.check-build.outputs.build-success == 'true'
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+    
+    - name: Run integration tests
+      env:
+        TESTING: true
+        OPENAI_API_KEY: test-key
+        USE_MOCK_API: true
+        REDIS_URL: redis://localhost:6379
+      run: |
+        python run_tests.py --integration --coverage --output-dir test-results
+    
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: integration-test-results
+        path: test-results/
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: test-results/coverage.xml
+        flags: integration
+        name: integration-tests
+
+  api-tests:
+    needs: check-build
+    if: needs.check-build.outputs.build-success == 'true'
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-web.txt
+        pip install -r requirements-test.txt
+    
+    - name: Run API tests
+      env:
+        TESTING: true
+        OPENAI_API_KEY: test-key
+        USE_MOCK_API: true
+        REDIS_URL: redis://localhost:6379
+        WEB_HOST: 127.0.0.1
+        WEB_PORT: 8000
+      run: |
+        python run_tests.py --api --coverage --output-dir test-results
+    
+    - name: Upload API test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: api-test-results
+        path: test-results/
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: test-results/coverage.xml
+        flags: api
+        name: api-tests
+
+  cli-tests:
+    needs: check-build
+    if: needs.check-build.outputs.build-success == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+    
+    - name: Run CLI tests
+      env:
+        TESTING: true
+        OPENAI_API_KEY: test-key
+        USE_MOCK_API: true
+      run: |
+        python run_tests.py --cli --coverage --output-dir test-results
+    
+    - name: Upload CLI test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: cli-test-results
+        path: test-results/
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: test-results/coverage.xml
+        flags: cli
+        name: cli-tests
+
+  docker-tests:
+    needs: check-build
+    if: needs.check-build.outputs.build-success == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build test image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        target: testing
+        load: true
+        tags: raft-toolkit:test
+        cache-from: type=gha
+    
+    - name: Run tests in Docker
+      run: |
+        docker-compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from raft-test
+    
+    - name: Copy test results from container
+      if: always()
+      run: |
+        docker create --name test-container raft-toolkit:test
+        docker cp test-container:/app/test-results ./docker-test-results
+        docker rm test-container
+    
+    - name: Upload Docker test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: docker-test-results
+        path: docker-test-results/
+
+  test-summary:
+    needs: [unit-tests, integration-tests, api-tests, cli-tests, docker-tests]
+    if: always() && needs.check-build.outputs.build-success == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Generate test summary
+      id: summary
+      run: |
+        echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| API Tests | ${{ needs.api-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| CLI Tests | ${{ needs.cli-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Tests | ${{ needs.docker-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        
+        # Set overall status
+        if [[ "${{ needs.unit-tests.result }}" == "success" && 
+              "${{ needs.integration-tests.result }}" == "success" && 
+              "${{ needs.api-tests.result }}" == "success" && 
+              "${{ needs.cli-tests.result }}" == "success" && 
+              "${{ needs.docker-tests.result }}" == "success" ]]; then
+          echo "tests-passed=true" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎉 **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "tests-passed=false" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "💥 **Some tests failed. Please check the individual test results.**" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+    
+    outputs:
+      tests-passed: ${{ steps.summary.outputs.tests-passed }}
