@@ -118,6 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### New Development Dependencies
 - **Testing**: pytest-cov, pytest-asyncio, httpx for API testing
 - **Security**: bandit, safety, semgrep for security scanning
+- **Code Quality**: flake8, black, isort, mypy for linting and formatting
 - **Documentation**: mkdocs, mkdocs-material for documentation generation
 - **CI/CD**: Actions for automated workflows
 
@@ -169,6 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Trivy scanner**: Fixed multiple image tags issue by using single image reference for vulnerability scanning
 - **Build resilience**: Added error handling and dependency verification in Docker builds
 - **Workflow robustness**: Added fallback scanning and continue-on-error for security transitions
+- **Linting tools**: Added missing flake8, black, isort, mypy to requirements-test.txt
+- **Code quality config**: Added .flake8 and pyproject.toml for consistent formatting and linting
 
 #### Documentation Issues
 - **Mermaid diagram**: Improved readability with black text on light backgrounds
