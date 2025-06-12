@@ -14,6 +14,6 @@ PyCryptodome
 azure-identity
 torch
 python-pptx
-promptflow-core
-azure-ai-evaluation
-jsonlines
+promptflow-core>=1.18.0,<2.0.0
+azure-ai-evaluation>=1.8.0,<2.0.0
+jsonlines>=4.0.0,<5.0.0

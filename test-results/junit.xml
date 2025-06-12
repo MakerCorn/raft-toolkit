@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="2" failures="0" skipped="1" tests="3" time="10.247" timestamp="2025-06-12T09:31:39.180428" hostname="macpro.local"><testcase classname="" name="tests.api.test_web_app" time="0.000"><error message="collection failure">ImportError while importing test module '/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/api/test_web_app.py'.
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="2" failures="0" skipped="1" tests="3" time="1.565" timestamp="2025-06-12T10:22:38.116525" hostname="macpro.local"><testcase classname="" name="tests.api.test_web_app" time="0.000"><error message="collection failure">ImportError while importing test module '/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/api/test_web_app.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module

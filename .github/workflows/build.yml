@@ -12,20 +12,9 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
+  # Fast quality checks - run first to fail fast
+  quality:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    
-    strategy:
-      matrix:
-        target: [production, cli, development]
-    
-    outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
-      image-tag: ${{ steps.meta.outputs.tags }}
-    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -36,36 +25,68 @@ jobs:
         python-version: '3.11'
         cache: 'pip'
     
-    - name: Install linting dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements-test.txt
+        pip install safety bandit
     
-    - name: Run code quality checks
+    - name: Run quality checks
       run: |
-        echo "## 🔍 Code Quality Results" >> $GITHUB_STEP_SUMMARY
+        echo "## 🔍 Quality & Security Results" >> $GITHUB_STEP_SUMMARY
         
-        # Run linting tools (non-blocking during security transition)
-        echo "### Linting Results" >> $GITHUB_STEP_SUMMARY
+        # Linting (fast fail on critical issues)
+        echo "### Code Quality" >> $GITHUB_STEP_SUMMARY
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,__pycache__,.git
+        black --check . --exclude='\.venv|__pycache__|\.git'
+        isort --check-only . --skip-gitignore
+        python scripts/dockerfile_lint.py
+        echo "✅ All quality checks passed" >> $GITHUB_STEP_SUMMARY
         
-        if flake8 . --count --show-source --statistics; then
-          echo "✅ Flake8: No issues found" >> $GITHUB_STEP_SUMMARY
+        # Security (non-blocking)
+        echo "### Security Scanning" >> $GITHUB_STEP_SUMMARY
+        if safety scan --json > safety-report.json 2>/dev/null; then
+          echo "✅ No known vulnerabilities" >> $GITHUB_STEP_SUMMARY
         else
-          echo "⚠️ Flake8: Issues found (non-blocking)" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Security issues found (check artifacts)" >> $GITHUB_STEP_SUMMARY
         fi
         
-        if black --check .; then
-          echo "✅ Black: Code formatting is correct" >> $GITHUB_STEP_SUMMARY
+        if bandit -r . -f json -o bandit-report.json >/dev/null 2>&1; then
+          echo "✅ No security issues in code" >> $GITHUB_STEP_SUMMARY
         else
-          echo "⚠️ Black: Code formatting issues found (non-blocking)" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Code security issues found (check artifacts)" >> $GITHUB_STEP_SUMMARY
         fi
-        
-        if isort --check-only .; then
-          echo "✅ isort: Import sorting is correct" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "⚠️ isort: Import sorting issues found (non-blocking)" >> $GITHUB_STEP_SUMMARY
-        fi
-      continue-on-error: true
+      continue-on-error: false  # Fail fast on quality issues
+    
+    - name: Upload reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: quality-reports
+        path: |
+          safety-report.json
+          bandit-report.json
+          retention-days: 7
+
+  build:
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [production, cli]
+    
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -98,7 +119,7 @@ jobs:
       with:
         context: .
         target: ${{ matrix.target }}
-        platforms: linux/amd64,linux/arm64
+        platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -106,15 +127,14 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: |
           BUILDKIT_INLINE_CACHE=1
-      continue-on-error: ${{ matrix.target != 'production' }}
     
     - name: Generate build summary
       run: |
-        echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "## 🐳 Build Summary" >> $GITHUB_STEP_SUMMARY
         echo "**Target:** ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
         echo "**Image:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
         echo "**Digest:** ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Platforms:** linux/amd64,linux/arm64" >> $GITHUB_STEP_SUMMARY
+        echo "**Platforms:** ${{ github.event_name == 'pull_request' && 'linux/amd64 (PR)' || 'linux/amd64,linux/arm64' }}" >> $GITHUB_STEP_SUMMARY
     
     - name: Run Trivy vulnerability scanner
       if: matrix.target == 'production' && github.event_name != 'pull_request'
@@ -131,101 +151,52 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
-  lint:
+  # Development build - only for main branch pushes
+  build-dev:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [quality, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
       with:
-        python-version: '3.11'
-        cache: 'pip'
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-test.txt
-    
-    - name: Run code linting
-      run: |
-        echo "## Linting Results" >> $GITHUB_STEP_SUMMARY
-        
-        # Run flake8
-        echo "### Flake8" >> $GITHUB_STEP_SUMMARY
-        if flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.venv,__pycache__,.git; then
-          echo "✅ No critical flake8 issues found" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Flake8 found critical issues" >> $GITHUB_STEP_SUMMARY
-          echo "Continuing build despite linting issues" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        # Run black check
-        echo "### Black" >> $GITHUB_STEP_SUMMARY
-        if black --check . --exclude='\.venv|__pycache__|\.git'; then
-          echo "✅ Code formatting is correct" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Code formatting issues found" >> $GITHUB_STEP_SUMMARY
-          echo "Run 'black .' to fix formatting" >> $GITHUB_STEP_SUMMARY
-          echo "Continuing build despite formatting issues" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        # Run isort check
-        echo "### isort" >> $GITHUB_STEP_SUMMARY
-        if isort --check-only . --skip-gitignore; then
-          echo "✅ Import sorting is correct" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Import sorting issues found" >> $GITHUB_STEP_SUMMARY
-          echo "Run 'isort .' to fix imports" >> $GITHUB_STEP_SUMMARY
-          echo "Continuing build despite import sorting issues" >> $GITHUB_STEP_SUMMARY
-        fi
-
-  security:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
       with:
-        python-version: '3.11'
-        cache: 'pip'
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        flavor: |
+          latest=auto
+          suffix=-development
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
     
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install safety bandit
-    
-    - name: Run safety check
-      run: |
-        echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
-        echo "### Safety (Dependency Vulnerabilities)" >> $GITHUB_STEP_SUMMARY
-        if safety check --json > safety-report.json; then
-          echo "✅ No known vulnerabilities found in dependencies" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Vulnerabilities found in dependencies" >> $GITHUB_STEP_SUMMARY
-          cat safety-report.json >> $GITHUB_STEP_SUMMARY
-        fi
-    
-    - name: Run bandit security linter
-      run: |
-        echo "### Bandit (Security Issues)" >> $GITHUB_STEP_SUMMARY
-        if bandit -r . -f json -o bandit-report.json; then
-          echo "✅ No security issues found in code" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Security issues found in code" >> $GITHUB_STEP_SUMMARY
-          cat bandit-report.json >> $GITHUB_STEP_SUMMARY
-        fi
-    
-    - name: Upload security reports
-      if: always()
-      uses: actions/upload-artifact@v4
+    - name: Build development image
+      uses: docker/build-push-action@v5
       with:
-        name: security-reports
-        path: |
-          safety-report.json
-          bandit-report.json
+        context: .
+        target: development
+        platforms: linux/amd64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1

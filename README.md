@@ -446,6 +446,23 @@ docker compose -f docker-compose.test.yml up
 
 See [`docs/TEST_DIRECTORIES.md`](docs/TEST_DIRECTORIES.md) for complete configuration guide.
 
+### Dependency Troubleshooting
+
+If you encounter dependency conflicts during installation:
+
+```bash
+# Run dependency checker
+python scripts/check_dependencies.py
+
+# Check for conflicts
+pip check
+
+# Clean installation
+pip install -r requirements.txt --force-reinstall
+```
+
+See [`docs/DEPENDENCY_TROUBLESHOOTING.md`](docs/DEPENDENCY_TROUBLESHOOTING.md) for comprehensive troubleshooting guide.
+
 ### Docker Testing
 
 ```bash

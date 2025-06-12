@@ -114,9 +114,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Final Security Remediation**: Addressed remaining vulnerability
   - **CVE-2024-46946**: Pinned `langchain-experimental==0.3.4` (safe version, vulnerability only affects LLMSymbolicMathChain not SemanticChunker)
   - **Safety CLI**: Updated from deprecated `safety check` to `safety scan` command
-- **Dependency Resolution**: Fixed OpenAI version conflicts
-  - `openai==1.30.1` → `openai>=1.68.2,<2.0.0` (compatible with langchain-openai)
-  - Added upper bounds to prevent breaking changes
+- **Dependency Resolution**: Fixed multiple package version conflicts
+  - **FastAPI Conflict**: Updated `fastapi==0.104.1` → `fastapi>=0.109.0,<1.0.0` (required by promptflow-core 1.18.0)
+  - **OpenAI**: `openai==1.30.1` → `openai>=1.68.2,<2.0.0` (compatible with langchain-openai)
+  - **Web Dependencies**: Added version bounds to prevent future conflicts (uvicorn, redis, celery)
+  - **Core Dependencies**: Added version constraints to promptflow-core, azure-ai-evaluation, jsonlines
+  - Added upper bounds to prevent breaking changes across all dependencies
 
 #### New Development Dependencies
 - **Testing**: pytest-cov, pytest-asyncio, httpx for API testing
@@ -189,6 +192,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added security best practices and monitoring guidance
   - Updated installation instructions with multi-target Docker builds
   - Enhanced project structure documentation with clear file organization
+- **Dependency management tools**: Created comprehensive dependency verification system
+  - Added `scripts/check_dependencies.py` for automated dependency conflict detection
+  - Enhanced Dockerfile with improved dependency resolution error handling
+  - Added `pip check` validation in Docker builds to catch conflicts early
+- **Dockerfile improvements**: Enhanced Docker build process and compliance
+  - Fixed FROM/AS casing inconsistencies for Docker linting compliance
+  - Added proper metadata labels (maintainer, description, version)
+  - Improved apt cache cleanup with `apt-get clean` and cache removal
+  - Created comprehensive `.dockerignore` file to optimize build context
+  - Added `scripts/dockerfile_lint.py` for automated Dockerfile quality checks
 
 #### Documentation Issues
 - **Mermaid diagram**: Improved readability with black text on light backgrounds
