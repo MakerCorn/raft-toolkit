@@ -18,7 +18,6 @@ env:
 jobs:
   # Only run release if test workflow succeeded
   check-tests:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       tests-passed: ${{ steps.check.outputs.success }}
@@ -27,26 +26,30 @@ jobs:
     - name: Check test workflow status
       id: check
       run: |
+        echo "Event name: ${{ github.event_name }}"
+        echo "Ref type: ${{ github.ref_type }}"
+        echo "Ref: ${{ github.ref }}"
+        
         # Only allow releases if:
-        # 1. Triggered by successful test workflow
+        # 1. Tag push (assumes tests passed on main branch)
         # 2. Manual dispatch (with warning)
-        # 3. Tag push (assumes tests passed on main branch)
-        if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+        # 3. Triggered by successful test workflow AND it's a workflow_run event
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
           echo "success=true" >> $GITHUB_OUTPUT
           echo "should-release=true" >> $GITHUB_OUTPUT
-          echo "✅ Release approved: Tests passed"
+          echo "🏷️ Tag-triggered release - assuming tests passed on main"
         elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
           echo "success=true" >> $GITHUB_OUTPUT
           echo "should-release=true" >> $GITHUB_OUTPUT
           echo "⚠️ Manual release dispatch - bypassing test requirement"
-        elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+        elif [[ "${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
           echo "success=true" >> $GITHUB_OUTPUT
-          echo "should-release=true" >> $GITHUB_OUTPUT
-          echo "🏷️ Tag-triggered release - assuming tests passed on main"
+          echo "should-release=false" >> $GITHUB_OUTPUT
+          echo "✅ Tests passed but not releasing from workflow_run (create a tag to release)"
         else
           echo "success=false" >> $GITHUB_OUTPUT
           echo "should-release=false" >> $GITHUB_OUTPUT
-          echo "❌ Tests failed or were cancelled. Skipping release."
+          echo "❌ Tests failed, cancelled, or inappropriate trigger. Skipping release."
           exit 1
         fi
 
@@ -73,10 +76,13 @@ jobs:
           # Use existing tag
           TAG=${{ github.ref_name }}
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-        else
-          # Generate new tag based on commit
+          echo "Using existing tag: $TAG"
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          # For manual dispatch, generate new tag based on commit
           if git describe --tags --exact-match HEAD 2>/dev/null; then
             TAG=$(git describe --tags --exact-match HEAD)
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "Current commit already has tag: $TAG"
           else
             # Get latest tag and increment patch version
             LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
@@ -85,13 +91,18 @@ jobs:
             PATCH=$(echo $LATEST_TAG | cut -d. -f3)
             PATCH=$((PATCH + 1))
             TAG="v$MAJOR.$MINOR.$PATCH"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "Generated new tag: $TAG"
+            
+            # Create and push tag
+            git config user.name "GitHub Actions"
+            git config user.email "actions@github.com"
+            git tag $TAG
+            git push origin $TAG
           fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          # Create and push tag
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git tag $TAG
-          git push origin $TAG
+        else
+          echo "Error: This step should only run for tag pushes or manual dispatch"
+          exit 1
         fi
 
     - name: Extract version
@@ -194,17 +205,34 @@ jobs:
         echo "- [Docker Images](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})" >> current_changelog.md
         echo "- [Full Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)" >> current_changelog.md
 
+    - name: Verify tag exists
+      run: |
+        TAG=${{ steps.tag.outputs.tag }}
+        if [[ -z "$TAG" ]]; then
+          echo "Error: No tag specified"
+          exit 1
+        fi
+        
+        # For workflow_dispatch, the tag should have been created in the previous step
+        # For tag push, the tag already exists
+        if ! git tag -l | grep -q "^${TAG}$"; then
+          echo "Error: Tag $TAG does not exist"
+          git tag -l
+          exit 1
+        fi
+        
+        echo "Tag $TAG verified successfully"
+
     - name: Create GitHub Release
       id: create_release
       uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.tag.outputs.tag }}
         name: "🚀 RAFT Toolkit ${{ steps.tag.outputs.tag }}"
         body_path: current_changelog.md
         draft: false
         prerelease: ${{ contains(steps.tag.outputs.tag, '-') || contains(steps.tag.outputs.tag, 'alpha') || contains(steps.tag.outputs.tag, 'beta') || contains(steps.tag.outputs.tag, 'rc') }}
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   build-release-images:
     needs: [check-tests, create-release]
@@ -272,11 +300,10 @@ jobs:
     - name: Upload SBOM to release
       if: matrix.target == 'production'
       uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ needs.create-release.outputs.release-tag }}
         files: sbom.spdx.json
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   publish-packages:
     needs: [check-tests, create-release]
@@ -321,11 +348,10 @@ jobs:
 
     - name: Upload packages to release
       uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ needs.create-release.outputs.release-tag }}
         files: dist/*
+        token: ${{ secrets.GITHUB_TOKEN }}
 
   update-documentation:
     needs: [check-tests, create-release, build-release-images]

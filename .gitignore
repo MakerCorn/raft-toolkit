@@ -185,3 +185,5 @@ cython_debug/
 
 .claude
 .claude/
+CLAUDE.MD
+claude.md

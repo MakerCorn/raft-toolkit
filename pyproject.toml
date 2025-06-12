@@ -1,3 +1,80 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raft-toolkit"
+version = "1.0.0"
+description = "RAFT (Retrieval Augmented Fine Tuning) toolkit for generating synthetic Q&A datasets"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "RAFT Toolkit Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "openai>=1.0.0",
+    "python-dotenv",
+    "pydantic>=2.0.0",
+    "pathlib",
+    "tqdm",
+    "pandas",
+    "pyarrow",
+    "tiktoken",
+    "pdfplumber",
+    "python-pptx",
+    "langchain-text-splitters",
+    "sentence-transformers",
+    "langchain-openai",
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+web = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "jinja2",
+    "redis",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-asyncio",
+    "black",
+    "isort",
+    "mypy",
+    "bandit",
+    "safety",
+]
+
+[project.scripts]
+raft = "cli.main:main"
+raft-web = "web.app:main"
+
+[project.urls]
+"Homepage" = "https://github.com/microsoft/raft-toolkit"
+"Bug Reports" = "https://github.com/microsoft/raft-toolkit/issues"
+"Source" = "https://github.com/microsoft/raft-toolkit"
+
+[tool.setuptools.packages.find]
+include = ["core*", "cli*", "web*", "tools*"]
+exclude = ["tests*", "notebooks*", "templates*", "docs*", "scripts*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.yaml", "*.yml"]
+templates = ["*.txt"]
+web = ["static/*"]
+
 [tool.black]
 line-length = 120
 target-version = ['py39', 'py310', 'py311']

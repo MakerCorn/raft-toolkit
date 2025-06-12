@@ -7,6 +7,9 @@ def split_jsonl_file(file_path, max_size=199_000_000):
     Args:
         file_path (str): Path to the .jsonl file to split.
         max_size (int): Maximum size in bytes for each part file.
+        
+    Returns:
+        list: List of created part file paths.
     """
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
@@ -16,6 +19,7 @@ def split_jsonl_file(file_path, max_size=199_000_000):
     file_size = 0
     part_file = None
     part_file_name = f"{filename}_part_{file_number}.jsonl"
+    created_files = []
     
     with open(file_path, 'r', encoding='utf-8') as infile:
         for line in infile:
@@ -24,6 +28,7 @@ def split_jsonl_file(file_path, max_size=199_000_000):
                 if part_file:
                     part_file.close()
                 part_file_name = f"{filename}_part_{file_number}.jsonl"
+                created_files.append(part_file_name)
                 part_file = open(part_file_name, 'w', encoding='utf-8')
                 file_number += 1
                 file_size = 0
@@ -32,6 +37,7 @@ def split_jsonl_file(file_path, max_size=199_000_000):
     if part_file:
         part_file.close()
     print("Split completed.")
+    return created_files
 
 def extract_random_jsonl_rows(file_path, num_rows, output_file):
     """Extracts a given number of random rows from a .jsonl file and saves them to another file.

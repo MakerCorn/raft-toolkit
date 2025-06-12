@@ -9,6 +9,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Added
 
+### 🔧 Enhanced
+
+### 🐛 Fixed
+
+### 📦 Dependencies
+
+---
+
+## [1.0.1] - 2025-01-06
+
+### 🐛 Fixed
+
+#### Critical Test Fixes
+- **Unit test failures**: Fixed 13 failing unit tests that were causing CI/CD pipeline failures
+  - **Import issues in `test_clients.py`**: Fixed mock paths for LangChain embeddings from `core.clients.openai_client.OpenAIEmbeddings` to `langchain_openai.OpenAIEmbeddings`
+  - **Attribute mismatches**: Changed `completion_count` to `calls` in UsageStats tests to match actual implementation
+  - **Config test issues**: Fixed environment variable conflicts by clearing conflicting env vars before tests
+  - **File path validation**: Used temporary files instead of non-existent paths in validation tests
+  - **Utils test issues**: Fixed `split_jsonl_file` to return list of created files, corrected environment variable patterns
+  - **Token caching**: Added global cache clearing before each identity utils test
+
+#### Release Workflow Fixes
+- **GitHub Actions permissions error**: Fixed "Resource not accessible by integration" error in release workflow
+  - **Trigger logic**: Modified workflow to only create releases for tag pushes or manual dispatch, not workflow_run events
+  - **Tag handling**: Added proper validation that tags exist before creating releases
+  - **Token usage**: Updated from deprecated `env.GITHUB_TOKEN` to `token` parameter
+  - **Error handling**: Improved error messages and validation for missing or invalid tags
+
+#### Build Configuration Fixes
+- **Package discovery error**: Fixed "Multiple top-level packages discovered in a flat-layout" error in `python -m build`
+  - **Added complete build system configuration** to `pyproject.toml` with setuptools>=64
+  - **Package inclusion rules**: Explicitly configured to include `core`, `cli`, `web`, `tools` and exclude `tests`, `notebooks`, `templates`, `docs`, `scripts`
+  - **Project metadata**: Added comprehensive project information including dependencies and entry points
+  - **License configuration**: Updated to modern SPDX format to remove deprecation warnings
+
+### 🚀 Added
+
+#### Release Management Tools
+- **Release script** (`scripts/create_release.sh`): Interactive script for safe release creation
+  - Version incrementing support (patch/minor/major)
+  - Git state validation and proper tag creation
+  - Integration with GitHub Actions workflow
+- **Release documentation** (`docs/RELEASES.md`): Comprehensive guide for creating and managing releases
+  - Step-by-step instructions for both manual and automated releases
+  - Troubleshooting section for common release issues
+  - Best practices for versioning and release notes
+
+#### Enhanced CI/CD Pipeline
+- **Improved test reliability**: All unit tests now pass consistently (43/43 tests passing)
+- **Proper workflow dependencies**: Fixed build → test → release dependency chain
+- **Better error reporting**: Enhanced debugging information in workflow logs
+
+### 📦 Dependencies
+
+#### Build System Updates
+- **Build dependencies**: Added `setuptools>=64`, `wheel`, and `build` for proper package building
+- **Entry points**: Configured CLI scripts (`raft = "cli.main:main"`, `raft-web = "web.app:main"`)
+- **Package data**: Proper inclusion of templates, static files, and configuration files
+
+### 🔧 Enhanced
+
+#### Code Quality Improvements
+- **Function signatures**: Updated `split_jsonl_file` to return list of created part files
+- **Test isolation**: Added proper setup/teardown for token caching tests
+- **Environment handling**: Improved environment variable management in tests
+- **Mock configurations**: Better mock paths aligned with actual import structure
+
+#### Developer Experience
+- **Release process**: Streamlined release creation with automated validation
+- **Build validation**: Local build testing to catch issues before CI/CD
+- **Error diagnostics**: Clearer error messages for common build and test failures
+
+### 🛡️ Security
+
+#### Test Security
+- **Token cache isolation**: Prevents test pollution from cached authentication tokens
+- **Environment isolation**: Proper cleanup of environment variables between tests
+- **Temporary file handling**: Secure creation and cleanup of temporary test files
+
+### 📈 Performance
+
+#### Build Optimization
+- **Package size reduction**: Excluded unnecessary files (tests, docs, notebooks) from built packages
+- **Faster builds**: Optimized package discovery and file inclusion rules
+- **Efficient testing**: Reduced test execution time with proper test isolation
+
+### 🚀 Added
+
 #### Analysis Tools Suite
 - **🛠️ Six comprehensive evaluation tools** integrated into web interface
   - **Dataset Evaluation**: Model performance analysis with configurable metrics
