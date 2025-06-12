@@ -32,12 +32,14 @@ COPY requirements*.txt ./
 
 # Install Python dependencies with error handling
 RUN pip install --upgrade pip && \
+    # Install requirements with dependency resolution
     pip install --no-cache-dir -r requirements.txt && \
     if [ -f requirements-web.txt ]; then pip install --no-cache-dir -r requirements-web.txt; fi && \
     # Verify critical imports work
-    python -c "import pypdf; import secrets; print('Security dependencies OK')" && \
-    python -c "from azure.ai.evaluation import evaluate; print('Azure AI Evaluation OK')" || \
-    echo "Warning: Some dependencies may have issues"
+    python -c "import pypdf; import secrets; print('✅ Security dependencies OK')" && \
+    python -c "import openai; print('✅ OpenAI', openai.__version__, 'OK')" && \
+    python -c "from azure.ai.evaluation import evaluate; print('✅ Azure AI Evaluation OK')" || \
+    (echo "❌ Some dependency imports failed" && exit 1)
 
 # Stage 3: Development
 FROM dependencies as development

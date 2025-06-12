@@ -108,9 +108,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fixed parameter names: `question` → `query`, `answer` → `response`
   - Resolved installation failures with missing `promptflow.eval` package
 - **Security Updates**: Upgraded vulnerable dependencies
-  - `transformers==4.37.2` → `transformers>=4.44.0` (fixed 7 CVEs)
-  - `PyPDF2==3.0.1` → `pypdf>=4.0.0` (fixed 1 CVE)
-  - `langchain-experimental` → pinned to `==0.3.3` (mitigated CVE-2024-21513, CVE-2024-46946)
+  - `transformers==4.37.2` → `transformers>=4.44.0,<5.0.0` (fixed 7 CVEs)
+  - `PyPDF2==3.0.1` → `pypdf>=4.0.0,<5.0.0` (fixed 1 CVE)
+  - `langchain-experimental` → `>=0.3.3,<0.4.0` (mitigated CVE-2024-21513, CVE-2024-46946)
+- **Dependency Resolution**: Fixed OpenAI version conflicts
+  - `openai==1.30.1` → `openai>=1.68.2,<2.0.0` (compatible with langchain-openai)
+  - Added upper bounds to prevent breaking changes
 
 #### New Development Dependencies
 - **Testing**: pytest-cov, pytest-asyncio, httpx for API testing
