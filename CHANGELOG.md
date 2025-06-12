@@ -149,11 +149,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Docker Build Issues
 - **Missing file references**: Removed non-existent `run_cli.py` from Dockerfile COPY commands
 - **Correct entry points**: CLI uses `raft.py`, web uses `run_web.py`, tests use `run_tests.py`
+- **Trivy scanner**: Fixed multiple image tags issue by using single image reference for vulnerability scanning
 
 #### Documentation Issues
 - **Mermaid diagram**: Improved readability with black text on light backgrounds
 - **Installation clarity**: Step-by-step instructions for all components
 - **Configuration examples**: Environment-specific templates
+- **Broken links**: Fixed non-existent deployment docs links, consolidated to existing DEPLOYMENT.md
 
 ---
 

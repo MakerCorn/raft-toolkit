@@ -594,16 +594,13 @@ The toolkit is designed for cloud deployment with:
 - **Health check endpoints**
 
 See deployment guides for specific platforms:
-- [AWS Deployment](docs/deployment/aws.md)
-- [Azure Deployment](docs/deployment/azure.md)
-- [Google Cloud Deployment](docs/deployment/gcp.md)
-- [Kubernetes Deployment](docs/deployment/kubernetes.md)
+- See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for comprehensive deployment guides including AWS, Azure, Google Cloud, and Kubernetes
 
 ## 🛠️ Fine-tuning & Evaluation
 
 ### Model Fine-tuning
 
-- See [azure-ai-studio-ft/howto.md](azure-ai-studio-ft/howto.md) for Azure fine-tuning
+- See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for Azure AI Studio fine-tuning guidance
 - Use generated datasets with popular fine-tuning frameworks:
   - HuggingFace Transformers
   - OpenAI Fine-tuning API
@@ -696,4 +693,4 @@ python3 raft.py \
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the [LICENSE](https://opensource.org/licenses/MIT) file or the OSI page for full terms.
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
