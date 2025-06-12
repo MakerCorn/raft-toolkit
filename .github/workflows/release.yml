@@ -18,6 +18,7 @@ env:
 jobs:
   # Only run release if test workflow succeeded
   check-tests:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       tests-passed: ${{ steps.check.outputs.success }}
