@@ -135,6 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Release gating**: Releases only after successful tests
 - **Error handling**: Comprehensive failure management
 - **Artifact management**: Proper cleanup and retention
+- **Deprecated actions**: Updated to latest versions (upload-artifact@v4, action-gh-release@v1, upload-pages-artifact@v3)
 
 #### Documentation Issues
 - **Mermaid diagram**: Improved readability with black text on light backgrounds

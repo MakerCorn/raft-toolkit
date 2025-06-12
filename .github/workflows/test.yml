@@ -76,7 +76,7 @@ jobs:
         python run_tests.py --unit --coverage --output-dir test-results
     
     - name: Upload unit test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: unit-test-results-py${{ matrix.python-version }}
@@ -132,7 +132,7 @@ jobs:
         python run_tests.py --integration --coverage --output-dir test-results
     
     - name: Upload integration test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results
@@ -190,7 +190,7 @@ jobs:
         python run_tests.py --api --coverage --output-dir test-results
     
     - name: Upload API test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: api-test-results
@@ -233,7 +233,7 @@ jobs:
         python run_tests.py --cli --coverage --output-dir test-results
     
     - name: Upload CLI test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: cli-test-results
@@ -279,7 +279,7 @@ jobs:
         docker rm test-container
     
     - name: Upload Docker test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: docker-test-results

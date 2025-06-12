@@ -185,12 +185,12 @@ jobs:
 
     - name: Create GitHub Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.tag.outputs.tag }}
-        release_name: "🚀 RAFT Toolkit ${{ steps.tag.outputs.tag }}"
+        name: "🚀 RAFT Toolkit ${{ steps.tag.outputs.tag }}"
         body_path: current_changelog.md
         draft: false
         prerelease: ${{ contains(steps.tag.outputs.tag, '-') || contains(steps.tag.outputs.tag, 'alpha') || contains(steps.tag.outputs.tag, 'beta') || contains(steps.tag.outputs.tag, 'rc') }}
@@ -260,14 +260,12 @@ jobs:
 
     - name: Upload SBOM to release
       if: matrix.target == 'production'
-      uses: actions/upload-release-asset@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: sbom.spdx.json
-        asset_name: sbom.spdx.json
-        asset_content_type: application/json
+        tag_name: ${{ needs.create-release.outputs.release-tag }}
+        files: sbom.spdx.json
 
   publish-packages:
     needs: [check-tests, create-release]
@@ -311,14 +309,12 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
 
     - name: Upload packages to release
-      uses: actions/upload-release-asset@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: dist/
-        asset_name: python-packages
-        asset_content_type: application/zip
+        tag_name: ${{ needs.create-release.outputs.release-tag }}
+        files: dist/*
 
   update-documentation:
     needs: [check-tests, create-release, build-release-images]
@@ -385,13 +381,13 @@ jobs:
       uses: actions/configure-pages@v3
 
     - name: Upload to GitHub Pages
-      uses: actions/upload-pages-artifact@v2
+      uses: actions/upload-pages-artifact@v3
       with:
         path: site/
 
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v2
+      uses: actions/deploy-pages@v4
 
   notify-completion:
     needs: [create-release, build-release-images, publish-packages, update-documentation]
