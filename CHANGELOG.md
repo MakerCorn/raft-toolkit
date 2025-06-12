@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Added
 
+### 🔧 Enhanced
+
+### 🐛 Fixed
+
+### 📦 Dependencies
+
+---
+
+## [0.0.1] - 2025-06-12
+
+### 🚀 Added
+
 #### Analysis Tools Suite
 - **🛠️ Six comprehensive evaluation tools** integrated into web interface
   - **Dataset Evaluation**: Model performance analysis with configurable metrics
