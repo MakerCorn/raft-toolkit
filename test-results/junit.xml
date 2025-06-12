@@ -1,15 +1,67 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="2" failures="0" skipped="1" tests="3" time="1.565" timestamp="2025-06-12T10:22:38.116525" hostname="macpro.local"><testcase classname="" name="tests.api.test_web_app" time="0.000"><error message="collection failure">ImportError while importing test module '/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/api/test_web_app.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/api/test_web_app.py:11: in &lt;module&gt;
-    from web.app import app, job_manager
-E   ImportError: cannot import name 'job_manager' from 'web.app' (/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/web/app.py)</error></testcase><testcase classname="" name="tests.cli.test_eval_tool" time="0.000"><skipped message="collection skipped">('/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/cli/test_eval_tool.py', 20, 'Skipped: eval tool not available')</skipped></testcase><testcase classname="" name="tests.unit.test_utils" time="0.000"><error message="collection failure">ImportError while importing test module '/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/unit/test_utils.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py:127: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-tests/unit/test_utils.py:11: in &lt;module&gt;
-    from core.utils.file_utils import (
-E   ImportError: cannot import name 'ensure_directory_exists' from 'core.utils.file_utils' (/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/core/utils/file_utils.py)</error></testcase></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="3" skipped="1" tests="20" time="1.204" timestamp="2025-06-12T12:15:16.329850" hostname="macpro.local"><testcase classname="" name="tests.cli.test_eval_tool" time="0.000"><skipped message="collection skipped">('/Volumes/Studio/Sources/AI Projects/local-raft-toolkit/raft-toolkit/tests/cli/test_eval_tool.py', 20, 'Skipped: eval tool not available')</skipped></testcase><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_parser_creation" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_required_arguments" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_default_values" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestCreateParser" name="test_all_arguments" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_basic_args" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_only_changed_values" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_override_chunking_params" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestOverrideConfigFromArgs" name="test_invalid_chunking_params_json" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_success" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestShowPreview object at 0x10ad8af40&gt;
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x119582d00&gt;
+
+    @pytest.mark.cli
+    def test_show_preview_success(self, capsys):
+        """Test successful preview display."""
+        mock_engine = Mock(spec=RaftEngine)
+&gt;       mock_engine.config.questions = 5
+
+tests/cli/test_cli_main.py:197: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;Mock spec='RaftEngine' id='4720176432'&gt;, name = 'config'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+&gt;               raise AttributeError("Mock object has no attribute %r" % name)
+E               AttributeError: Mock object has no attribute 'config'
+
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_many_files" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestShowPreview object at 0x10ad86b20&gt;
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x119743970&gt;
+
+    @pytest.mark.cli
+    def test_show_preview_many_files(self, capsys):
+        """Test preview with many files (truncation)."""
+        mock_engine = Mock(spec=RaftEngine)
+&gt;       mock_engine.config.questions = 3
+
+tests/cli/test_cli_main.py:224: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;Mock spec='RaftEngine' id='4722014288'&gt;, name = 'config'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+&gt;               raise AttributeError("Mock object has no attribute %r" % name)
+E               AttributeError: Mock object has no attribute 'config'
+
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestShowPreview" name="test_show_preview_error" time="0.000" /><testcase classname="tests.cli.test_cli_main.TestValidateOnly" name="test_validate_only_success" time="0.000"><failure message="AttributeError: Mock object has no attribute 'config'">self = &lt;tests.cli.test_cli_main.TestValidateOnly object at 0x10ac280a0&gt;
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x119554880&gt;
+
+    @pytest.mark.cli
+    def test_validate_only_success(self, capsys):
+        """Test successful validation."""
+        mock_engine = Mock(spec=RaftEngine)
+&gt;       mock_engine.config.output = "/test/output"
+
+tests/cli/test_cli_main.py:264: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;Mock spec='RaftEngine' id='4719986528'&gt;, name = 'config'
+
+    def __getattr__(self, name):
+        if name in {'_mock_methods', '_mock_unsafe'}:
+            raise AttributeError(name)
+        elif self._mock_methods is not None:
+            if name not in self._mock_methods or name in _all_magics:
+&gt;               raise AttributeError("Mock object has no attribute %r" % name)
+E               AttributeError: Mock object has no attribute 'config'
+
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/unittest/mock.py:630: AttributeError</failure></testcase><testcase classname="tests.cli.test_cli_main.TestValidateOnly" name="test_validate_only_error" time="0.001" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_preview_mode" time="0.008" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_validate_mode" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_normal_processing" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_keyboard_interrupt" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_general_error" time="0.003" /><testcase classname="tests.cli.test_cli_main.TestMainFunction" name="test_main_with_env_file" time="0.003" /></testsuite></testsuites>
