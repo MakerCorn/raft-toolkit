@@ -81,9 +81,15 @@ def main():
     print(f"Command: {' '.join(cmd)}")
     print("-" * 60)
     
-    # Run the tests
+    # Run the tests with security considerations
     try:
-        result = subprocess.run(cmd, cwd=project_root, check=False)
+        # Validate that cmd contains only expected pytest commands
+        if not all(isinstance(arg, str) for arg in cmd):
+            raise ValueError("All command arguments must be strings")
+        if not cmd[0].endswith(('pytest', 'python')):
+            raise ValueError("Command must start with pytest or python")
+            
+        result = subprocess.run(cmd, cwd=project_root, check=False, shell=False)  # nosec B603
         return result.returncode
     except KeyboardInterrupt:
         print("\nTests interrupted by user")

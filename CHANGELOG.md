@@ -73,6 +73,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🛡️ Security & Operations
 
+#### Critical Security Fixes
+- **🔒 Cryptographically secure random generation**: Replaced `random` with `secrets.SystemRandom` for security-sensitive operations
+- **🛡️ File upload security**: Added comprehensive validation, sanitization, and size limits
+- **🚫 Path traversal protection**: Implemented secure file path validation and sanitization
+- **📁 File permissions**: Restrictive permissions on uploaded files and directories (0o600/0o700)
+- **🌐 CORS hardening**: Restricted origins, methods, and headers; disabled credentials
+- **🔐 Security headers**: Added comprehensive HTTP security headers (XSS, CSRF, content-type protection)
+- **⚡ Input validation**: Enhanced subprocess execution with command validation
+- **📦 Dependency updates**: Updated vulnerable packages (transformers, PyPDF2→pypdf, langchain)
+
 #### Container Security
 - **Non-root user execution** in all Docker images
 - **Health checks** for all services
@@ -97,6 +107,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated all evaluation tools to use new Azure AI Evaluation SDK
   - Fixed parameter names: `question` → `query`, `answer` → `response`
   - Resolved installation failures with missing `promptflow.eval` package
+- **Security Updates**: Upgraded vulnerable dependencies
+  - `transformers==4.37.2` → `transformers>=4.44.0` (fixed 7 CVEs)
+  - `PyPDF2==3.0.1` → `pypdf>=4.0.0` (fixed 1 CVE)
+  - `langchain-experimental` → pinned to `==0.3.3` (mitigated CVE-2024-21513, CVE-2024-46946)
 
 #### New Development Dependencies
 - **Testing**: pytest-cov, pytest-asyncio, httpx for API testing
@@ -150,6 +164,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Missing file references**: Removed non-existent `run_cli.py` from Dockerfile COPY commands
 - **Correct entry points**: CLI uses `raft.py`, web uses `run_web.py`, tests use `run_tests.py`
 - **Trivy scanner**: Fixed multiple image tags issue by using single image reference for vulnerability scanning
+- **Build resilience**: Added error handling and dependency verification in Docker builds
+- **Workflow robustness**: Added fallback scanning and continue-on-error for security transitions
 
 #### Documentation Issues
 - **Mermaid diagram**: Improved readability with black text on light backgrounds

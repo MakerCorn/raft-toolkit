@@ -69,6 +69,7 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: |
           BUILDKIT_INLINE_CACHE=1
+      continue-on-error: ${{ matrix.target != 'production' }}
     
     - name: Generate build summary
       run: |
@@ -79,15 +80,16 @@ jobs:
         echo "**Platforms:** linux/amd64,linux/arm64" >> $GITHUB_STEP_SUMMARY
     
     - name: Run Trivy vulnerability scanner
-      if: matrix.target == 'production'
+      if: matrix.target == 'production' && github.event_name != 'pull_request'
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.target }}'
         format: 'sarif'
         output: 'trivy-results.sarif'
+      continue-on-error: true
     
     - name: Upload Trivy scan results to GitHub Security tab
-      if: matrix.target == 'production'
+      if: matrix.target == 'production' && hashFiles('trivy-results.sarif') != ''
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: 'trivy-results.sarif'

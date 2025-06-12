@@ -2,7 +2,7 @@
 LLM service for question generation and answering.
 """
 import logging
-import random
+import secrets
 import time
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -258,13 +258,15 @@ class LLMService:
         """Generate a complete QA data point with context and answer."""
         # Select distractor chunks
         available_chunks = [c for c in all_chunks if c.id != oracle_chunk.id]
-        distractor_chunks = random.sample(available_chunks, min(num_distractors, len(available_chunks)))
+        # Use secrets.SystemRandom for cryptographically secure sampling
+        secure_random = secrets.SystemRandom()
+        distractor_chunks = secure_random.sample(available_chunks, min(num_distractors, len(available_chunks)))
         
         # Decide whether to include oracle
-        include_oracle = random.random() < oracle_probability
+        include_oracle = secure_random.random() < oracle_probability
         if not include_oracle and available_chunks:
             # Replace oracle with another distractor
-            oracle_chunk = random.choice(available_chunks)
+            oracle_chunk = secure_random.choice(available_chunks)
         
         # Generate answer
         answer = self._generate_answer(question.text, oracle_chunk.content)

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 import logging
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +19,7 @@ import uvicorn
 from core.config import RaftConfig, get_config
 from core.raft_engine import RaftEngine
 from core.models import DocType, OutputFormat, OutputType, ChunkingStrategy
+from core.security import SecurityConfig
 
 logger = logging.getLogger(__name__)
 
@@ -87,14 +88,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
+# Add CORS middleware with security considerations
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_origins,  # Restrict to specific origins
+    allow_credentials=False,  # Disable credentials for security
+    allow_methods=["GET", "POST"],  # Only allow necessary methods
+    allow_headers=["Content-Type", "Authorization"],  # Restrict headers
 )
+
+# Security middleware for headers
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    
+    # Add security headers
+    security_headers = SecurityConfig.get_secure_headers()
+    for header, value in security_headers.items():
+        response.headers[header] = value
+    
+    return response
 
 # Mount static files
 static_dir = Path(__file__).parent / "static"
@@ -151,30 +166,67 @@ async def serve_ui():
 
 @app.post("/api/upload", response_model=Dict[str, str])
 async def upload_file(file: UploadFile = File(...)):
-    """Upload a file for processing."""
+    """Upload a file for processing with security validation."""
     try:
+        # Security validations
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Filename is required")
+        
+        # Validate file extension using security config
+        file_ext = Path(file.filename).suffix.lower()
+        if file_ext not in SecurityConfig.ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type {file_ext} not allowed. Allowed: {', '.join(SecurityConfig.ALLOWED_EXTENSIONS)}"
+            )
+        
+        # Validate file size using security config
+        content = await file.read()
+        if len(content) > SecurityConfig.MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail=f"File too large. Maximum size: {SecurityConfig.MAX_FILE_SIZE // (1024*1024)}MB")
+        
+        # Sanitize filename using security utility
+        safe_filename = SecurityConfig.sanitize_filename(file.filename)
+        if not safe_filename.endswith(file_ext):
+            safe_filename += file_ext
+        
         # Create temp directory for uploads
         upload_dir = Path(tempfile.gettempdir()) / "raft_uploads"
-        upload_dir.mkdir(exist_ok=True)
+        upload_dir.mkdir(exist_ok=True, mode=0o700)  # Restrict permissions
         
-        # Save uploaded file
-        file_id = str(uuid.uuid4())
-        file_path = upload_dir / f"{file_id}_{file.filename}"
+        # Save uploaded file with secure path
+        file_id = SecurityConfig.generate_secure_id()
+        file_path = upload_dir / f"{file_id}_{safe_filename}"
+        
+        # Validate the final path is secure
+        if not SecurityConfig.validate_file_path(str(file_path)):
+            raise HTTPException(status_code=400, detail="Invalid file path")
+        
+        # Ensure we don't overwrite existing files
+        counter = 1
+        while file_path.exists():
+            name_part = file_path.stem.rsplit('_', 1)[0]
+            file_path = upload_dir / f"{name_part}_{counter}{file_ext}"
+            counter += 1
         
         with open(file_path, "wb") as buffer:
-            content = await file.read()
             buffer.write(content)
+        
+        # Set restrictive file permissions
+        file_path.chmod(0o600)
         
         return {
             "file_id": file_id,
-            "filename": file.filename,
+            "filename": safe_filename,
             "file_path": str(file_path),
             "size": len(content)
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Upload failed")
 
 @app.post("/api/preview", response_model=PreviewResponse)
 async def get_preview(

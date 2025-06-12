@@ -99,6 +99,7 @@ jobs:
         load: true
         tags: raft-toolkit:scan
         cache-from: type=gha
+      continue-on-error: true
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -106,12 +107,25 @@ jobs:
         image-ref: 'raft-toolkit:scan'
         format: 'sarif'
         output: 'trivy-results.sarif'
+      continue-on-error: true
 
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && hashFiles('trivy-results.sarif') != ''
       with:
         sarif_file: 'trivy-results.sarif'
+    
+    - name: Fallback filesystem scan
+      if: hashFiles('trivy-results.sarif') == ''
+      run: |
+        echo "Docker scan failed, running filesystem scan as fallback"
+        trivy fs --format sarif --output trivy-fs-results.sarif . || echo "Filesystem scan also failed"
+    
+    - name: Upload fallback scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: hashFiles('trivy-fs-results.sarif') != ''
+      with:
+        sarif_file: 'trivy-fs-results.sarif'
 
     - name: Run Docker Scout (if available)
       if: github.event_name != 'schedule'

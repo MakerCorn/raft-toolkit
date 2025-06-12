@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
-import PyPDF2
+import pypdf
 from pptx import Presentation
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_openai.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
@@ -131,7 +131,7 @@ class DocumentService:
         elif self.config.doctype == "pdf":
             text = ""
             with open(file_path, 'rb') as file:
-                reader = PyPDF2.PdfReader(file)
+                reader = pypdf.PdfReader(file)
                 for page in reader.pages:
                     text += page.extract_text()
             return text
