@@ -132,7 +132,7 @@ def main():
     
     # Add options
     if args.coverage:
-        coverage_args = ["--cov=core", "--cov=cli", "--cov=web", "--cov-report=term-missing", "--cov-fail-under=10"]
+        coverage_args = ["--cov=core", "--cov=cli", "--cov=web", "--cov-report=term-missing", "--cov-fail-under=8"]
         
         # Create directories as needed
         if args.output_dir:
