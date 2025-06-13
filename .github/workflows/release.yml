@@ -1,62 +1,92 @@
 name: Release
 
+# This workflow only runs on manual execution (workflow_dispatch)
+# It provides automated versioning with the following options:
+# - version_type: patch/minor/major for automatic version bumping
+# - custom_version: specify exact version (overrides version_type)
+# - prerelease: mark as pre-release
+
 on:
-  workflow_run:
-    workflows: ["Test"]
-    types:
-      - completed
-    branches: [ main ]
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Type of version bump'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (e.g., v1.2.3) - overrides version_type if provided'
+        required: false
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Only run release if test workflow succeeded
-  check-tests:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  # Validate release parameters and check repository state
+  validate-release:
     runs-on: ubuntu-latest
     outputs:
-      tests-passed: ${{ steps.check.outputs.success }}
-      should-release: ${{ steps.check.outputs.should-release }}
+      should-release: ${{ steps.validate.outputs.should-release }}
+      version-type: ${{ steps.validate.outputs.version-type }}
+      custom-version: ${{ steps.validate.outputs.custom-version }}
+      is-prerelease: ${{ steps.validate.outputs.is-prerelease }}
     steps:
-    - name: Check test workflow status
-      id: check
-      run: |
-        echo "Event name: ${{ github.event_name }}"
-        echo "Ref type: ${{ github.ref_type }}"
-        echo "Ref: ${{ github.ref }}"
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
         
-        # Only allow releases if:
-        # 1. Tag push (assumes tests passed on main branch)
-        # 2. Manual dispatch (with warning)
-        # 3. Triggered by successful test workflow AND it's a workflow_run event
-        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
-          echo "success=true" >> $GITHUB_OUTPUT
-          echo "should-release=true" >> $GITHUB_OUTPUT
-          echo "🏷️ Tag-triggered release - assuming tests passed on main"
-        elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          echo "success=true" >> $GITHUB_OUTPUT
-          echo "should-release=true" >> $GITHUB_OUTPUT
-          echo "⚠️ Manual release dispatch - bypassing test requirement"
-        elif [[ "${{ github.event_name }}" == "workflow_run" && "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
-          echo "success=true" >> $GITHUB_OUTPUT
-          echo "should-release=false" >> $GITHUB_OUTPUT
-          echo "✅ Tests passed but not releasing from workflow_run (create a tag to release)"
+    - name: Validate release parameters
+      id: validate
+      run: |
+        echo "🚀 Manual release triggered"
+        echo "Version type: ${{ github.event.inputs.version_type }}"
+        echo "Custom version: ${{ github.event.inputs.custom_version }}"
+        echo "Pre-release: ${{ github.event.inputs.prerelease }}"
+        
+        # Validate inputs
+        if [[ -n "${{ github.event.inputs.custom_version }}" ]]; then
+          CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+          # Validate version format (vX.Y.Z or X.Y.Z)
+          if [[ ! "$CUSTOM_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "❌ Invalid custom version format: $CUSTOM_VERSION"
+            echo "Expected format: vX.Y.Z or X.Y.Z (with optional pre-release suffix)"
+            exit 1
+          fi
+          echo "custom-version=$CUSTOM_VERSION" >> $GITHUB_OUTPUT
+          echo "version-type=custom" >> $GITHUB_OUTPUT
         else
-          echo "success=false" >> $GITHUB_OUTPUT
-          echo "should-release=false" >> $GITHUB_OUTPUT
-          echo "❌ Tests failed, cancelled, or inappropriate trigger. Skipping release."
-          exit 1
+          echo "version-type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+          echo "custom-version=" >> $GITHUB_OUTPUT
         fi
+        
+        echo "is-prerelease=${{ github.event.inputs.prerelease }}" >> $GITHUB_OUTPUT
+        echo "should-release=true" >> $GITHUB_OUTPUT
+        
+        # Check for uncommitted changes
+        if [[ -n "$(git status --porcelain)" ]]; then
+          echo "⚠️ Warning: There are uncommitted changes in the repository"
+          git status --short
+        fi
+        
+        # Show recent commits
+        echo "📝 Recent commits:"
+        git log --oneline -5
 
   create-release:
-    needs: check-tests
-    if: needs.check-tests.outputs.should-release == 'true'
+    needs: validate-release
+    if: needs.validate-release.outputs.should-release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -73,37 +103,80 @@ jobs:
     - name: Generate version and tag
       id: tag
       run: |
-        if [[ "${{ github.ref_type }}" == "tag" ]]; then
-          # Use existing tag
-          TAG=${{ github.ref_name }}
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Using existing tag: $TAG"
-        elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          # For manual dispatch, generate new tag based on commit
-          if git describe --tags --exact-match HEAD 2>/dev/null; then
-            TAG=$(git describe --tags --exact-match HEAD)
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "Current commit already has tag: $TAG"
+        # Check if current commit already has a tag
+        if git describe --tags --exact-match HEAD 2>/dev/null; then
+          EXISTING_TAG=$(git describe --tags --exact-match HEAD)
+          echo "⚠️ Current commit already has tag: $EXISTING_TAG"
+          
+          # Ask user if they want to proceed
+          if [[ "${{ needs.validate-release.outputs.version-type }}" == "custom" ]]; then
+            TAG="${{ needs.validate-release.outputs.custom-version }}"
+            # Ensure tag starts with 'v'
+            if [[ ! "$TAG" =~ ^v ]]; then
+              TAG="v$TAG"
+            fi
+            echo "Using custom version despite existing tag: $TAG"
           else
-            # Get latest tag and increment patch version
-            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-            MAJOR=$(echo $LATEST_TAG | cut -d. -f1 | sed 's/v//')
-            MINOR=$(echo $LATEST_TAG | cut -d. -f2)
-            PATCH=$(echo $LATEST_TAG | cut -d. -f3)
-            PATCH=$((PATCH + 1))
-            TAG="v$MAJOR.$MINOR.$PATCH"
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "Generated new tag: $TAG"
-            
-            # Create and push tag
-            git config user.name "GitHub Actions"
-            git config user.email "actions@github.com"
-            git tag $TAG
-            git push origin $TAG
+            echo "❌ Cannot auto-generate version when commit already has a tag"
+            echo "Use custom version input to override, or checkout a different commit"
+            exit 1
           fi
         else
-          echo "Error: This step should only run for tag pushes or manual dispatch"
-          exit 1
+          # Generate new version based on inputs
+          if [[ "${{ needs.validate-release.outputs.version-type }}" == "custom" ]]; then
+            TAG="${{ needs.validate-release.outputs.custom-version }}"
+            # Ensure tag starts with 'v'
+            if [[ ! "$TAG" =~ ^v ]]; then
+              TAG="v$TAG"
+            fi
+            echo "Using custom version: $TAG"
+          else
+            # Get latest tag and increment based on version type
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            echo "Latest tag: $LATEST_TAG"
+            
+            # Parse version components
+            MAJOR=$(echo $LATEST_TAG | cut -d. -f1 | sed 's/v//')
+            MINOR=$(echo $LATEST_TAG | cut -d. -f2)
+            PATCH=$(echo $LATEST_TAG | cut -d. -f3 | cut -d- -f1)  # Remove pre-release suffix
+            
+            # Increment based on version type
+            case "${{ needs.validate-release.outputs.version-type }}" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+              *)
+                echo "❌ Invalid version type: ${{ needs.validate-release.outputs.version-type }}"
+                exit 1
+                ;;
+            esac
+            
+            TAG="v$MAJOR.$MINOR.$PATCH"
+            echo "Generated new version: $TAG (type: ${{ needs.validate-release.outputs.version-type }})"
+          fi
+        fi
+        
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        
+        # Create and push tag
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        
+        if git tag -l | grep -q "^${TAG}$"; then
+          echo "⚠️ Tag $TAG already exists, will update release"
+        else
+          echo "Creating new tag: $TAG"
+          git tag $TAG
+          git push origin $TAG
         fi
 
     - name: Extract version
@@ -232,12 +305,12 @@ jobs:
         name: "🚀 RAFT Toolkit ${{ steps.tag.outputs.tag }}"
         body_path: current_changelog.md
         draft: false
-        prerelease: ${{ contains(steps.tag.outputs.tag, '-') || contains(steps.tag.outputs.tag, 'alpha') || contains(steps.tag.outputs.tag, 'beta') || contains(steps.tag.outputs.tag, 'rc') }}
+        prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' || contains(steps.tag.outputs.tag, '-') || contains(steps.tag.outputs.tag, 'alpha') || contains(steps.tag.outputs.tag, 'beta') || contains(steps.tag.outputs.tag, 'rc') }}
         token: ${{ secrets.GITHUB_TOKEN }}
 
   build-release-images:
-    needs: [check-tests, create-release]
-    if: needs.check-tests.outputs.should-release == 'true'
+    needs: [validate-release, create-release]
+    if: needs.validate-release.outputs.should-release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -307,8 +380,8 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
   publish-packages:
-    needs: [check-tests, create-release]
-    if: needs.check-tests.outputs.should-release == 'true'
+    needs: [validate-release, create-release]
+    if: needs.validate-release.outputs.should-release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -342,7 +415,7 @@ jobs:
       run: python -m build
 
     - name: Publish to PyPI
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      if: secrets.PYPI_API_TOKEN != ''
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
@@ -355,8 +428,8 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
   update-documentation:
-    needs: [check-tests, create-release, build-release-images]
-    if: needs.check-tests.outputs.should-release == 'true'
+    needs: [validate-release, create-release, build-release-images]
+    if: needs.validate-release.outputs.should-release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -428,8 +501,8 @@ jobs:
       uses: actions/deploy-pages@v4
 
   notify-completion:
-    needs: [create-release, build-release-images, publish-packages, update-documentation]
-    if: always() && needs.check-tests.outputs.should-release == 'true'
+    needs: [validate-release, create-release, build-release-images, publish-packages, update-documentation]
+    if: always() && needs.validate-release.outputs.should-release == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Generate release summary
