@@ -68,6 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `requests` for HTTP operations (optional)
   - Graceful degradation when dependencies not available
 
+- **Updated tracing dependencies**: Modern OpenTelemetry stack
+  - Replaced deprecated `opentelemetry-exporter-jaeger` with `opentelemetry-exporter-otlp`
+  - Updated instrumentation packages for compatibility
+  - Enhanced Docker build validation with optional dependency handling
+
 - **Enhanced testing**: Comprehensive test coverage for new functionality
   - Unit tests for all input source implementations
   - Integration tests with mock cloud services

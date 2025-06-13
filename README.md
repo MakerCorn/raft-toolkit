@@ -296,6 +296,11 @@ pip install -r requirements.txt
 # Optional: Install cloud storage dependencies
 pip install -r requirements-k8s.txt  # For S3 and enhanced cloud features
 
+# Optional: Install specific feature groups
+pip install -e ".[cloud]"     # For S3 and SharePoint support
+pip install -e ".[tracing]"   # For OpenTelemetry tracing
+pip install -e ".[web]"       # For web interface dependencies
+
 # Optional: Install for development
 pip install -e ".[all]"  # Install all optional dependencies
 

@@ -15,7 +15,7 @@ azure-identity
 torch
 python-pptx
 promptflow-core>=1.18.0,<2.0.0
-azure-ai-evaluation>=1.8.0,<2.0.0
+azure-ai-evaluation>=1.0.0,<2.0.0
 jsonlines>=4.0.0,<5.0.0
 
 # Enhanced logging and tracing (optional)
@@ -26,8 +26,8 @@ sentry-sdk>=1.40.0,<2.0.0
 # OpenTelemetry tracing (optional)
 opentelemetry-api>=1.22.0,<2.0.0
 opentelemetry-sdk>=1.22.0,<2.0.0
-opentelemetry-exporter-jaeger>=1.22.0,<2.0.0
-opentelemetry-instrumentation-logging>=0.43b0,<1.0.0
+opentelemetry-exporter-otlp>=1.22.0,<2.0.0
+opentelemetry-instrumentation>=0.40b0,<1.0.0
 
 # Rate limiting and performance
 tenacity>=8.2.0,<9.0.0

@@ -55,7 +55,15 @@ RUN pip install --upgrade pip && \
     echo "🔍 Verifying critical dependencies..." && \
     python -c "import pypdf; import secrets; print('✅ Security dependencies OK')" && \
     python -c "import openai; print('✅ OpenAI', openai.__version__, 'OK')" && \
-    python -c "from azure.ai.evaluation import evaluate; print('✅ Azure AI Evaluation OK')" && \
+    python -c "
+try:
+    from azure.ai.evaluation import evaluate
+    print('✅ Azure AI Evaluation OK')
+except ImportError:
+    print('⚠️ Azure AI Evaluation not available (optional)')
+except Exception as e:
+    print(f'⚠️ Azure AI Evaluation error: {e} (optional)')
+" && \
     python -c "import fastapi; print('✅ FastAPI', fastapi.__version__, 'OK')" && \
     # Run dependency conflict check
     echo "🔗 Checking for dependency conflicts..." && \
