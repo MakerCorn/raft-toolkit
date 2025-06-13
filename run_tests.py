@@ -137,10 +137,24 @@ def main():
         # Create directories as needed
         if args.output_dir:
             output_path = Path(args.output_dir)
-            output_path.mkdir(parents=True, exist_ok=True)
+            try:
+                output_path.mkdir(parents=True, exist_ok=True)
+            except PermissionError:
+                # Fall back to temp directory if we can't create in the specified location
+                print(f"Warning: Cannot create output directory {output_path}, using temp directory")
+                args.output_dir = str(Path(temp_dir) / "test-results")
+                output_path = Path(args.output_dir)
+                output_path.mkdir(parents=True, exist_ok=True)
         
         coverage_path = Path(args.coverage_dir)
-        coverage_path.mkdir(parents=True, exist_ok=True)
+        try:
+            coverage_path.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            # Fall back to temp directory if we can't create in the specified location
+            print(f"Warning: Cannot create coverage directory {coverage_path}, using temp directory")
+            args.coverage_dir = str(Path(temp_dir) / "coverage")
+            coverage_path = Path(args.coverage_dir)
+            coverage_path.mkdir(parents=True, exist_ok=True)
         
         # Configure coverage reports
         if args.output_dir:

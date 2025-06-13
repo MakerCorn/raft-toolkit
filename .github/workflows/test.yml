@@ -335,36 +335,36 @@ jobs:
           -e TESTING=true \
           -e OPENAI_API_KEY=test-key \
           -e USE_MOCK_API=true \
-          -v "$PWD/test-results:/app/test-results" \
+          -v "$PWD/test-results:/tmp/test-results" \
           raft-toolkit:test \
-          python run_tests.py --unit --coverage --output-dir /app/test-results/unit
+          python run_tests.py --unit --coverage --output-dir /tmp/test-results/unit
         
         echo "Running integration tests..."
         docker run --rm \
           -e TESTING=true \
           -e OPENAI_API_KEY=test-key \
           -e USE_MOCK_API=true \
-          -v "$PWD/test-results:/app/test-results" \
+          -v "$PWD/test-results:/tmp/test-results" \
           raft-toolkit:test \
-          python run_tests.py --integration --coverage --output-dir /app/test-results/integration
+          python run_tests.py --integration --coverage --output-dir /tmp/test-results/integration
         
         echo "Running API tests..."
         docker run --rm \
           -e TESTING=true \
           -e OPENAI_API_KEY=test-key \
           -e USE_MOCK_API=true \
-          -v "$PWD/test-results:/app/test-results" \
+          -v "$PWD/test-results:/tmp/test-results" \
           raft-toolkit:test \
-          python run_tests.py --api --coverage --output-dir /app/test-results/api
+          python run_tests.py --api --coverage --output-dir /tmp/test-results/api
         
         echo "Running CLI tests..."
         docker run --rm \
           -e TESTING=true \
           -e OPENAI_API_KEY=test-key \
           -e USE_MOCK_API=true \
-          -v "$PWD/test-results:/app/test-results" \
+          -v "$PWD/test-results:/tmp/test-results" \
           raft-toolkit:test \
-          python run_tests.py --cli --coverage --output-dir /app/test-results/cli
+          python run_tests.py --cli --coverage --output-dir /tmp/test-results/cli
     
     - name: Prepare test results directory
       if: always()
