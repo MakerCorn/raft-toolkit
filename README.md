@@ -92,6 +92,32 @@ graph TD
 - Documents change frequently
 - General-purpose question answering is sufficient
 
+### Best Practices for RAFT Training Data
+
+#### Document Preparation
+- **Quality Over Quantity**: Use high-quality, authoritative documents
+- **Consistent Format**: Maintain consistent document structure and formatting
+- **Domain Relevance**: Focus on documents representative of target use cases
+- **Optimal Length**: Use documents of 1,000-10,000 tokens for best chunking results
+
+#### Question Generation
+- **Diverse Question Types**: Include factual, analytical, and inferential questions
+- **Appropriate Difficulty**: Match question complexity to intended use case
+- **Natural Language**: Generate questions that users would realistically ask
+- **Coverage**: Ensure questions cover all important document sections
+
+#### Dataset Composition
+- **Distractor Ratio**: Use 3-5 distractor documents per training example
+- **Oracle Probability**: Include source document 80-100% of the time
+- **Balanced Difficulty**: Mix easy, medium, and hard questions
+- **Size Guidelines**: Aim for 1,000-10,000 training examples minimum
+
+#### Quality Assurance
+- **Manual Review**: Sample and manually verify question-answer pairs
+- **Consistency Checks**: Ensure answers are actually derivable from context
+- **Bias Detection**: Check for dataset biases and systematic errors
+- **Evaluation Split**: Reserve 10-20% of data for evaluation
+
 ### The RAFT Fine-Tuning Process
 
 #### 1. **Training Data Generation** (This Toolkit)
@@ -229,32 +255,6 @@ python tools/eval.py --model ft:gpt-3.5-turbo:suffix --question-file eval.jsonl
 - **Error Analysis**: Identify common failure patterns
 - **Data Augmentation**: Generate additional training examples for weak areas
 - **Iterative Improvement**: Refine dataset and retrain
-
-### Best Practices for RAFT Training Data
-
-#### Document Preparation
-- **Quality Over Quantity**: Use high-quality, authoritative documents
-- **Consistent Format**: Maintain consistent document structure and formatting
-- **Domain Relevance**: Focus on documents representative of target use cases
-- **Optimal Length**: Use documents of 1,000-10,000 tokens for best chunking results
-
-#### Question Generation
-- **Diverse Question Types**: Include factual, analytical, and inferential questions
-- **Appropriate Difficulty**: Match question complexity to intended use case
-- **Natural Language**: Generate questions that users would realistically ask
-- **Coverage**: Ensure questions cover all important document sections
-
-#### Dataset Composition
-- **Distractor Ratio**: Use 3-5 distractor documents per training example
-- **Oracle Probability**: Include source document 80-100% of the time
-- **Balanced Difficulty**: Mix easy, medium, and hard questions
-- **Size Guidelines**: Aim for 1,000-10,000 training examples minimum
-
-#### Quality Assurance
-- **Manual Review**: Sample and manually verify question-answer pairs
-- **Consistency Checks**: Ensure answers are actually derivable from context
-- **Bias Detection**: Check for dataset biases and systematic errors
-- **Evaluation Split**: Reserve 10-20% of data for evaluation
 
 ## 📦 Installation & Configuration
 
