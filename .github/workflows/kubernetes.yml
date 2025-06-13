@@ -94,28 +94,60 @@ jobs:
     - name: Validate Kubernetes manifests
       run: |
         echo "### Kubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
+        
+        validate_manifests() {
+          local dir=$1
+          local name=$2
+          echo "#### $name" >> $GITHUB_STEP_SUMMARY
+          
+          echo "Building and validating $name manifests..."
+          echo "Running kustomize build for $name..."
+          
+          # Try to build with verbose output
+          if ! kustomize build --load-restrictor LoadRestrictionsNone "$dir" 2>kustomize_error.txt 1>build_output.yaml; then
+            echo "❌ Failed to build $name manifests" >> $GITHUB_STEP_SUMMARY
+            echo "Kustomize build error:" >> $GITHUB_STEP_SUMMARY
+            cat kustomize_error.txt >> $GITHUB_STEP_SUMMARY
+            echo "Attempted to build:" >> $GITHUB_STEP_SUMMARY
+            find "$dir" -type f -name "*.yaml" -exec echo {} \; >> $GITHUB_STEP_SUMMARY
+            return 1
+          fi
+          
+          echo "Running kubectl validation for $name..."
+          if ! kubectl apply --dry-run=client -f build_output.yaml 2>kubectl_error.txt; then
+            echo "❌ $name manifests validation failed" >> $GITHUB_STEP_SUMMARY
+            echo "Kubectl validation error:" >> $GITHUB_STEP_SUMMARY
+            cat kubectl_error.txt >> $GITHUB_STEP_SUMMARY
+            return 1
+          fi
+          
+          echo "✅ $name manifests are valid" >> $GITHUB_STEP_SUMMARY
+          return 0
+        }
+        
+        # List all yaml files that will be processed
+        echo "### Found Kubernetes Manifests:" >> $GITHUB_STEP_SUMMARY
+        find k8s -type f -name "*.yaml" -o -name "*.yml" | sort >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Verify kustomize version
+        echo "### Kustomize Version:" >> $GITHUB_STEP_SUMMARY
+        kustomize version >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
         # Validate base manifests
-        echo "#### Base Manifests" >> $GITHUB_STEP_SUMMARY
-        cd k8s/base
-        if kustomize build . | kubectl apply --dry-run=client -f - >/dev/null 2>&1; then
-          echo "✅ Base manifests are valid" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Base manifests validation failed" >> $GITHUB_STEP_SUMMARY
+        if ! validate_manifests "k8s/base" "Base Manifests"; then
+          cat build_output.yaml || true
           exit 1
         fi
-        cd ../..
+        
         # Validate cloud-specific overlays
         for cloud in aks eks gks; do
           if [ -d "k8s/overlays/$cloud" ]; then
-            echo "#### $cloud Overlay" >> $GITHUB_STEP_SUMMARY
-            cd k8s/overlays/$cloud
-            if kustomize build . | kubectl apply --dry-run=client -f - >/dev/null 2>&1; then
-              echo "✅ $cloud overlay is valid" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "❌ $cloud overlay validation failed" >> $GITHUB_STEP_SUMMARY
+            if ! validate_manifests "k8s/overlays/$cloud" "$cloud Overlay"; then
+              cat build_output.yaml || true
               exit 1
             fi
-            cd ../../..
           else
             echo "⚠️ $cloud overlay directory not found, skipping validation" >> $GITHUB_STEP_SUMMARY
           fi

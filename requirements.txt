@@ -11,7 +11,26 @@ mdc==1.2.1
 pytest==8.1.2
 wand
 PyCryptodome
-azure-identity
+# Azure Core Services
+azure-identity>=1.15.0,<2.0.0
+azure-core>=1.30.0,<2.0.0
+azure-keyvault-secrets>=4.7.0,<5.0.0
+
+# Azure AI and ML Services
+azure-ai-ml>=1.13.0,<2.0.0
+azure-ai-evaluation>=1.0.0,<2.0.0
+azure-cognitiveservices-language-textanalytics>=0.2.0,<1.0.0
+azure-search-documents>=11.4.0,<12.0.0
+
+# Azure Storage
+azure-storage-blob>=12.19.0,<13.0.0
+azure-storage-queue>=12.9.0,<13.0.0
+
+# Azure Resource Management
+azure-mgmt-resource>=23.0.0,<24.0.0
+azure-mgmt-storage>=21.0.0,<22.0.0
+azure-mgmt-containerinstance>=10.1.0,<11.0.0
+
 torch
 python-pptx
 promptflow-core>=1.18.0,<2.0.0
