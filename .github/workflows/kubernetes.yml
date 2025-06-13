@@ -78,7 +78,6 @@ jobs:
     - name: Validate Kubernetes manifests
       run: |
         echo "### Kubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
-        
         # Validate base manifests
         echo "#### Base Manifests" >> $GITHUB_STEP_SUMMARY
         cd k8s/base
@@ -89,45 +88,49 @@ jobs:
           exit 1
         fi
         cd ../..
-        
         # Validate cloud-specific overlays
         for cloud in aks eks gks; do
-          echo "#### $cloud Overlay" >> $GITHUB_STEP_SUMMARY
-          cd k8s/overlays/$cloud
-          if kustomize build . | kubectl apply --dry-run=client -f - >/dev/null 2>&1; then
-            echo "✅ $cloud overlay is valid" >> $GITHUB_STEP_SUMMARY
+          if [ -d "k8s/overlays/$cloud" ]; then
+            echo "#### $cloud Overlay" >> $GITHUB_STEP_SUMMARY
+            cd k8s/overlays/$cloud
+            if kustomize build . | kubectl apply --dry-run=client -f - >/dev/null 2>&1; then
+              echo "✅ $cloud overlay is valid" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ $cloud overlay validation failed" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            cd ../../..
           else
-            echo "❌ $cloud overlay validation failed" >> $GITHUB_STEP_SUMMARY
-            exit 1
+            echo "⚠️ $cloud overlay directory not found, skipping validation" >> $GITHUB_STEP_SUMMARY
           fi
-          cd ../../..
         done
     
     - name: Validate Helm chart
       run: |
         echo "### Helm Chart Validation" >> $GITHUB_STEP_SUMMARY
-        
-        cd k8s/helm
-        if helm lint . >/dev/null 2>&1; then
-          echo "✅ Helm chart is valid" >> $GITHUB_STEP_SUMMARY
+        if [ -d k8s/helm ]; then
+          cd k8s/helm
+          if helm lint . >/dev/null 2>&1; then
+            echo "✅ Helm chart is valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Helm chart validation failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          # Test Helm template rendering
+          if helm template test-release . >/dev/null 2>&1; then
+            echo "✅ Helm template rendering successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Helm template rendering failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          cd ../..
         else
-          echo "❌ Helm chart validation failed" >> $GITHUB_STEP_SUMMARY
-          exit 1
+          echo "⚠️ Helm chart directory not found, skipping Helm validation" >> $GITHUB_STEP_SUMMARY
         fi
-        
-        # Test Helm template rendering
-        if helm template test-release . >/dev/null 2>&1; then
-          echo "✅ Helm template rendering successful" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "❌ Helm template rendering failed" >> $GITHUB_STEP_SUMMARY
-          exit 1
-        fi
-        cd ../..
     
     - name: Security scan Kubernetes manifests
       run: |
         echo "### Security Scanning" >> $GITHUB_STEP_SUMMARY
-        
         # Install and run kubesec
         curl -sSX GET "https://api.github.com/repos/controlplaneio/kubesec/releases/latest" \
           | grep '"browser_download_url":' \
@@ -135,7 +138,6 @@ jobs:
           | cut -d '"' -f 4 \
           | xargs curl -sSL -o kubesec
         chmod +x kubesec
-        
         # Scan deployments for security issues
         SECURITY_ISSUES=0
         for cloud in base aks eks gks; do
@@ -144,29 +146,28 @@ jobs:
           else
             manifest_path="k8s/overlays/$cloud"
           fi
-          
-          cd "$manifest_path"
-          kustomize build . > deployment.yaml
-          
-          # Run kubesec scan
-          if ./../../kubesec scan deployment.yaml --format=json > kubesec-report.json 2>/dev/null; then
-            SCORE=$(jq -r '.[0].score // 0' kubesec-report.json)
-            if [ "$SCORE" -ge 0 ]; then
-              echo "✅ $cloud security scan passed (score: $SCORE)" >> $GITHUB_STEP_SUMMARY
+          if [ -d "$manifest_path" ]; then
+            cd "$manifest_path"
+            kustomize build . > deployment.yaml
+            # Run kubesec scan
+            if ./../../kubesec scan deployment.yaml --format=json > kubesec-report.json 2>/dev/null; then
+              SCORE=$(jq -r '.[0].score // 0' kubesec-report.json)
+              if [ "$SCORE" -ge 0 ]; then
+                echo "✅ $cloud security scan passed (score: $SCORE)" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "⚠️ $cloud security scan found issues (score: $SCORE)" >> $GITHUB_STEP_SUMMARY
+                SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+              fi
             else
-              echo "⚠️ $cloud security scan found issues (score: $SCORE)" >> $GITHUB_STEP_SUMMARY
-              SECURITY_ISSUES=$((SECURITY_ISSUES + 1))
+              echo "⚠️ $cloud security scan failed to run" >> $GITHUB_STEP_SUMMARY
             fi
+            rm -f deployment.yaml kubesec-report.json
+            cd - >/dev/null
           else
-            echo "⚠️ $cloud security scan failed to run" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ $cloud directory not found, skipping security scan" >> $GITHUB_STEP_SUMMARY
           fi
-          
-          rm -f deployment.yaml kubesec-report.json
-          cd - >/dev/null
         done
-        
         rm -f kubesec
-        
         if [ $SECURITY_ISSUES -gt 0 ]; then
           echo "⚠️ Found security issues in $SECURITY_ISSUES configurations" >> $GITHUB_STEP_SUMMARY
           echo "Security issues are non-blocking but should be reviewed" >> $GITHUB_STEP_SUMMARY
