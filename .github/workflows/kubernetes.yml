@@ -55,19 +55,20 @@ jobs:
         version: 'v3.13.0'
     
     - name: Validate YAML syntax
+      shell: bash
       run: |
         echo "## 🔍 YAML Validation Results" >> $GITHUB_STEP_SUMMARY
-        
-        # Check all YAML files for syntax errors
+
         YAML_ERRORS=0
-        for file in $(find k8s -name "*.yaml" -o -name "*.yml"); do
-          if ! yamllint -d relaxed "$file" >/dev/null 2>&1; then
+        while IFS= read -r -d '' file; do
+          if ! yamllint -d relaxed "$file" >yamllint.log 2>&1; then
             echo "❌ YAML syntax error in $file" >> $GITHUB_STEP_SUMMARY
+            cat yamllint.log >> $GITHUB_STEP_SUMMARY
             YAML_ERRORS=$((YAML_ERRORS + 1))
           fi
-        done
-        
-        if [ $YAML_ERRORS -eq 0 ]; then
+        done < <(find k8s -type f \( -name "*.yaml" -o -name "*.yml" \) -print0)
+
+        if [ "$YAML_ERRORS" -eq 0 ]; then
           echo "✅ All YAML files have valid syntax" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Found $YAML_ERRORS YAML syntax errors" >> $GITHUB_STEP_SUMMARY
