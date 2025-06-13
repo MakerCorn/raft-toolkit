@@ -31,8 +31,9 @@ images:
   newName: gcr.io/your-project-id/raft-toolkit
   newTag: latest
 
-commonLabels:
-  cloud.provider: gcp
-  deployment.environment: gks
+labels:
+- pairs:
+    cloud.provider: gcp
+    deployment.environment: gks
 
 namespace: raft-toolkit

@@ -29,8 +29,9 @@ images:
   newName: your-acr-registry.azurecr.io/raft-toolkit
   newTag: latest
 
-commonLabels:
-  cloud.provider: azure
-  deployment.environment: aks
+labels:
+- pairs:
+    cloud.provider: azure
+    deployment.environment: aks
 
 namespace: raft-toolkit

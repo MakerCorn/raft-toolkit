@@ -31,8 +31,9 @@ images:
   newName: your-account-id.dkr.ecr.us-west-2.amazonaws.com/raft-toolkit
   newTag: latest
 
-commonLabels:
-  cloud.provider: aws
-  deployment.environment: eks
+labels:
+- pairs:
+    cloud.provider: aws
+    deployment.environment: eks
 
 namespace: raft-toolkit

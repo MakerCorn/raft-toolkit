@@ -21,8 +21,9 @@ images:
 - name: raft-toolkit
   newTag: latest
 
-commonLabels:
-  app.kubernetes.io/managed-by: kustomize
-  app.kubernetes.io/version: "latest"
+labels:
+- pairs:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/version: "latest"
 
 namespace: raft-toolkit
