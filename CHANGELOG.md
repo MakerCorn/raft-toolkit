@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📚 Enhanced
+
+#### Major Documentation Reorganization
+- **🔄 README.md restructured**: Complete reorganization of README.md for improved user experience and logical information flow
+  - **📋 Grouped Installation & Configuration**: All setup information consolidated into single cohesive section
+    - Prerequisites with detailed hardware, software, and cloud provider requirements
+    - Progressive installation options (Standard → Full → Feature-specific)
+    - Comprehensive system requirements matrix with cloud provider credentials
+    - Environment setup with production, development, and testing templates
+  - **⚡ Usage Before Advanced Topics**: Logical flow from basic usage to advanced configuration
+    - Command-line interface examples with local files, S3, and SharePoint sources
+    - Web interface documentation with analysis tools overview
+    - Standalone evaluation tools with comprehensive usage examples
+  - **🔧 Advanced Configuration Section**: All advanced topics grouped together
+    - Rate limiting for cloud AI services with strategies and presets
+    - Enhanced CLI logging with distributed tracing capabilities
+    - Azure OpenAI support with configuration examples
+    - File utilities and helper functions
+  - **🏗️ Architecture & Structure**: Technical documentation properly positioned
+    - 12-factor app architecture overview
+    - Comprehensive project structure with detailed file organization
+    - Testing framework with multiple categories and configuration options
+  - **🚀 Building & Deployment at End**: All deployment information consolidated at conclusion
+    - Docker deployment with multi-target builds
+    - Kubernetes deployment across major cloud providers
+    - CI/CD integration with comprehensive pipeline examples
+    - Security best practices and monitoring setup
+
+- **📋 Comprehensive Requirements Documentation**: Updated to reflect all new features and their dependencies
+  - **🎯 Feature Group Matrix**: Clear breakdown of what each optional dependency provides
+    - Core dependencies for basic RAFT functionality
+    - Web interface dependencies for job management and analysis tools
+    - Cloud integration dependencies for S3 and SharePoint support
+    - Kubernetes dependencies for production deployment
+    - Monitoring dependencies for observability and tracing
+    - Development dependencies for testing and code quality
+  - **📊 Installation Comparison Table**: Minimal vs Full installation feature comparison
+  - **🌐 Cloud Provider Requirements**: Detailed credential requirements for each cloud service
+  - **⚙️ Environment Configuration**: Production-ready configuration templates
+
+- **🔍 Restored Missing Content**: Added back all content that was inadvertently removed during reorganization
+  - **RAFT Fine-Tuning Process**: Complete process documentation with chunking strategies
+  - **Best Practices for RAFT Training Data**: Document preparation, question generation, and quality assurance
+  - **Rate Limiting Arguments**: CLI arguments for advanced rate limiting configuration
+  - **Progress Tracking & Distributed Tracing**: Enhanced logging features with external service integration
+  - **Pipeline Configuration Examples**: GitLab CI and Jenkins integration examples
+  - **Advanced Filtering & Configuration**: File filtering and environment variable configuration
+  - **Testing Infrastructure**: Configurable test directories, dependency troubleshooting, code quality tools
+  - **Analysis Tools Documentation**: Detailed coverage of all six evaluation and analysis tools
+
+- **✨ Visual Improvements**: Enhanced document readability and navigation
+  - Collapsible sections for environment templates
+  - Progressive disclosure from basic to advanced topics
+  - Clear section headers with logical grouping
+  - Feature comparison tables and requirement matrices
+  - Better code examples with comprehensive explanations
+
 ### 🚀 Added
 
 #### Multi-Source Input System

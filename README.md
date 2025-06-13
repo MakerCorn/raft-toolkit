@@ -49,6 +49,22 @@ graph TD
 - **Web Interface**: Visual workflow management and monitoring
 - **CLI Tools**: Scriptable automation and batch processing
 
+### Key Features
+
+**Features:**
+- 📊 **Dual Interface**: Command-line tool and modern web interface
+- 🛠️ **Analysis Tools Suite**: Evaluation, answer generation, and PromptFlow analysis
+- 🏗️ **12-Factor Architecture**: Cloud-native, scalable design
+- 📄 **Multi-Format Support**: PDF, TXT, JSON, PPTX, and API documentation
+- ☁️ **Multiple Input Sources**: Local files, Amazon S3, SharePoint Online
+- 🔐 **Enterprise Authentication**: AWS credentials, Azure AD, SharePoint integration
+- 🎯 **Flexible Output**: HuggingFace, OpenAI completion/chat, and evaluation formats
+- ⚡ **Parallel Processing**: Configurable workers for optimal performance
+- 📋 **Enhanced Logging**: Production-ready logging with progress tracking, external service integration (Sentry, DataDog), and structured output
+- 🧪 **Comprehensive Testing**: Unit, integration, API, and CLI test suites
+- 🐳 **Container Ready**: Docker support for easy deployment
+- 🚀 **Kubernetes Ready**: Complete Kubernetes deployment configurations
+
 ### RAFT vs Traditional RAG: Key Differences
 
 | Aspect | Traditional RAG | RAFT Fine-Tuning |
@@ -59,19 +75,6 @@ graph TD
 | **Latency** | Requires runtime retrieval + inference | Faster inference with better document integration |
 | **Setup Complexity** | Lower initial setup | Higher setup (requires training data generation) |
 | **Customization** | Limited to prompt engineering | Deep customization through fine-tuning |
-
-### Advantages of RAFT Fine-Tuning
-
-**✅ Performance Benefits:**
-- **Improved Document Reasoning**: Models learn to better understand and utilize retrieved documents
-- **Domain Adaptation**: Optimized for specific document types (legal, medical, technical, etc.)
-- **Reduced Hallucination**: Better grounding in provided context through training
-- **Enhanced Factual Accuracy**: Explicit training on document-based question answering
-
-**✅ Operational Benefits:**
-- **Faster Inference**: No need for complex retrieval orchestration at runtime
-- **Consistent Quality**: Predictable performance across similar document types
-- **Cost Efficiency**: Smaller fine-tuned models can outperform larger general models
 
 ### When to Use RAFT vs Traditional RAG
 
@@ -253,34 +256,38 @@ python tools/eval.py --model ft:gpt-3.5-turbo:suffix --question-file eval.jsonl
 - **Bias Detection**: Check for dataset biases and systematic errors
 - **Evaluation Split**: Reserve 10-20% of data for evaluation
 
-RAFT takes an input document and creates a dataset of `{question, answer, documents}` triplets for fine-tuning LLMs on retrieval-augmented tasks. Now available with both **CLI** and **Web UI** interfaces plus comprehensive **evaluation tools**!
-
-**Features:**
-- 📊 **Dual Interface**: Command-line tool and modern web interface
-- 🛠️ **Analysis Tools Suite**: Evaluation, answer generation, and PromptFlow analysis
-- 🏗️ **12-Factor Architecture**: Cloud-native, scalable design
-- 📄 **Multi-Format Support**: PDF, TXT, JSON, PPTX, and API documentation
-- ☁️ **Multiple Input Sources**: Local files, Amazon S3, SharePoint Online
-- 🔐 **Enterprise Authentication**: AWS credentials, Azure AD, SharePoint integration
-- 🎯 **Flexible Output**: HuggingFace, OpenAI completion/chat, and evaluation formats
-- ⚡ **Parallel Processing**: Configurable workers for optimal performance
-- 📋 **Enhanced Logging**: Production-ready logging with progress tracking, external service integration (Sentry, DataDog), and structured output
-- 🧪 **Comprehensive Testing**: Unit, integration, API, and CLI test suites
-- 🐳 **Container Ready**: Docker support for easy deployment
-- 🚀 **Kubernetes Ready**: Complete Kubernetes deployment configurations
-
-## 📦 Installation
+## 📦 Installation & Configuration
 
 ### Prerequisites
 
-- Python 3.9+ (3.11 recommended)
-- OpenAI API key (or Azure OpenAI credentials)
-- Optional: AWS credentials for S3 input sources
-- Optional: Azure AD app registration for SharePoint input sources
-- Optional: Docker & Docker Compose for containerized deployment
+#### 🔧 Core Requirements
+- **Python 3.9+** (3.11 recommended for best performance)
+- **OpenAI API key** (or Azure OpenAI credentials, or Ollama for local models)
+- **4GB+ RAM** (8GB+ recommended for large documents)
+- **10GB+ disk space** (for datasets and temporary files)
 
-### 🚀 Quick Start (Recommended)
+#### ☁️ Cloud Integration Requirements (Optional)
+- **AWS credentials** for S3 input sources (IAM role or access keys)
+- **Azure AD app registration** for SharePoint Online integration
+- **Google Cloud credentials** for GCS storage (service account)
 
+#### 🏗️ Infrastructure Requirements (Optional)
+- **Docker & Docker Compose** for containerized deployment
+- **Redis** for web interface job management and caching
+- **Kubernetes cluster** for production scaling and deployment
+- **Container registry access** (Docker Hub, GHCR, ACR, ECR, GCR)
+
+#### 🔐 Security & Monitoring (Optional)
+- **Sentry DSN** for error tracking and performance monitoring
+- **DataDog API key** for metrics collection and alerting
+- **Jaeger endpoint** for distributed tracing visualization
+- **SSL certificates** for HTTPS deployment in production
+
+### 🚀 Quick Start
+
+Choose your installation method based on your use case:
+
+#### 📋 Standard Installation
 ```bash
 # Clone the repository
 git clone https://github.com/your-repo/raft-toolkit.git
@@ -290,24 +297,29 @@ cd raft-toolkit
 cp .env.example .env
 # Edit .env with your OpenAI API key
 
-# Install core dependencies
+# Install core dependencies (includes basic RAFT functionality)
 pip install -r requirements.txt
-
-# Optional: Install cloud storage dependencies
-pip install -r requirements-k8s.txt  # For S3 and enhanced cloud features
-
-# Optional: Install specific feature groups
-pip install -e ".[cloud]"     # For S3 and SharePoint support
-pip install -e ".[tracing]"   # For OpenTelemetry tracing
-pip install -e ".[web]"       # For web interface dependencies
-
-# Optional: Install for development
-pip install -e ".[all]"  # Install all optional dependencies
 
 # Test installation
 python run_tests.py --unit --fast
 
-# Start web interface
+# Run basic CLI
+python raft.py --datapath sample_data/sample.pdf --output ./output --preview
+```
+
+#### 🌐 Full Installation (All Features)
+```bash
+# Install with all optional features
+pip install -e ".[all]"
+
+# Or install specific feature groups as needed:
+pip install -e ".[web]"         # Web interface with job management
+pip install -e ".[cloud]"       # S3 and SharePoint integration  
+pip install -e ".[kubernetes]"  # Kubernetes deployment tools
+pip install -e ".[tracing]"     # OpenTelemetry monitoring
+pip install -e ".[dev]"         # Development and testing tools
+
+# Start web interface (requires web features)
 python run_web.py
 # Open http://localhost:8000
 ```
@@ -329,43 +341,32 @@ docker compose up -d
 # Redis dashboard: http://localhost:8081
 ```
 
-### 📋 Detailed Installation
+### 📋 System Requirements Summary
 
-#### Core Dependencies
-```bash
-# Essential packages for basic functionality
-pip install -r requirements.txt
-```
+**Minimum System Requirements:**
+- **OS**: Linux, macOS, or Windows with WSL2
+- **Python**: 3.9+ (3.11+ recommended for optimal performance)  
+- **Memory**: 4GB RAM (8GB+ for large document processing)
+- **Storage**: 10GB available disk space
+- **Network**: Internet access for AI model APIs
 
-#### Web Interface (Optional)
-```bash
-# For full web UI experience
-pip install -r requirements-web.txt
-```
+**Production System Requirements:**
+- **Memory**: 16GB+ RAM for concurrent processing
+- **CPU**: 4+ cores for optimal parallel processing
+- **Storage**: 100GB+ SSD for large-scale dataset generation
+- **Container Runtime**: Docker 20.10+ or containerd 1.6+
+- **Orchestration**: Kubernetes 1.24+ for scaled deployments
 
-#### Development & Testing (Optional)
-```bash
-# For contributors and advanced users
-pip install -r requirements-test.txt
+**Cloud Provider Requirements (Choose One or More):**
 
-# Run full test suite
-python run_tests.py --coverage --output-dir ./test-results
-```
-
-#### Multi-Target Docker Builds
-```bash
-# Production deployment
-docker build --target production -t raft-toolkit:prod .
-
-# Development with debugging
-docker build --target development -t raft-toolkit:dev .
-
-# CLI-only lightweight image
-docker build --target cli -t raft-toolkit:cli .
-
-# Testing environment
-docker build --target testing -t raft-toolkit:test .
-```
+| Provider | Service | Purpose | Required Credentials |
+|----------|---------|---------|---------------------|
+| **OpenAI** | API Platform | AI model access | API key |
+| **Azure** | OpenAI Service | Enterprise AI | Endpoint + key |
+| **AWS** | S3, EKS | Storage + hosting | Access keys or IAM role |
+| **Azure** | Blob, AKS, AD | Storage + hosting + auth | Service principal or managed identity |
+| **Google Cloud** | GCS, GKE | Storage + hosting | Service account JSON |
+| **SharePoint** | Online | Document source | App registration + client secret |
 
 ### Environment Setup
 
@@ -399,513 +400,176 @@ RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=500
 RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=10000
 RAFT_RATE_LIMIT_MAX_BURST=50
 RAFT_RATE_LIMIT_MAX_RETRIES=3
+
+# 🌐 Cloud Storage Configuration (optional)
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_DEFAULT_REGION=us-east-1
+
+# 🏢 SharePoint Configuration (optional)
+SHAREPOINT_CLIENT_ID=your_sharepoint_app_id
+SHAREPOINT_CLIENT_SECRET=your_sharepoint_app_secret
+SHAREPOINT_TENANT_ID=your_azure_tenant_id
+
+# 📊 Monitoring and Observability (optional)
+RAFT_LOG_LEVEL=INFO
+RAFT_LOG_FORMAT=colored
+RAFT_LOG_OUTPUT=console
+RAFT_TRACING_ENABLED=true
+SENTRY_DSN=your_sentry_dsn_for_error_tracking
+DATADOG_API_KEY=your_datadog_api_key
+
+# 🔴 Redis Configuration (for web interface)
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=your_redis_password
+
+# 🔒 Security Configuration (production)
+CORS_ORIGINS=https://your-domain.com
+ENABLE_AUTH=false
+JWT_SECRET=your_jwt_secret_for_production
 ```
 
-### 🌐 Kubernetes Deployment
+#### 🎯 **Environment Templates**
 
-For production deployments, RAFT Toolkit supports Kubernetes across major cloud providers:
+<details>
+<summary><strong>📝 Development Environment (.env.dev)</strong></summary>
 
 ```bash
-# Azure Kubernetes Service (AKS)
-export OPENAI_API_KEY="your-openai-api-key"
-./k8s/scripts/deploy-aks.sh
-
-# Amazon Elastic Kubernetes Service (EKS)  
-export OPENAI_API_KEY="your-openai-api-key"
-./k8s/scripts/deploy-eks.sh
-
-# Google Kubernetes Engine (GKE)
-export OPENAI_API_KEY="your-openai-api-key"
-export PROJECT_ID="your-gcp-project-id"
-./k8s/scripts/deploy-gks.sh
+# 🛠️ Minimal development setup
+OPENAI_API_KEY=your_development_api_key
+RAFT_LOG_LEVEL=DEBUG
+RAFT_LOG_FORMAT=colored
+WEB_DEBUG=true
+RAFT_RATE_LIMIT_ENABLED=false
 ```
+</details>
 
-**Kubernetes Features:**
-- **🔄 Auto-scaling**: Horizontal and vertical pod autoscaling
-- **🛡️ Security**: Non-root containers, network policies, RBAC
-- **📊 Monitoring**: Health checks, Prometheus metrics, logging
-- **💾 Storage**: Persistent volumes for input/output data
-- **🌐 Ingress**: Load balancing and SSL termination
-- **🔧 Configuration**: Environment-based config management
-
-See the complete [Kubernetes Deployment Guide](docs/KUBERNETES.md) for detailed instructions.
-
-## ⚙️ Main Arguments
-
-- **`--datapath`**: Path to the input document
-- **`--output`**: Path to save the generated dataset
-- **`--output-format`**: Output format (`hf` [default], `completion`, `chat`)
-- **`--output-type`**: Output file type (`jsonl` [default], `parquet`)
-- **`--output-chat-system-prompt`**: System prompt for chat output (optional)
-- **`--distractors`**: Number of distractor documents per data point
-- **`--doctype`**: Document type (`pdf`, `txt`, `json`, `api`, `pptx`)
-- **`--p`**: Percentage of including the oracle document in context
-- **`--chunk_size`**: Size of each chunk (in tokens)
-- **`--questions`**: Number of QA pairs to generate per chunk
-- **`--workers`**: Number of workers for QA generation
-- **`--embed-workers`**: Number of workers for chunking/embedding
-- **`--openai_key`**: OpenAI API key
-- **`--embedding-model`**: Embedding model (default: `text-embedding-ada-002`)
-- **`--completion-model`**: Model for QA generation (default: `gpt-4`)
-- **`--use-azure-identity`**: Use Azure Default Credentials for token retrieval
-- **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
-- **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
-
-### 🚦 Rate Limiting Arguments
-
-- **`--rate-limit`**: Enable rate limiting for API requests (default: disabled)
-- **`--rate-limit-strategy`**: Rate limiting strategy (`fixed_window`, `sliding_window` [default], `token_bucket`, `adaptive`)
-- **`--rate-limit-preset`**: Use preset configuration (`openai_gpt4`, `openai_gpt35_turbo`, `azure_openai_standard`, `anthropic_claude`, `conservative`, `aggressive`)
-- **`--rate-limit-requests-per-minute`**: Maximum requests per minute (overrides preset)
-- **`--rate-limit-tokens-per-minute`**: Maximum tokens per minute (overrides preset)
-- **`--rate-limit-max-burst`**: Maximum burst requests allowed (overrides preset)
-- **`--rate-limit-max-retries`**: Maximum retries on rate limit errors (default: 3)
-
-## 🚦 Rate Limiting for Cloud AI Services
-
-The RAFT Toolkit includes comprehensive rate limiting to handle the constraints imposed by cloud-based AI services. Rate limiting is **disabled by default** to maintain backward compatibility, but is highly recommended for production use to avoid hitting API limits and reduce costs.
-
-### Why Rate Limiting Matters
-
-**Common Issues Without Rate Limiting:**
-- API rate limit errors (HTTP 429) causing processing failures
-- Unexpected costs from burst API usage
-- Inconsistent processing times due to throttling
-- Failed batches requiring expensive reprocessing
-
-**Benefits of Rate Limiting:**
-- **Predictable Costs**: Control API spending with token and request limits
-- **Reliable Processing**: Avoid rate limit errors through intelligent throttling
-- **Optimized Performance**: Adaptive strategies adjust to service response times
-- **Better Monitoring**: Detailed statistics on API usage and throttling
-
-### Quick Start Examples
-
-#### Using Preset Configurations
-```bash
-# OpenAI GPT-4 with recommended limits
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-preset openai_gpt4
-
-# Azure OpenAI with conservative limits  
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-preset azure_openai_standard
-
-# Anthropic Claude with aggressive processing
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-preset anthropic_claude
-```
-
-#### Custom Rate Limiting
-```bash
-# Custom limits for your specific API tier
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit \
-  --rate-limit-strategy sliding_window \
-  --rate-limit-requests-per-minute 100 \
-  --rate-limit-tokens-per-minute 5000 \
-  --rate-limit-max-burst 20
-
-# Adaptive rate limiting (adjusts based on response times)
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-strategy adaptive \
-  --rate-limit-requests-per-minute 200
-```
-
-### Rate Limiting Strategies
-
-#### 1. **Sliding Window** (Recommended)
-- **Best for**: Most production use cases
-- **How it works**: Tracks requests over a rolling time window
-- **Advantages**: Smooth rate distribution, handles bursts well
-```bash
---rate-limit-strategy sliding_window
-```
-
-#### 2. **Fixed Window**
-- **Best for**: Simple rate limiting scenarios
-- **How it works**: Resets limits at fixed intervals (every minute)
-- **Advantages**: Simple to understand, predictable behavior
-```bash
---rate-limit-strategy fixed_window
-```
-
-#### 3. **Token Bucket**
-- **Best for**: Bursty workloads with occasional high throughput needs
-- **How it works**: Accumulates "tokens" over time, consumes them for requests
-- **Advantages**: Allows controlled bursts above average rate
-```bash
---rate-limit-strategy token_bucket
-```
-
-#### 4. **Adaptive**
-- **Best for**: Unknown or variable API performance
-- **How it works**: Automatically adjusts rate based on response times
-- **Advantages**: Self-tuning, optimizes for service performance
-```bash
---rate-limit-strategy adaptive
-```
-
-### Available Presets
-
-| Preset | Service | Requests/min | Tokens/min | Burst | Use Case |
-|--------|---------|--------------|------------|-------|----------|
-| `openai_gpt4` | OpenAI GPT-4 | 500 | 10,000 | 50 | Production GPT-4 |
-| `openai_gpt35_turbo` | OpenAI GPT-3.5 Turbo | 3,500 | 90,000 | 100 | High-throughput GPT-3.5 |
-| `azure_openai_standard` | Azure OpenAI | 120 | 6,000 | 20 | Standard Azure tier |
-| `anthropic_claude` | Anthropic Claude | 1,000 | 100,000 | 50 | Claude API |
-| `conservative` | Any service | 60 | 2,000 | 10 | Safe/cautious processing |
-| `aggressive` | Any service | 1,000 | 50,000 | 100 | Fast processing |
-
-### Environment Configuration
-
-Set rate limiting via environment variables for consistent configuration across deployments:
+<details>
+<summary><strong>🚀 Production Environment (.env.prod)</strong></summary>
 
 ```bash
-# Enable rate limiting
-export RAFT_RATE_LIMIT_ENABLED=true
-export RAFT_RATE_LIMIT_PRESET=openai_gpt4
-
-# Custom configuration
-export RAFT_RATE_LIMIT_ENABLED=true
-export RAFT_RATE_LIMIT_STRATEGY=sliding_window
-export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=200
-export RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=8000
-export RAFT_RATE_LIMIT_MAX_BURST=30
-export RAFT_RATE_LIMIT_MAX_RETRIES=5
+# 🏭 Production deployment configuration
+OPENAI_API_KEY=your_production_api_key
+RAFT_ENV=production
+RAFT_LOG_LEVEL=INFO
+RAFT_LOG_FORMAT=json
+RAFT_LOG_OUTPUT=both
+RAFT_TRACING_ENABLED=true
+RAFT_RATE_LIMIT_ENABLED=true
+RAFT_RATE_LIMIT_PRESET=openai_gpt4
+SENTRY_DSN=your_sentry_dsn
+ENABLE_AUTH=true
+CORS_ORIGINS=https://your-production-domain.com
 ```
+</details>
 
-### Rate Limiting Statistics
-
-When rate limiting is enabled, the toolkit provides detailed statistics:
-
-```
-Rate Limiting Statistics:
-  Strategy: sliding_window
-  Total Wait Time: 45.2s
-  Rate Limit Hits: 12
-  Average Response Time: 1.85s
-  Current Rate Limit: 450.0 req/min
-```
-
-**Understanding the Statistics:**
-- **Total Wait Time**: Time spent waiting due to rate limiting
-- **Rate Limit Hits**: Number of times rate limiting delayed requests
-- **Average Response Time**: Mean API response time (for adaptive tuning)
-- **Current Rate Limit**: Effective rate limit (may adapt based on performance)
-
-### Advanced Configuration
-
-#### Fine-Tuning Retry Behavior
-```bash
-# Aggressive retry with exponential backoff
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-preset openai_gpt4 \
-  --rate-limit-max-retries 5
-
-# Conservative approach (default: 3 retries)
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-preset conservative
-```
-
-#### Token-Aware Rate Limiting
-The toolkit automatically estimates token usage for more accurate rate limiting:
-- **Question generation**: ~15 tokens per question + context size
-- **Answer generation**: ~150 tokens output + question + context
-- **Adaptive estimation**: Learns from actual usage patterns
-
-### Best Practices
-
-#### Production Deployments
-1. **Always enable rate limiting**: `--rate-limit` or `RAFT_RATE_LIMIT_ENABLED=true`
-2. **Start with presets**: Use service-specific presets then fine-tune
-3. **Monitor statistics**: Watch for high wait times or frequent rate limit hits
-4. **Use adaptive strategy**: For unknown or variable service performance
-
-#### Development and Testing
-1. **Use conservative preset**: Avoid accidental high usage during development
-2. **Test with rate limiting**: Ensure your workflows work with production settings
-3. **Monitor costs**: Track token usage with rate limiting statistics
-
-#### Cost Optimization
-```bash
-# Very conservative for cost control
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-preset conservative \
-  --questions 3 --workers 1
-
-# Balanced approach for production
-python raft.py --datapath docs/ --output training_data/ \
-  --rate-limit --rate-limit-preset openai_gpt4 \
-  --workers 2
-```
-
-## 🧪 Testing & Release Infrastructure
-
-### Recent Major Improvements (v1.0.1)
-
-The RAFT Toolkit now includes a robust, fully-automated testing and release infrastructure:
-
-#### ✅ Complete Test Suite Reliability
-- **43/43 unit tests passing**: All unit test failures have been resolved
-- **Fixed critical test issues**: Mock paths, environment isolation, token caching
-- **Cross-platform testing**: Linux, macOS, and Windows support
-- **Multi-Python version testing**: Python 3.9, 3.10, and 3.11
-
-#### 🚀 Automated Release Pipeline
-- **Tag-triggered releases**: Create releases by pushing version tags
-- **Build system fixes**: Resolved package discovery and build configuration issues
-- **GitHub Actions integration**: Automated building, testing, and publishing
-- **Release tools**: Interactive release script for safe version management
-
-#### 🛠️ Enhanced Developer Experience
-- **Release script**: `./scripts/create_release.sh` for guided release creation
-- **Build validation**: Local testing before CI/CD deployment
-- **Comprehensive documentation**: Step-by-step guides for releases and testing
-
-#### 📦 Improved Build System
-- **Fixed package discovery**: Resolved "Multiple top-level packages" setuptools error
-- **Modern pyproject.toml**: Complete build configuration with proper dependencies
-- **Package optimization**: Smaller builds excluding unnecessary files (tests, docs, notebooks)
-- **Entry points**: Proper CLI script configuration for `raft` and `raft-web` commands
-
-#### Example: Creating a Release
-```bash
-# Interactive release creation (recommended)
-./scripts/create_release.sh
-
-# Manual tag creation (advanced)
-git tag -a v1.0.2 -m "Release v1.0.2"
-git push origin v1.0.2
-```
-
-See [`docs/RELEASES.md`](docs/RELEASES.md) for the complete release management guide.
-
-#### 🔧 Testing Improvements Details
-
-**Unit Test Fixes (13 tests resolved):**
-- **Import path corrections**: Fixed LangChain embeddings mock paths
-- **Attribute alignment**: Corrected `completion_count` → `calls` mismatches  
-- **Environment isolation**: Proper cleanup between tests
-- **File handling**: Temporary file creation for validation tests
-- **Token caching**: Global cache clearing for authentication tests
-
-**Build Configuration Fixes:**
-- **Package inclusion**: Explicit control over what gets built (`core`, `cli`, `web`, `tools`)
-- **Dependency management**: Proper setuptools configuration
-- **Entry point registration**: Automated CLI script installation
-- **Metadata compliance**: Modern SPDX license format
-
-**Release Workflow Fixes:**
-- **Permission handling**: Proper GitHub token usage
-- **Tag validation**: Verify tags exist before release creation
-- **Trigger logic**: Only create releases for actual version tags
-- **Error handling**: Better debugging and validation messages
-
-**CI/CD Pipeline Reliability:**
-- **Build → Test → Release**: Proper dependency chain prevents broken releases
-- **Multi-platform support**: Testing across different OS and Python versions
-- **Artifact generation**: Automated Docker images, Python packages, and documentation
-- **Quality gates**: All tests must pass before any release is created
-
-### Test Runner
-
-The RAFT Toolkit includes a comprehensive test suite with configurable directories:
+<details>
+<summary><strong>🧪 Testing Environment (.env.test)</strong></summary>
 
 ```bash
-# Run all tests
-python run_tests.py
-
-# Run specific test types
-python run_tests.py --unit              # Unit tests only
-python run_tests.py --integration       # Integration tests
-python run_tests.py --api              # API tests
-python run_tests.py --cli              # CLI tests
-
-# With coverage reporting
-python run_tests.py --coverage --output-dir ./test-results
-
-# Fast tests (skip slow ones)
-python run_tests.py --fast
-
-# Parallel execution
-python run_tests.py --parallel 4
+# 🔬 Testing configuration
+OPENAI_API_KEY=test_key_placeholder
+RAFT_LOG_LEVEL=WARNING
+RAFT_ENV=testing
+TEST_OUTPUT_DIR=./test-results
+TEST_TEMP_DIR=/tmp/raft-tests
+TEST_COVERAGE_DIR=./coverage
 ```
+</details>
 
-### Configurable Test Directories
+### 📋 Detailed Installation Guide
 
-Configure test directories via CLI arguments or environment variables:
-
+#### 🎯 Core Dependencies
 ```bash
-# Custom directories via CLI
-python run_tests.py --integration \
-  --output-dir ./ci-results \
-  --temp-dir /tmp/fast-ssd \
-  --coverage-dir ./coverage
-
-# Via environment variables
-export TEST_OUTPUT_DIR=./my-results
-export TEST_TEMP_DIR=/tmp/my-temp
-export TEST_COVERAGE_DIR=./coverage
-python run_tests.py --coverage
-
-# Docker testing with custom directories
-export HOST_TEST_RESULTS_DIR=/shared/test-results
-docker compose -f docker-compose.test.yml up
+# Essential packages for basic RAFT functionality
+pip install -r requirements.txt
 ```
+**Includes:** OpenAI integration, document processing (PDF, PPTX, TXT), chunking strategies, dataset generation, Azure services, basic logging, and evaluation tools.
 
-See [`docs/TEST_DIRECTORIES.md`](docs/TEST_DIRECTORIES.md) for complete configuration guide.
-
-### Dependency Troubleshooting
-
-If you encounter dependency conflicts during installation:
-
+#### 🌐 Web Interface Dependencies
 ```bash
-# Run dependency checker
-python scripts/check_dependencies.py
-
-# Check for conflicts
-pip check
-
-# Clean installation
-pip install -r requirements.txt --force-reinstall
+# For full web UI experience with job management
+pip install -r requirements-web.txt
 ```
+**Includes:** FastAPI backend, async job processing, Redis integration, file upload/download, real-time progress tracking, and comprehensive analysis tools.
 
-See [`docs/DEPENDENCY_TROUBLESHOOTING.md`](docs/DEPENDENCY_TROUBLESHOOTING.md) for comprehensive troubleshooting guide.
-
-### Docker Testing
-
+#### ☁️ Cloud Integration Dependencies
 ```bash
-# Run tests in Docker environment
-docker compose -f docker-compose.test.yml up --abort-on-container-exit
-
-# Specific test suites
-docker compose -f docker-compose.test.yml run raft-test-unit
-docker compose -f docker-compose.test.yml run raft-test-integration
+# For enterprise cloud storage and authentication
+pip install -e ".[cloud]"
 ```
+**Includes:** AWS S3 integration, SharePoint Online support, Azure AD authentication, OAuth2 flows, credential management, and cloud storage patterns.
 
-### Code Quality
-
+#### 🏗️ Kubernetes & Infrastructure Dependencies
 ```bash
-# Install code quality tools
+# For production deployment and scaling
+pip install -r requirements-k8s.txt
+```
+**Includes:** Kubernetes client, multi-cloud deployment tools, Prometheus monitoring, auto-scaling support, and infrastructure management.
+
+#### 🔍 Monitoring & Tracing Dependencies
+```bash
+# For production observability and debugging
+pip install -e ".[tracing]"
+```
+**Includes:** OpenTelemetry integration, distributed tracing, Sentry error tracking, structured logging, Jaeger export, and performance monitoring.
+
+#### 🧪 Development & Testing Dependencies
+```bash
+# For contributors and advanced users
 pip install -r requirements-test.txt
 
-# Run linting
-flake8 .
-black --check .
-isort --check-only .
-mypy .
-
-# Auto-format code
-black .
-isort .
+# Run full test suite with coverage
+python run_tests.py --coverage --output-dir ./test-results
 ```
+**Includes:** pytest framework, async testing, API testing, mock libraries, code quality tools (black, flake8, mypy), security scanning, and coverage reporting.
 
-### Security Scanning
+#### 🎛️ Optional Feature Groups
 
+**Complete Feature Matrix:**
 ```bash
-# Install security tools
-pip install bandit safety
+# Install individual feature groups as needed:
 
-# Run security scans
-bandit -r . -f json -o security-report.json
-safety scan -r requirements.txt
+# 🌐 Web Interface - Modern web UI with job management
+pip install -e ".[web]"
+# Required for: Interactive dataset generation, analysis tools, job tracking, file upload/download
+
+# ☁️ Cloud Storage - Enterprise storage integration  
+pip install -e ".[cloud]"
+# Required for: S3 input sources, SharePoint Online, Azure Blob Storage, multi-cloud support
+
+# 🏗️ Kubernetes - Production deployment tools
+pip install -e ".[kubernetes]"  
+# Required for: K8s deployment, auto-scaling, multi-cloud clusters, container orchestration
+
+# 🔍 Monitoring - Observability and tracing
+pip install -e ".[tracing]"
+# Required for: Distributed tracing, error tracking, performance monitoring, structured logging
+
+# 🧪 Development - Testing and quality tools
+pip install -e ".[dev]"
+# Required for: Unit testing, code quality, security scanning, contribution workflow
+
+# 🚀 All Features - Complete installation
+pip install -e ".[all]"
+# Includes: web + cloud + kubernetes + tracing + dev
 ```
 
-## 🚀 CI/CD Integration
+**Minimal vs Full Installation Comparison:**
 
-### GitHub Actions Workflows
+| Feature | Minimal Install | Full Install |
+|---------|----------------|--------------|
+| **Core RAFT Generation** | ✅ Basic CLI | ✅ CLI + Web UI |
+| **Document Processing** | ✅ PDF, TXT, JSON | ✅ + PPTX, API docs |
+| **Cloud Storage** | ❌ Local only | ✅ S3, SharePoint, Azure |
+| **Kubernetes Deployment** | ❌ Docker only | ✅ Multi-cloud K8s |
+| **Monitoring & Tracing** | ❌ Basic logs | ✅ Full observability |
+| **Web Interface** | ❌ CLI only | ✅ Modern web UI |
+| **Analysis Tools** | ❌ Basic eval | ✅ 6 analysis tools |
+| **Rate Limiting** | ❌ No protection | ✅ Advanced rate control |
+| **Authentication** | ❌ API keys only | ✅ Enterprise auth |
 
-The project includes comprehensive CI/CD pipelines:
-
-**Build Pipeline** (`Build → Test → Release`):
-- 🔍 **Code Quality**: Linting with flake8, black, isort
-- 🏗️ **Multi-Target Builds**: Production, development, CLI, testing images
-- 🔒 **Security Scanning**: Bandit, Safety, Trivy vulnerability scans
-- 📦 **Container Registry**: Automatic publishing to GitHub Container Registry
-
-**Test Pipeline**:
-- 🧪 **Comprehensive Testing**: Unit, integration, API, CLI, Docker tests
-- 📊 **Coverage Reporting**: Codecov integration with detailed metrics
-- 🐍 **Multi-Python Support**: Testing on Python 3.9, 3.10, 3.11
-- ⚡ **Parallel Execution**: Optimized test execution with dependency management
-
-**Security Pipeline**:
-- 🛡️ **Dependency Scanning**: Daily automated vulnerability checks
-- 📋 **License Compliance**: Automated license compatibility verification
-- 🔄 **Auto-Updates**: Automated dependency update PRs
-
-### Environment Variables for CI/CD
-
-```bash
-# Test configuration
-TEST_OUTPUT_DIR=/workspace/test-results
-TEST_TEMP_DIR=/workspace/temp
-TEST_COVERAGE_DIR=/workspace/coverage
-
-# Docker configuration
-HOST_TEST_RESULTS_DIR=/tmp/ci-results
-HOST_COVERAGE_DIR=/tmp/ci-coverage
-HOST_TEMP_DIR=/tmp/ci-temp
-
-# Security scanning
-ENABLE_SECURITY_SCANS=true
-UPLOAD_SARIF=true
-```
-
-### Pipeline Configuration Examples
-
-**GitLab CI**:
-```yaml
-test:
-  script:
-    - pip install -r requirements-test.txt
-    - python run_tests.py --coverage --output-dir ./test-results
-  artifacts:
-    reports:
-      junit: test-results/junit.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: test-results/coverage.xml
-```
-
-**Jenkins**:
-```groovy
-pipeline {
-    agent any
-    environment {
-        TEST_OUTPUT_DIR = "${WORKSPACE}/test-results"
-        TEST_TEMP_DIR = "/tmp/jenkins-${BUILD_ID}"
-    }
-    stages {
-        stage('Test') {
-            steps {
-                sh 'python run_tests.py --coverage'
-                publishTestResults testResultsPattern: 'test-results/junit.xml'
-                publishCoverage adapters: [coberturaAdapter('test-results/coverage.xml')]
-            }
-        }
-    }
-}
-```
-
-## 📝 Azure OpenAI Support
-
-To enable Azure OpenAI support, set the environment variable `AZURE_OPENAI_ENABLED=1` (or `true`).
-
-You must also set the appropriate Azure OpenAI environment variables (e.g., `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY`, etc.) as required by your deployment.
-
-Example for zsh:
-
-```zsh
-export AZURE_OPENAI_ENABLED=1
-export AZURE_OPENAI_ENDPOINT="https://your-azure-endpoint.openai.azure.com/"
-export AZURE_OPENAI_KEY="your-azure-api-key"
-```
-
-If `AZURE_OPENAI_ENABLED` is not set or is set to `0`/`false`, the toolkit will use standard OpenAI API endpoints and keys.
-
-## ⚡ Quick Start
+## ⚡ Usage
 
 ### 🖥️ Command Line Interface
 
@@ -1055,7 +719,38 @@ python pfeval_chat.py --input dataset.jsonl --output evaluation.json
 
 See the [tools/README.md](tools/README.md) for comprehensive documentation on all available tools.
 
-## 🧩 Chunking Options
+### ⚙️ Main Arguments
+
+- **`--datapath`**: Path to the input document
+- **`--output`**: Path to save the generated dataset
+- **`--output-format`**: Output format (`hf` [default], `completion`, `chat`)
+- **`--output-type`**: Output file type (`jsonl` [default], `parquet`)
+- **`--output-chat-system-prompt`**: System prompt for chat output (optional)
+- **`--distractors`**: Number of distractor documents per data point
+- **`--doctype`**: Document type (`pdf`, `txt`, `json`, `api`, `pptx`)
+- **`--p`**: Percentage of including the oracle document in context
+- **`--chunk_size`**: Size of each chunk (in tokens)
+- **`--questions`**: Number of QA pairs to generate per chunk
+- **`--workers`**: Number of workers for QA generation
+- **`--embed-workers`**: Number of workers for chunking/embedding
+- **`--openai_key`**: OpenAI API key
+- **`--embedding-model`**: Embedding model (default: `text-embedding-ada-002`)
+- **`--completion-model`**: Model for QA generation (default: `gpt-4`)
+- **`--use-azure-identity`**: Use Azure Default Credentials for token retrieval
+- **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
+- **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
+
+### 🚦 Rate Limiting Arguments
+
+- **`--rate-limit`**: Enable rate limiting for API requests (default: disabled)
+- **`--rate-limit-strategy`**: Rate limiting strategy (`fixed_window`, `sliding_window` [default], `token_bucket`, `adaptive`)
+- **`--rate-limit-preset`**: Use preset configuration (`openai_gpt4`, `openai_gpt35_turbo`, `azure_openai_standard`, `anthropic_claude`, `conservative`, `aggressive`)
+- **`--rate-limit-requests-per-minute`**: Maximum requests per minute (overrides preset)
+- **`--rate-limit-tokens-per-minute`**: Maximum tokens per minute (overrides preset)
+- **`--rate-limit-max-burst`**: Maximum burst requests allowed (overrides preset)
+- **`--rate-limit-max-retries`**: Maximum retries on rate limit errors (default: 3)
+
+### 🧩 Chunking Options
 
 - **Semantic** (default): Embedding-based, best for context preservation.
 - **Fixed**: Splits by token count (`--chunk_size`).
@@ -1081,11 +776,152 @@ python3 raft.py --datapath sample_data/United_States_PDF.pdf \
   --chunking-params '{"overlap": 50, "min_chunk_size": 200}'
 ```
 
-## 📊 Enhanced CLI Logging
+### 📝 Workflow
+
+1. **Chunk Generation**: Document is split into chunks (see options above).
+2. **QA Generation**: LLM generates N questions and answers per chunk.
+3. **Distractor Appending**: Random chunks are added as distractors for each QA pair.
+4. **Dataset Export**: Data is saved in the specified format for fine-tuning.
+
+### 💡 Tips
+
+- You can use a `.env` file for OpenAI/Azure keys.
+- For Azure, set deployment names with `--completion-model` and `--embedding-model`.
+- Use `--chunking-strategy` and `--chunking-params` for best results on your data.
+
+### 🦙 Using Ollama as the OpenAI Model Service
+
+You can use [Ollama](https://ollama.com/) as a local OpenAI-compatible API for running models like Llama 3, Mistral, and others. This allows you to run RAFT without cloud API keys.
+
+**1. Start Ollama with your desired model:**
+
+```bash
+ollama run llama3
+```
+
+**2. Set the OpenAI-compatible endpoint in your environment:**
+
+```bash
+export OPENAI_API_BASE_URL="http://localhost:11434/v1"
+export OPENAI_API_KEY="ollama-anything"  # Any non-empty string
+```
+
+Or add these to your `.env` file:
+
+```env
+OPENAI_API_BASE_URL=http://localhost:11434/v1
+OPENAI_API_KEY=ollama-anything
+```
+
+**3. Run RAFT as usual:**
+
+```bash
+python3 raft.py \
+  --datapath sample_data/United_States_PDF.pdf \
+  --output ./sample_ds4 \
+  --distractors 4 \
+  --doctype pdf \
+  --chunk_size 512 \
+  --questions 5 \
+  --openai_key $OPENAI_API_KEY
+```
+
+**Note:**
+
+- Ollama's API is compatible with the OpenAI API, but some advanced features may not be supported.
+- You can specify different models by running `ollama run <model_name>` and setting the appropriate model in your RAFT command if needed.
+
+## 🔧 Advanced Configuration
+
+### 🚦 Rate Limiting for Cloud AI Services
+
+The RAFT Toolkit includes comprehensive rate limiting to handle the constraints imposed by cloud-based AI services. Rate limiting is **disabled by default** to maintain backward compatibility, but is highly recommended for production use to avoid hitting API limits and reduce costs.
+
+#### Why Rate Limiting Matters
+
+**Common Issues Without Rate Limiting:**
+- API rate limit errors (HTTP 429) causing processing failures
+- Unexpected costs from burst API usage
+- Inconsistent processing times due to throttling
+- Failed batches requiring expensive reprocessing
+
+**Benefits of Rate Limiting:**
+- **Predictable Costs**: Control API spending with token and request limits
+- **Reliable Processing**: Avoid rate limit errors through intelligent throttling
+- **Optimized Performance**: Adaptive strategies adjust to service response times
+- **Better Monitoring**: Detailed statistics on API usage and throttling
+
+#### Quick Start Examples
+
+**Using Preset Configurations:**
+```bash
+# OpenAI GPT-4 with recommended limits
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset openai_gpt4
+
+# Azure OpenAI with conservative limits  
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset azure_openai_standard
+
+# Anthropic Claude with aggressive processing
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset anthropic_claude
+```
+
+**Custom Rate Limiting:**
+```bash
+# Custom limits for your specific API tier
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit \
+  --rate-limit-strategy sliding_window \
+  --rate-limit-requests-per-minute 100 \
+  --rate-limit-tokens-per-minute 5000 \
+  --rate-limit-max-burst 20
+
+# Adaptive rate limiting (adjusts based on response times)
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-strategy adaptive \
+  --rate-limit-requests-per-minute 200
+```
+
+#### Rate Limiting Strategies
+
+1. **Sliding Window** (Recommended)
+   - **Best for**: Most production use cases
+   - **How it works**: Tracks requests over a rolling time window
+   - **Advantages**: Smooth rate distribution, handles bursts well
+
+2. **Fixed Window**
+   - **Best for**: Simple rate limiting scenarios
+   - **How it works**: Resets limits at fixed intervals (every minute)
+   - **Advantages**: Simple to understand, predictable behavior
+
+3. **Token Bucket**
+   - **Best for**: Bursty workloads with occasional high throughput needs
+   - **How it works**: Accumulates "tokens" over time, consumes them for requests
+   - **Advantages**: Allows controlled bursts above average rate
+
+4. **Adaptive**
+   - **Best for**: Unknown or variable API performance
+   - **How it works**: Automatically adjusts rate based on response times
+   - **Advantages**: Self-tuning, optimizes for service performance
+
+#### Available Presets
+
+| Preset | Service | Requests/min | Tokens/min | Burst | Use Case |
+|--------|---------|--------------|------------|-------|----------|
+| `openai_gpt4` | OpenAI GPT-4 | 500 | 10,000 | 50 | Production GPT-4 |
+| `openai_gpt35_turbo` | OpenAI GPT-3.5 Turbo | 3,500 | 90,000 | 100 | High-throughput GPT-3.5 |
+| `azure_openai_standard` | Azure OpenAI | 120 | 6,000 | 20 | Standard Azure tier |
+| `anthropic_claude` | Anthropic Claude | 1,000 | 100,000 | 50 | Claude API |
+| `conservative` | Any service | 60 | 2,000 | 10 | Safe/cautious processing |
+| `aggressive` | Any service | 1,000 | 50,000 | 100 | Fast processing |
+
+### 📊 Enhanced CLI Logging
 
 The RAFT Toolkit features a comprehensive logging system designed for production use, debugging, and integration with external monitoring tools.
 
-### 🎯 **Logging Features**
+#### 🎯 **Logging Features**
 
 **Default Open Source Integration:**
 - **Colored console output** with timestamps and log levels
@@ -1109,7 +945,7 @@ The RAFT Toolkit features a comprehensive logging system designed for production
 - **Custom handlers** for other logging services
 - **Structured data export** compatible with log analysis platforms
 
-### 🚀 **Quick Start - Enhanced Logging**
+#### 🚀 **Quick Start - Enhanced Logging**
 
 **Basic Usage:**
 ```bash
@@ -1140,7 +976,7 @@ RAFT_JAEGER_ENDPOINT=         # Jaeger collector endpoint (optional)
 RAFT_TRACE_CONSOLE=false      # Export traces to console
 ```
 
-### 🔧 **Progress Tracking**
+#### 🔧 **Progress Tracking**
 
 The enhanced logging system provides visual progress indicators throughout RAFT operations:
 
@@ -1160,7 +996,7 @@ The enhanced logging system provides visual progress indicators throughout RAFT 
 - `FAIL` - Error occurred
 - `STOP` - User interruption
 
-### 🔍 **Distributed Tracing**
+#### 🔍 **Distributed Tracing**
 
 The enhanced logging system includes built-in distributed tracing capabilities:
 
@@ -1196,7 +1032,7 @@ python raft.py --datapath docs.pdf --output ./results
 # View traces at http://localhost:16686
 ```
 
-### 📈 **Contextual Logging**
+#### 📈 **Contextual Logging**
 
 Enhanced logging includes operation metadata and tracing information for better debugging and monitoring:
 
@@ -1221,7 +1057,7 @@ Enhanced logging includes operation metadata and tracing information for better 
 }
 ```
 
-### 🔗 **External Service Integration**
+#### 🔗 **External Service Integration**
 
 **Sentry Error Tracking:**
 ```bash
@@ -1254,7 +1090,7 @@ def custom_handler(log_entry, record):
 setup_external_logging(custom_handler)
 ```
 
-### 🛠️ **Optional Dependencies**
+#### 🛠️ **Optional Dependencies**
 
 Enhanced logging works with optional libraries for improved features:
 
@@ -1282,7 +1118,7 @@ pip install sentry-sdk datadog
 - UUID-based trace IDs if OpenTelemetry isn't available
 - Basic formatters if coloredlogs/structlog aren't available
 
-### 📁 **Log Files and Rotation**
+#### 📁 **Log Files and Rotation**
 
 **File Output Configuration:**
 ```bash
@@ -1301,7 +1137,7 @@ RAFT_LOG_BACKUP_COUNT=5
 - `logs/raft.json` - JSON structured logs
 - `logs/raft_rotating.log` - Rotated logs for production
 
-### 🚀 **Production Deployment**
+#### 🚀 **Production Deployment**
 
 **Docker with Enhanced Logging:**
 ```yaml
@@ -1331,7 +1167,7 @@ data:
   RAFT_LOG_STRUCTURED: "true"
 ```
 
-### 📋 **Log Analysis Examples**
+#### 📋 **Log Analysis Examples**
 
 **Query JSON logs with jq:**
 ```bash
@@ -1368,20 +1204,23 @@ filebeat.inputs:
     environment: production
 ```
 
-## 📝 Workflow
+### 📝 Azure OpenAI Support
 
-1. **Chunk Generation**: Document is split into chunks (see options above).
-2. **QA Generation**: LLM generates N questions and answers per chunk.
-3. **Distractor Appending**: Random chunks are added as distractors for each QA pair.
-4. **Dataset Export**: Data is saved in the specified format for fine-tuning.
+To enable Azure OpenAI support, set the environment variable `AZURE_OPENAI_ENABLED=1` (or `true`).
 
-## 💡 Tips
+You must also set the appropriate Azure OpenAI environment variables (e.g., `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY`, etc.) as required by your deployment.
 
-- You can use a `.env` file for OpenAI/Azure keys.
-- For Azure, set deployment names with `--completion-model` and `--embedding-model`.
-- Use `--chunking-strategy` and `--chunking-params` for best results on your data.
+Example for zsh:
 
-## 📚 File Utilities
+```zsh
+export AZURE_OPENAI_ENABLED=1
+export AZURE_OPENAI_ENDPOINT="https://your-azure-endpoint.openai.azure.com/"
+export AZURE_OPENAI_KEY="your-azure-api-key"
+```
+
+If `AZURE_OPENAI_ENABLED` is not set or is set to `0`/`false`, the toolkit will use standard OpenAI API endpoints and keys.
+
+### 📚 File Utilities
 
 - **Split large JSONL files:**
 
@@ -1424,6 +1263,58 @@ raft-toolkit/
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
 
+## 🏗️ Project Structure
+
+```
+raft-toolkit/
+├── 📁 core/                      # Core business logic
+│   ├── clients/                  # External API clients
+│   ├── config.py                 # Configuration management
+│   ├── formatters/               # Dataset format converters
+│   ├── models.py                 # Data models and schemas
+│   ├── raft_engine.py           # Main orchestration engine
+│   ├── security.py              # Security utilities
+│   └── services/                 # Business services
+│       ├── dataset_service.py    # Dataset operations
+│       ├── document_service.py   # Document processing
+│       └── llm_service.py       # LLM interactions
+├── 📁 cli/                       # Command-line interface
+│   └── main.py                   # CLI entry point
+├── 📁 web/                       # Web interface
+│   ├── app.py                    # FastAPI application
+│   └── static/                   # Frontend assets
+├── 📁 tools/                     # Standalone evaluation tools
+│   ├── eval.py                   # Dataset evaluation
+│   ├── answer.py                 # Answer generation
+│   └── pfeval_*.py              # PromptFlow evaluations
+├── 📁 tests/                     # Comprehensive test suite
+│   ├── unit/                     # Unit tests
+│   ├── integration/              # Integration tests
+│   ├── api/                      # API tests
+│   └── cli/                      # CLI tests
+├── 📁 docs/                      # Documentation
+│   ├── WEB_INTERFACE.md          # Web UI guide
+│   ├── DEPLOYMENT.md             # Deployment instructions
+│   ├── CONFIGURATION.md          # Configuration reference
+│   └── TEST_DIRECTORIES.md      # Test configuration guide
+├── 📁 .github/                   # CI/CD workflows
+│   └── workflows/
+│       ├── build.yml             # Build & code quality
+│       ├── test.yml              # Comprehensive testing
+│       ├── release.yml           # Release automation
+│       └── security.yml          # Security scanning
+├── 🐳 docker-compose.yml         # Multi-service orchestration
+├── 🐳 docker-compose.test.yml    # Testing environment
+├── 🐳 Dockerfile                 # Multi-stage container builds
+├── 🔧 requirements*.txt          # Python dependencies
+├── ⚙️ .env.example              # Environment template
+├── ⚙️ .env.test.example         # Test configuration template
+├── 🧪 run_tests.py              # Test runner with configurable directories
+├── 🌐 run_web.py                # Web server launcher
+├── 📋 raft.py                   # Legacy CLI entry point
+└── 📖 README.md                 # This documentation
+```
+
 ## 🧪 Testing
 
 The toolkit includes a comprehensive test suite covering unit tests, integration tests, API tests, and CLI tests.
@@ -1456,43 +1347,87 @@ python run_tests.py --verbose
 - **API Tests**: Web interface endpoints and responses
 - **CLI Tests**: Command-line interface validation
 
+### Configurable Test Directories
+
+Configure test directories via CLI arguments or environment variables:
+
+```bash
+# Custom directories via CLI
+python run_tests.py --integration \
+  --output-dir ./ci-results \
+  --temp-dir /tmp/fast-ssd \
+  --coverage-dir ./coverage
+
+# Via environment variables
+export TEST_OUTPUT_DIR=./my-results
+export TEST_TEMP_DIR=/tmp/my-temp
+export TEST_COVERAGE_DIR=./coverage
+python run_tests.py --coverage
+
+# Docker testing with custom directories
+export HOST_TEST_RESULTS_DIR=/shared/test-results
+docker compose -f docker-compose.test.yml up
+```
+
+See [`docs/TEST_DIRECTORIES.md`](docs/TEST_DIRECTORIES.md) for complete configuration guide.
+
+### Dependency Troubleshooting
+
+If you encounter dependency conflicts during installation:
+
+```bash
+# Run dependency checker
+python scripts/check_dependencies.py
+
+# Check for conflicts
+pip check
+
+# Clean installation
+pip install -r requirements.txt --force-reinstall
+```
+
+See [`docs/DEPENDENCY_TROUBLESHOOTING.md`](docs/DEPENDENCY_TROUBLESHOOTING.md) for comprehensive troubleshooting guide.
+
+### Docker Testing
+
+```bash
+# Run tests in Docker environment
+docker compose -f docker-compose.test.yml up --abort-on-container-exit
+
+# Specific test suites
+docker compose -f docker-compose.test.yml run raft-test-unit
+docker compose -f docker-compose.test.yml run raft-test-integration
+```
+
+### Code Quality
+
+```bash
+# Install code quality tools
+pip install -r requirements-test.txt
+
+# Run linting
+flake8 .
+black --check .
+isort --check-only .
+mypy .
+
+# Auto-format code
+black .
+isort .
+```
+
+### Security Scanning
+
+```bash
+# Install security tools
+pip install bandit safety
+
+# Run security scans
+bandit -r . -f json -o security-report.json
+safety scan -r requirements.txt
+```
+
 See [TESTING.md](TESTING.md) for detailed testing documentation.
-
-## 🚀 Deployment
-
-### Local Development
-
-```bash
-# Development mode with auto-reload
-python run_web.py --debug
-
-# Production mode
-python run_web.py --host 0.0.0.0 --port 8000
-```
-
-### Docker Deployment
-
-```bash
-# Build and run with Docker Compose
-docker-compose up -d
-
-# Scale workers
-docker-compose up -d --scale worker=3
-
-# View logs
-docker-compose logs -f
-```
-
-### Cloud Deployment
-
-The toolkit is designed for cloud deployment with:
-- **Environment-based configuration**
-- **Stateless architecture**
-- **Horizontal scaling support**
-- **Health check endpoints**
-
-See deployment guides for specific platforms:
-- See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for comprehensive deployment guides including AWS, Azure, Google Cloud, and Kubernetes
 
 ## 🛠️ Fine-tuning & Evaluation
 
@@ -1547,101 +1482,7 @@ python tools/answer.py --input questions.jsonl --output gpt35_answers.jsonl --mo
 - **Coherence**: How coherent and logical is the response?
 - **Similarity**: How similar is the answer to reference answers?
 
-## 🦙 Using Ollama as the OpenAI Model Service
-
-You can use [Ollama](https://ollama.com/) as a local OpenAI-compatible API for running models like Llama 3, Mistral, and others. This allows you to run RAFT without cloud API keys.
-
-**1. Start Ollama with your desired model:**
-
-```bash
-ollama run llama3
-```
-
-**2. Set the OpenAI-compatible endpoint in your environment:**
-
-```bash
-export OPENAI_API_BASE_URL="http://localhost:11434/v1"
-export OPENAI_API_KEY="ollama-anything"  # Any non-empty string
-```
-
-Or add these to your `.env` file:
-
-```env
-OPENAI_API_BASE_URL=http://localhost:11434/v1
-OPENAI_API_KEY=ollama-anything
-```
-
-**3. Run RAFT as usual:**
-
-```bash
-python3 raft.py \
-  --datapath sample_data/United_States_PDF.pdf \
-  --output ./sample_ds4 \
-  --distractors 4 \
-  --doctype pdf \
-  --chunk_size 512 \
-  --questions 5 \
-  --openai_key $OPENAI_API_KEY
-```
-
-**Note:**
-
-- Ollama's API is compatible with the OpenAI API, but some advanced features may not be supported.
-- You can specify different models by running `ollama run <model_name>` and setting the appropriate model in your RAFT command if needed.
-
-## 🏗️ Project Structure
-
-```
-raft-toolkit/
-├── 📁 core/                      # Core business logic
-│   ├── clients/                  # External API clients
-│   ├── config.py                 # Configuration management
-│   ├── formatters/               # Dataset format converters
-│   ├── models.py                 # Data models and schemas
-│   ├── raft_engine.py           # Main orchestration engine
-│   ├── security.py              # Security utilities
-│   └── services/                 # Business services
-│       ├── dataset_service.py    # Dataset operations
-│       ├── document_service.py   # Document processing
-│       └── llm_service.py       # LLM interactions
-├── 📁 cli/                       # Command-line interface
-│   └── main.py                   # CLI entry point
-├── 📁 web/                       # Web interface
-│   ├── app.py                    # FastAPI application
-│   └── static/                   # Frontend assets
-├── 📁 tools/                     # Standalone evaluation tools
-│   ├── eval.py                   # Dataset evaluation
-│   ├── answer.py                 # Answer generation
-│   └── pfeval_*.py              # PromptFlow evaluations
-├── 📁 tests/                     # Comprehensive test suite
-│   ├── unit/                     # Unit tests
-│   ├── integration/              # Integration tests
-│   ├── api/                      # API tests
-│   └── cli/                      # CLI tests
-├── 📁 docs/                      # Documentation
-│   ├── WEB_INTERFACE.md          # Web UI guide
-│   ├── DEPLOYMENT.md             # Deployment instructions
-│   ├── CONFIGURATION.md          # Configuration reference
-│   └── TEST_DIRECTORIES.md      # Test configuration guide
-├── 📁 .github/                   # CI/CD workflows
-│   └── workflows/
-│       ├── build.yml             # Build & code quality
-│       ├── test.yml              # Comprehensive testing
-│       ├── release.yml           # Release automation
-│       └── security.yml          # Security scanning
-├── 🐳 docker-compose.yml         # Multi-service orchestration
-├── 🐳 docker-compose.test.yml    # Testing environment
-├── 🐳 Dockerfile                 # Multi-stage container builds
-├── 🔧 requirements*.txt          # Python dependencies
-├── ⚙️ .env.example              # Environment template
-├── ⚙️ .env.test.example         # Test configuration template
-├── 🧪 run_tests.py              # Test runner with configurable directories
-├── 🌐 run_web.py                # Web server launcher
-├── 📋 raft.py                   # Legacy CLI entry point
-└── 📖 README.md                 # This documentation
-```
-
-## 🚀 Deployment
+## 🚀 Building & Deployment
 
 ### 🐳 Docker Deployment
 
@@ -1670,6 +1511,21 @@ docker compose -f docker-compose.dev.yml up -d
 
 # Testing environment
 docker compose -f docker-compose.test.yml up
+```
+
+#### Multi-Target Docker Builds
+```bash
+# Production deployment
+docker build --target production -t raft-toolkit:prod .
+
+# Development with debugging
+docker build --target development -t raft-toolkit:dev .
+
+# CLI-only lightweight image
+docker build --target cli -t raft-toolkit:cli .
+
+# Testing environment
+docker build --target testing -t raft-toolkit:test .
 ```
 
 ### ☁️ Cloud Deployment
@@ -1710,17 +1566,43 @@ spec:
             cpu: "1000m"
 ```
 
-**Helm Chart** (Advanced users):
-```bash
-# Add repository (when available)
-helm repo add raft-toolkit https://charts.raft-toolkit.com
-helm repo update
+### 🌐 Kubernetes Deployment
 
-# Install with custom values
-helm install raft-toolkit raft-toolkit/raft-toolkit \
-  --set openai.apiKey="your-api-key" \
-  --set scaling.replicas=3 \
-  --set persistence.enabled=true
+For production deployments, RAFT Toolkit supports Kubernetes across major cloud providers:
+
+```bash
+# Azure Kubernetes Service (AKS)
+export OPENAI_API_KEY="your-openai-api-key"
+./k8s/scripts/deploy-aks.sh
+
+# Amazon Elastic Kubernetes Service (EKS)  
+export OPENAI_API_KEY="your-openai-api-key"
+./k8s/scripts/deploy-eks.sh
+
+# Google Kubernetes Engine (GKE)
+export OPENAI_API_KEY="your-openai-api-key"
+export PROJECT_ID="your-gcp-project-id"
+./k8s/scripts/deploy-gks.sh
+```
+
+**Kubernetes Features:**
+- **🔄 Auto-scaling**: Horizontal and vertical pod autoscaling
+- **🛡️ Security**: Non-root containers, network policies, RBAC
+- **📊 Monitoring**: Health checks, Prometheus metrics, logging
+- **💾 Storage**: Persistent volumes for input/output data
+- **🌐 Ingress**: Load balancing and SSL termination
+- **🔧 Configuration**: Environment-based config management
+
+See the complete [Kubernetes Deployment Guide](docs/KUBERNETES.md) for detailed instructions.
+
+### Local Development
+
+```bash
+# Development mode with auto-reload
+python run_web.py --debug
+
+# Production mode
+python run_web.py --host 0.0.0.0 --port 8000
 ```
 
 ### 🔧 Environment Configuration
@@ -1776,20 +1658,6 @@ print(f'Environment: {config.env}')
 "
 ```
 
-**Log Aggregation:**
-```yaml
-# docker-compose.override.yml
-version: '3.8'
-services:
-  raft-toolkit:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-        labels: "service=raft-toolkit,environment=production"
-```
-
 ### 🔒 Security Best Practices
 
 **Container Security:**
@@ -1826,6 +1694,124 @@ services:
     cap_add:
       - NET_BIND_SERVICE
 ```
+
+### 🚀 CI/CD Integration
+
+#### GitHub Actions Workflows
+
+The project includes comprehensive CI/CD pipelines:
+
+**Build Pipeline** (`Build → Test → Release`):
+- 🔍 **Code Quality**: Linting with flake8, black, isort
+- 🏗️ **Multi-Target Builds**: Production, development, CLI, testing images
+- 🔒 **Security Scanning**: Bandit, Safety, Trivy vulnerability scans
+- 📦 **Container Registry**: Automatic publishing to GitHub Container Registry
+
+**Test Pipeline**:
+- 🧪 **Comprehensive Testing**: Unit, integration, API, CLI, Docker tests
+- 📊 **Coverage Reporting**: Codecov integration with detailed metrics
+- 🐍 **Multi-Python Support**: Testing on Python 3.9, 3.10, 3.11
+- ⚡ **Parallel Execution**: Optimized test execution with dependency management
+
+**Security Pipeline**:
+- 🛡️ **Dependency Scanning**: Daily automated vulnerability checks
+- 📋 **License Compliance**: Automated license compatibility verification
+- 🔄 **Auto-Updates**: Automated dependency update PRs
+
+#### Environment Variables for CI/CD
+
+```bash
+# Test configuration
+TEST_OUTPUT_DIR=/workspace/test-results
+TEST_TEMP_DIR=/workspace/temp
+TEST_COVERAGE_DIR=/workspace/coverage
+
+# Docker configuration
+HOST_TEST_RESULTS_DIR=/tmp/ci-results
+HOST_COVERAGE_DIR=/tmp/ci-coverage
+HOST_TEMP_DIR=/tmp/ci-temp
+
+# Security scanning
+ENABLE_SECURITY_SCANS=true
+UPLOAD_SARIF=true
+```
+
+#### Pipeline Configuration Examples
+
+**GitLab CI**:
+```yaml
+test:
+  script:
+    - pip install -r requirements-test.txt
+    - python run_tests.py --coverage --output-dir ./test-results
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: test-results/coverage.xml
+```
+
+**Jenkins**:
+```groovy
+pipeline {
+    agent any
+    environment {
+        TEST_OUTPUT_DIR = "${WORKSPACE}/test-results"
+        TEST_TEMP_DIR = "/tmp/jenkins-${BUILD_ID}"
+    }
+    stages {
+        stage('Test') {
+            steps {
+                sh 'python run_tests.py --coverage'
+                publishTestResults testResultsPattern: 'test-results/junit.xml'
+                publishCoverage adapters: [coberturaAdapter('test-results/coverage.xml')]
+            }
+        }
+    }
+}
+```
+
+### 🧪 Testing & Release Infrastructure
+
+#### Recent Major Improvements (v1.0.1)
+
+The RAFT Toolkit now includes a robust, fully-automated testing and release infrastructure:
+
+**✅ Complete Test Suite Reliability**
+- **43/43 unit tests passing**: All unit test failures have been resolved
+- **Fixed critical test issues**: Mock paths, environment isolation, token caching
+- **Cross-platform testing**: Linux, macOS, and Windows support
+- **Multi-Python version testing**: Python 3.9, 3.10, and 3.11
+
+**🚀 Automated Release Pipeline**
+- **Tag-triggered releases**: Create releases by pushing version tags
+- **Build system fixes**: Resolved package discovery and build configuration issues
+- **GitHub Actions integration**: Automated building, testing, and publishing
+- **Release tools**: Interactive release script for safe version management
+
+**🛠️ Enhanced Developer Experience**
+- **Release script**: `./scripts/create_release.sh` for guided release creation
+- **Build validation**: Local testing before CI/CD deployment
+- **Comprehensive documentation**: Step-by-step guides for releases and testing
+
+**📦 Improved Build System**
+- **Fixed package discovery**: Resolved "Multiple top-level packages" setuptools error
+- **Modern pyproject.toml**: Complete build configuration with proper dependencies
+- **Package optimization**: Smaller builds excluding unnecessary files (tests, docs, notebooks)
+- **Entry points**: Proper CLI script configuration for `raft` and `raft-web` commands
+
+#### Example: Creating a Release
+```bash
+# Interactive release creation (recommended)
+./scripts/create_release.sh
+
+# Manual tag creation (advanced)
+git tag -a v1.0.2 -m "Release v1.0.2"
+git push origin v1.0.2
+```
+
+See [`docs/RELEASES.md`](docs/RELEASES.md) for the complete release management guide.
 
 ## 🤝 Contributing
 
