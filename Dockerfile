@@ -42,26 +42,26 @@ COPY requirements*.txt ./
 # Install Python dependencies with enhanced error handling
 RUN pip install --upgrade pip && \
     # Install core requirements first
-    echo "📦 Installing core dependencies..." && \
+    echo "Installing core dependencies..." && \
     pip install --no-cache-dir -r requirements.txt && \
-    echo "✅ Core dependencies installed successfully" && \
+    echo "Core dependencies installed successfully" && \
     # Install web dependencies if they exist
     if [ -f requirements-web.txt ]; then \
-        echo "🌐 Installing web dependencies..." && \
+        echo "Installing web dependencies..." && \
         pip install --no-cache-dir -r requirements-web.txt && \
-        echo "✅ Web dependencies installed successfully"; \
+        echo "Web dependencies installed successfully"; \
     fi && \
     # Verify critical imports work
-    echo "🔍 Verifying critical dependencies..." && \
-    python -c "import pypdf; import secrets; print('✅ Security dependencies OK')" && \
-    python -c "import openai; print('✅ OpenAI', openai.__version__, 'OK')" && \
-    python -c "try: from azure.ai.evaluation import evaluate; print('✅ Azure AI Evaluation OK')\nexcept ImportError: print('⚠️ Azure AI Evaluation not available (optional)')\nexcept Exception as e: print(f'⚠️ Azure AI Evaluation error: {e} (optional)')" && \
-    python -c "import fastapi; print('✅ FastAPI', fastapi.__version__, 'OK')" && \
+    echo "Verifying critical dependencies..." && \
+    python -c "import pypdf; import secrets; print('Security dependencies OK')" && \
+    python -c "import openai; print('OpenAI', openai.__version__, 'OK')" && \
+    python -c "try: from azure.ai.evaluation import evaluate; print('Azure AI Evaluation OK')\nexcept ImportError: print('Azure AI Evaluation not available (optional)')\nexcept Exception as e: print(f'Azure AI Evaluation error: {e} (optional)')" && \
+    python -c "import fastapi; print('FastAPI', fastapi.__version__, 'OK')" && \
     # Run dependency conflict check
-    echo "🔗 Checking for dependency conflicts..." && \
+    echo "Checking for dependency conflicts..." && \
     pip check && \
-    echo "🎉 All dependency verification completed successfully" || \
-    (echo "❌ Dependency verification failed. Run 'python scripts/check_dependencies.py' for details" && exit 1)
+    echo "All dependency verification completed successfully" || \
+    (echo "Dependency verification failed. Run 'python scripts/check_dependencies.py' for details" && exit 1)
 
 # Stage 3: Development
 FROM dependencies AS development
@@ -137,9 +137,9 @@ RUN rm -rf tests/ docs/ examples/ .git/ .github/ notebooks/ && \
 
 # Install Kubernetes-specific dependencies if optimized build
 RUN if [ "$KUBERNETES_OPTIMIZED" = "true" ]; then \
-        echo "🚀 Installing Kubernetes optimizations..." && \
+        echo "Installing Kubernetes optimizations..." && \
         pip install --no-cache-dir -r requirements-k8s.txt && \
-        echo "✅ Kubernetes dependencies installed successfully"; \
+        echo "Kubernetes dependencies installed successfully"; \
     fi
 
 # Create necessary directories and set permissions
