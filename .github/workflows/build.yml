@@ -121,7 +121,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [production, cli]
+        target: [production, cli, development]
     
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
@@ -170,6 +170,7 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: |
           BUILDKIT_INLINE_CACHE=1
+          KUBERNETES_OPTIMIZED=${{ matrix.target == 'production' && 'true' || 'false' }}
     
     - name: Generate build summary
       run: |

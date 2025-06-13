@@ -1,0 +1,224 @@
+# Default values for raft-toolkit
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: raft-toolkit
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Deployment configuration
+replicaCount: 2
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: raft-toolkit.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resources
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Node selection
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Storage configuration
+persistence:
+  enabled: true
+  storageClass: "default"
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  
+outputPersistence:
+  enabled: true
+  storageClass: "default"
+  accessMode: ReadWriteMany
+  size: 50Gi
+
+# RAFT Toolkit configuration
+raftConfig:
+  # General settings
+  outputFormat: "hf"
+  outputType: "jsonl"
+  distractors: 1
+  p: 1.0
+  questions: 5
+  chunkSize: 512
+  doctype: "pdf"
+  chunkingStrategy: "semantic"
+  
+  # Performance settings
+  workers: 2
+  embedWorkers: 1
+  pace: true
+  autoCleanCheckpoints: false
+  
+  # AI Model settings
+  embeddingModel: "text-embedding-ada-002"
+  completionModel: "gpt-4"
+  systemPromptKey: "gpt"
+  
+  # Rate limiting settings
+  rateLimiting:
+    enabled: true
+    strategy: "sliding_window"
+    preset: "openai_gpt4"
+    maxRetries: 3
+  
+  # Logging settings
+  logging:
+    level: "INFO"
+    format: "json"
+    output: "stdout"
+
+# Web interface configuration
+web:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+
+# Secret configuration
+secrets:
+  # OpenAI API configuration
+  openaiApiKey: ""  # Required
+  openaiApiBaseUrl: "https://api.openai.com/v1"
+  
+  # Azure OpenAI configuration (optional)
+  azureOpenaiEnabled: false
+  azureOpenaiKey: ""
+  azureOpenaiEndpoint: ""
+  azureOpenaiApiVersion: "2024-02-01"
+  
+  # External services (optional)
+  sentryDsn: ""
+  datadogApiKey: ""
+
+# Cloud provider specific settings
+cloudProvider:
+  # AWS settings
+  aws:
+    enabled: false
+    region: "us-west-2"
+    roleArn: ""
+    
+  # Azure settings
+  azure:
+    enabled: false
+    clientId: ""
+    tenantId: ""
+    subscriptionId: ""
+    
+  # GCP settings
+  gcp:
+    enabled: false
+    projectId: ""
+    region: "us-central1"
+    serviceAccountKey: ""
+
+# Job configuration for CLI mode
+job:
+  enabled: false
+  schedule: ""  # Cron schedule for CronJob
+  restartPolicy: "Never"
+  backoffLimit: 3
+  
+  # Job-specific resource limits
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+# Monitoring and observability
+monitoring:
+  enabled: false
+  prometheus:
+    enabled: false
+    port: 8000
+    path: "/metrics"
+  
+  serviceMonitor:
+    enabled: false
+    interval: "30s"
+    scrapeTimeout: "10s"
+
+# Health checks
+healthCheck:
+  enabled: true
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3

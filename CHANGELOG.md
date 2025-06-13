@@ -9,11 +9,181 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Added
 
+#### Multi-Source Input System
+- **Amazon S3 input source**: Direct processing of documents from S3 buckets
+  - **AWS authentication**: Support for access keys, IAM roles, and session tokens
+  - **Regional support**: Works with S3 buckets in any AWS region
+  - **Path filtering**: Include/exclude patterns with glob support
+  - **Streaming downloads**: Efficient processing of large files without local storage
+  - **Batch processing**: Configurable batch sizes for optimal performance
+
+- **SharePoint Online input source**: Enterprise document processing from SharePoint
+  - **Azure AD authentication**: Multiple auth methods (client credentials, device code, username/password)
+  - **Document library access**: Support for any SharePoint Online document library
+  - **Metadata preservation**: Retains SharePoint file metadata and version information
+  - **Secure authentication**: Production-ready app registration support
+
+- **Enhanced local file processing**: Improved local filesystem handling
+  - **Recursive directory scanning**: Configurable depth and pattern matching
+  - **Advanced filtering**: Include/exclude patterns with comprehensive glob support
+  - **File validation**: Pre-processing validation with detailed error reporting
+  - **Performance optimization**: Parallel processing with configurable workers
+
+- **Unified input source API**: Extensible architecture for future input sources
+  - **Source factory pattern**: Easy addition of new input source types
+  - **Async processing**: Non-blocking operations for cloud sources
+  - **Validation framework**: Comprehensive validation before processing begins
+  - **Preview functionality**: See what will be processed without actually processing
+  
+#### CLI Enhancements
+- **New command-line arguments**: Complete CLI support for all input sources
+  - `--source-type`: Choose input source type (local, s3, sharepoint)
+  - `--source-uri`: Specify source URI (paths, S3 URLs, SharePoint URLs)
+  - `--source-credentials`: JSON credentials for cloud authentication
+  - `--source-include-patterns` / `--source-exclude-patterns`: Advanced file filtering
+  - `--source-max-file-size` / `--source-batch-size`: Processing control
+
+- **Enhanced preview and validation**: Improved pre-processing capabilities
+  - **Source-aware previews**: Different preview formats for each source type
+  - **Connectivity validation**: Test authentication and permissions before processing
+  - **Detailed file statistics**: Document counts, sizes, and type breakdown
+  - **Processing estimates**: Realistic time and resource estimates
+
+#### Configuration System
+- **Environment variable support**: 12-factor compliant configuration for all sources
+  - `RAFT_SOURCE_TYPE` / `RAFT_SOURCE_URI`: Core source configuration
+  - `RAFT_SOURCE_CREDENTIALS`: Secure credential management
+  - `RAFT_SOURCE_*_PATTERNS`: Pattern-based filtering
+  - `AWS_*` / `AZURE_*`: Cloud provider specific variables
+
+- **Backward compatibility**: Seamless migration from existing workflows
+  - `--datapath` parameter still supported for local files
+  - Environment variables maintain existing behavior
+  - Configuration validation with helpful error messages
+
+#### Dependencies and Infrastructure  
+- **Cloud dependencies**: Optional installation of cloud provider SDKs
+  - `boto3` for S3 support (optional)
+  - `msal` for SharePoint authentication (optional) 
+  - `requests` for HTTP operations (optional)
+  - Graceful degradation when dependencies not available
+
+- **Enhanced testing**: Comprehensive test coverage for new functionality
+  - Unit tests for all input source implementations
+  - Integration tests with mock cloud services
+  - Configuration validation testing
+  - CLI argument parsing and validation tests
+
+#### Rate Limiting System
+- **Comprehensive rate limiting for AI services**: Intelligent request throttling to handle cloud-based AI service rate limits
+  - **Multiple strategies**: Fixed window, sliding window, token bucket, and adaptive rate limiting algorithms
+  - **Token-aware limiting**: Estimates and tracks both request count and token usage for precise rate management
+  - **Preset configurations**: Built-in rate limit presets for popular AI services (OpenAI GPT-4, GPT-3.5 Turbo, Azure OpenAI, Anthropic Claude, etc.)
+  - **Burst handling**: Configurable burst request allowances within time windows to handle traffic spikes
+  - **Exponential backoff**: Intelligent retry logic with jitter to avoid thundering herd problems
+  - **Adaptive rate adjustment**: Automatic rate limit adjustment based on response times and error patterns
+  
+- **CLI rate limiting options**: Complete command-line interface for rate limiting configuration
+  - `--rate-limit`: Enable/disable rate limiting (default: disabled)
+  - `--rate-limit-strategy`: Choose from fixed_window, sliding_window, token_bucket, adaptive strategies
+  - `--rate-limit-preset`: Use preset configurations for common AI services
+  - `--rate-limit-requests-per-minute` / `--rate-limit-tokens-per-minute`: Custom rate limits
+  - `--rate-limit-max-burst` / `--rate-limit-max-retries`: Burst and retry configuration
+  
+- **Environment-based rate limiting**: 12-factor compliant configuration via environment variables
+  - `RAFT_RATE_LIMIT_ENABLED`: Enable rate limiting
+  - `RAFT_RATE_LIMIT_STRATEGY`: Rate limiting strategy selection
+  - `RAFT_RATE_LIMIT_PRESET`: Preset configuration selection
+  - `RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE` / `RAFT_RATE_LIMIT_TOKENS_PER_MINUTE`: Rate limits
+  - `RAFT_RATE_LIMIT_MAX_BURST` / `RAFT_RATE_LIMIT_MAX_RETRIES`: Advanced configuration
+
+- **Rate limiting statistics and monitoring**: Real-time visibility into rate limiting performance
+  - **Request statistics**: Total requests, tokens used, wait times, rate limit hits
+  - **Performance metrics**: Average response times, current effective rate limits
+  - **CLI reporting**: Detailed rate limiting statistics in generation completion summary
+  - **Adaptive insights**: Current rate adjustments for adaptive strategies
+
+#### Kubernetes Production Deployment
+- **Comprehensive Kubernetes support**: Production-ready deployments on major cloud providers
+  - **Azure Kubernetes Service (AKS)**: Native Azure integration with ACR, Application Gateway, Azure Files
+  - **Amazon Elastic Kubernetes Service (EKS)**: AWS integration with ECR, ALB, EFS, and IAM roles
+  - **Google Kubernetes Engine (GKE)**: GCP integration with GCR, Cloud Load Balancer, Filestore
+  - **Multi-cloud flexibility**: Consistent deployment patterns across all major cloud providers
+
+- **Automated deployment scripts**: One-command deployment for each cloud provider
+  - **deploy-aks.sh**: Complete AKS setup with resource group, ACR, cluster creation
+  - **deploy-eks.sh**: Full EKS setup with ECR, eksctl cluster management, Load Balancer Controller
+  - **deploy-gks.sh**: Comprehensive GKE setup with GCR, service accounts, Workload Identity
+  - **Intelligent error handling**: Robust scripts with prerequisite checks and cleanup capabilities
+
+- **Production-grade configurations**: Enterprise-ready Kubernetes manifests
+  - **Base manifests**: Namespace, ConfigMap, Secret, Deployment, Service, Job, PVC, Ingress
+  - **Cloud-specific overlays**: Optimized configurations for each cloud provider's services
+  - **Kustomize support**: Declarative configuration management with environment-specific patches
+  - **Helm charts**: Package manager support for simplified deployment and upgrades
+
+- **Security and scalability features**: Production-ready operational capabilities
+  - **Auto-scaling**: Horizontal Pod Autoscaler and Vertical Pod Autoscaler configurations
+  - **Security contexts**: Non-root containers, read-only filesystems, dropped capabilities
+  - **Network policies**: Ingress/egress traffic control and pod-to-pod communication rules
+  - **RBAC**: Role-based access control for service accounts and pod permissions
+  - **Health checks**: Liveness and readiness probes for reliable deployments
+  - **Persistent storage**: Cloud-native storage solutions for input/output data persistence
+
+- **Monitoring and observability**: Comprehensive operational visibility
+  - **Prometheus integration**: Metrics collection with configurable scraping endpoints
+  - **Structured logging**: JSON logging with configurable levels and external aggregation support
+  - **Health endpoints**: Built-in health checks for load balancer and monitoring integration
+  - **Cloud monitoring**: Native integration with Azure Monitor, CloudWatch, and Google Cloud Monitoring
+
 ### 🔧 Enhanced
+
+#### CLI Logging System
+- **Enhanced logging architecture**: Implemented comprehensive logging system for CLI application using open source libraries
+  - **Default SDK integration**: Uses popular Python logging libraries (structlog, coloredlogs, PyYAML) with graceful fallbacks
+  - **Progress tracking**: Visual progress indicators in logs with contextual states (INIT, PROC, DONE, FAIL, etc.)
+  - **Multiple output formats**: Colored console output, JSON structured logging, standard text, and minimal formats
+  - **Contextual logging**: Ability to add operation metadata (input files, model names, worker counts, processing statistics)
+  - **Environment-based configuration**: Easy configuration via environment variables (RAFT_LOG_LEVEL, RAFT_LOG_FORMAT, RAFT_LOG_OUTPUT)
+
+- **Distributed tracing capabilities**: Built-in traceability using open source libraries as the default
+  - **OpenTelemetry integration**: Native support for OpenTelemetry distributed tracing with graceful fallbacks
+  - **Trace context propagation**: Automatic trace ID and span ID generation for operation correlation
+  - **Operation tracing**: Start/end operation tracking with custom attributes and events
+  - **Fallback trace IDs**: UUID-based trace generation when OpenTelemetry is not available
+  - **Jaeger export support**: Direct integration with Jaeger tracing backend
+  - **Trace-aware logging**: Automatic inclusion of trace IDs in all log messages for correlation
+
+- **External logging service integration**: Support for third-party logging and monitoring tools
+  - **Sentry integration**: Built-in error tracking and performance monitoring with `setup_sentry_logging()`
+  - **DataDog integration**: Metrics and logging integration with `setup_datadog_logging()`
+  - **Custom handlers**: Generic external handler support for other logging services
+  - **Structured data export**: JSON formatted logs for external analysis tools with tracing metadata
+
+- **Enhanced CLI user experience**: Improved logging throughout CLI application lifecycle
+  - **Operation phases**: Clear progress tracking for initialization, validation, processing, and completion
+  - **Error handling**: Detailed error logging with stack traces, contextual information, and trace correlation
+  - **Performance metrics**: Logging of processing statistics, timing, and resource usage with trace attributes
+  - **Configuration logging**: Detailed logging of configuration loading and validation steps
+  - **Trace correlation**: All operations automatically traced with unique identifiers for debugging and monitoring
 
 ### 🐛 Fixed
 
 ### 📦 Dependencies
+
+#### Optional Logging and Tracing Dependencies
+- **Enhanced logging libraries**: Added optional dependencies for improved logging experience
+  - `structlog`: Structured logging with configurable processors (optional)
+  - `coloredlogs`: Enhanced colored console output (optional) 
+  - `PyYAML`: YAML configuration file support (optional)
+  - Note: All dependencies are optional with graceful fallbacks to standard Python logging
+
+- **Distributed tracing libraries**: Added optional dependencies for tracing capabilities
+  - `opentelemetry-api`: Core OpenTelemetry API for tracing (optional)
+  - `opentelemetry-sdk`: OpenTelemetry SDK for trace collection (optional)
+  - `opentelemetry-exporter-jaeger`: Jaeger exporter for trace visualization (optional)
+  - `opentelemetry-instrumentation-logging`: Automatic logging instrumentation (optional)
+  - Note: Tracing works with UUID fallbacks when OpenTelemetry is not installed
 
 ---
 

@@ -10,6 +10,7 @@ This guide provides comprehensive information about configuring the RAFT Toolkit
 
 - [🔧 Environment Variables](#-environment-variables)
 - [📄 Configuration Files](#-configuration-files)
+- [📂 Input Sources Configuration](#-input-sources-configuration)
 - [🌐 API Configuration](#-api-configuration)
 - [🖥️ CLI Configuration](#️-cli-configuration)
 - [🌍 Web Interface Configuration](#-web-interface-configuration)
@@ -107,6 +108,35 @@ AZURE_STORAGE_ACCOUNT=raftstorage       # Azure storage account
 GCS_BUCKET=raft-toolkit-data            # Google Cloud Storage bucket
 ```
 
+### Input Source Configuration
+
+```bash
+# Input Source Type
+RAFT_SOURCE_TYPE=local                  # Input source type (local, s3, sharepoint)
+RAFT_SOURCE_URI=/path/to/documents      # Source URI or path
+RAFT_DATAPATH=/path/to/documents        # Legacy local path (for backward compatibility)
+
+# Source Filtering
+RAFT_SOURCE_INCLUDE_PATTERNS='["**/*.pdf", "**/*.txt"]'  # Include patterns (JSON array)
+RAFT_SOURCE_EXCLUDE_PATTERNS='["**/temp/**"]'           # Exclude patterns (JSON array)
+RAFT_SOURCE_MAX_FILE_SIZE=52428800      # Maximum file size in bytes (50MB)
+RAFT_SOURCE_BATCH_SIZE=100              # Batch size for processing
+
+# S3 Configuration
+AWS_ACCESS_KEY_ID=AKIA...               # AWS access key
+AWS_SECRET_ACCESS_KEY=...               # AWS secret key
+AWS_DEFAULT_REGION=us-east-1            # AWS region
+AWS_SESSION_TOKEN=...                   # Session token (for temporary credentials)
+
+# SharePoint Configuration
+RAFT_SOURCE_CREDENTIALS='{              # SharePoint credentials (JSON)
+  "auth_method": "client_credentials",
+  "client_id": "app_id",
+  "client_secret": "secret",
+  "tenant_id": "tenant_id"
+}'
+```
+
 ### Logging Configuration
 
 ```bash
@@ -126,6 +156,126 @@ ENABLE_STRUCTURED_LOGGING=false         # Enable structured logging
 LOG_JSON_INDENT=2                       # JSON log indentation
 LOG_INCLUDE_TIMESTAMP=true              # Include timestamp in logs
 ```
+
+---
+
+## 📂 Input Sources Configuration
+
+The RAFT Toolkit supports multiple input sources for document processing. Configure your preferred source using environment variables or CLI arguments.
+
+### 📁 Local Files (Default)
+
+```bash
+# Using traditional datapath
+RAFT_DATAPATH=/path/to/documents
+
+# Or using new source configuration  
+RAFT_SOURCE_TYPE=local
+RAFT_SOURCE_URI=/path/to/documents
+```
+
+### ☁️ Amazon S3
+
+Configure S3 access using AWS credentials:
+
+```bash
+# Source configuration
+RAFT_SOURCE_TYPE=s3
+RAFT_SOURCE_URI=s3://bucket-name/prefix/
+
+# AWS credentials (choose one method)
+# Method 1: Environment variables
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+AWS_DEFAULT_REGION=us-east-1
+
+# Method 2: Inline credentials (not recommended for production)
+RAFT_SOURCE_CREDENTIALS='{
+  "aws_access_key_id": "AKIA...",
+  "aws_secret_access_key": "...",
+  "region_name": "us-east-1"
+}'
+
+# Method 3: Use IAM roles (when running on AWS)
+# No additional configuration needed
+```
+
+### 🏢 SharePoint Online
+
+Configure SharePoint access using Azure AD app registration:
+
+```bash
+# Source configuration
+RAFT_SOURCE_TYPE=sharepoint
+RAFT_SOURCE_URI="https://company.sharepoint.com/sites/mysite/Shared Documents"
+
+# Authentication methods
+# Method 1: Client credentials (recommended for production)
+RAFT_SOURCE_CREDENTIALS='{
+  "auth_method": "client_credentials",
+  "client_id": "your-app-id",
+  "client_secret": "your-app-secret", 
+  "tenant_id": "your-tenant-id"
+}'
+
+# Method 2: Device code flow (interactive)
+RAFT_SOURCE_CREDENTIALS='{
+  "auth_method": "device_code",
+  "client_id": "your-app-id",
+  "tenant_id": "your-tenant-id"
+}'
+```
+
+### 🎯 Advanced Filtering
+
+Control which files are processed:
+
+```bash
+# Include specific file patterns
+RAFT_SOURCE_INCLUDE_PATTERNS='["**/*.pdf", "**/reports/*.txt", "**/2024/**"]'
+
+# Exclude specific patterns
+RAFT_SOURCE_EXCLUDE_PATTERNS='["**/temp/**", "**/.DS_Store", "**/draft*"]'
+
+# File size limits
+RAFT_SOURCE_MAX_FILE_SIZE=52428800  # 50MB in bytes
+
+# Processing batch size
+RAFT_SOURCE_BATCH_SIZE=100
+```
+
+### 📋 Source Configuration Examples
+
+#### Complete S3 Example
+```bash
+export RAFT_SOURCE_TYPE=s3
+export RAFT_SOURCE_URI=s3://my-docs-bucket/technical-docs/
+export AWS_ACCESS_KEY_ID=AKIA...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_DEFAULT_REGION=us-west-2
+export RAFT_SOURCE_INCLUDE_PATTERNS='["**/*.pdf", "**/*.md"]'
+export RAFT_SOURCE_EXCLUDE_PATTERNS='["**/drafts/**"]'
+export RAFT_SOURCE_MAX_FILE_SIZE=104857600  # 100MB
+
+python raft.py --output ./s3-dataset
+```
+
+#### Complete SharePoint Example
+```bash
+export RAFT_SOURCE_TYPE=sharepoint
+export RAFT_SOURCE_URI="https://company.sharepoint.com/sites/engineering/Shared Documents/API Docs"
+export RAFT_SOURCE_CREDENTIALS='{
+  "auth_method": "client_credentials",
+  "client_id": "12345678-1234-1234-1234-123456789012",
+  "client_secret": "your-secret-here",
+  "tenant_id": "87654321-4321-4321-4321-210987654321"
+}'
+export RAFT_SOURCE_INCLUDE_PATTERNS='["**/*.docx", "**/*.pdf"]'
+
+python raft.py --doctype pdf --output ./sharepoint-dataset
+```
+
+For detailed setup instructions, see [INPUT_SOURCES.md](INPUT_SOURCES.md).
 
 ---
 

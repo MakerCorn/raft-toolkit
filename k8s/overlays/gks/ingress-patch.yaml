@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: raft-toolkit-ingress
+  namespace: raft-toolkit
+  annotations:
+    # GCP Ingress Controller annotations
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "raft-toolkit-ip"
+    networking.gke.io/managed-certificates: "raft-toolkit-ssl-cert"
+    cloud.google.com/backend-config: '{"default": "raft-toolkit-backend-config"}'
+    cloud.google.com/armoring-config: '{"default": "raft-toolkit-security-policy"}'
+spec:
+  rules:
+  - host: raft-toolkit.gcp.example.com
+    http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: raft-toolkit-web-service
+            port:
+              number: 80
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: raft-toolkit-ssl-cert
+  namespace: raft-toolkit
+spec:
+  domains:
+    - raft-toolkit.gcp.example.com

@@ -1,0 +1,166 @@
+{{- if .Values.web.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "raft-toolkit.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "raft-toolkit.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "raft-toolkit.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- if .Values.monitoring.prometheus.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.monitoring.prometheus.port | quote }}
+        prometheus.io/path: {{ .Values.monitoring.prometheus.path }}
+        {{- end }}
+      labels:
+        {{- include "raft-toolkit.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "raft-toolkit.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "run_web.py"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.port }}
+              protocol: TCP
+          env:
+            # Web configuration
+            - name: WEB_HOST
+              value: {{ .Values.web.host | quote }}
+            - name: WEB_PORT
+              value: {{ .Values.web.port | quote }}
+            - name: WEB_DEBUG
+              value: {{ .Values.web.debug | quote }}
+            
+            # RAFT configuration from ConfigMap
+            - name: RAFT_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-config
+                  key: RAFT_LOG_LEVEL
+            - name: RAFT_LOG_FORMAT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-config
+                  key: RAFT_LOG_FORMAT
+            - name: RAFT_WORKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-config
+                  key: RAFT_WORKERS
+            - name: RAFT_RATE_LIMIT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-config
+                  key: RAFT_RATE_LIMIT_ENABLED
+            - name: RAFT_RATE_LIMIT_STRATEGY
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-config
+                  key: RAFT_RATE_LIMIT_STRATEGY
+            - name: RAFT_RATE_LIMIT_PRESET
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-config
+                  key: RAFT_RATE_LIMIT_PRESET
+            
+            # Secrets
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-secrets
+                  key: OPENAI_API_KEY
+            - name: OPENAI_API_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-secrets
+                  key: OPENAI_API_BASE_URL
+            {{- if .Values.secrets.azureOpenaiEnabled }}
+            - name: AZURE_OPENAI_ENABLED
+              value: "true"
+            - name: AZURE_OPENAI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-secrets
+                  key: AZURE_OPENAI_KEY
+            - name: AZURE_OPENAI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-secrets
+                  key: AZURE_OPENAI_ENDPOINT
+            {{- end }}
+            {{- if .Values.secrets.sentryDsn }}
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "raft-toolkit.fullname" . }}-secrets
+                  key: SENTRY_DSN
+            {{- end }}
+          
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.healthCheck.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.healthCheck.readinessProbe | nindent 12 }}
+          {{- end }}
+          
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          
+          volumeMounts:
+            {{- if .Values.outputPersistence.enabled }}
+            - name: output-storage
+              mountPath: /app/output
+            {{- end }}
+            - name: temp-storage
+              mountPath: /tmp
+
+      volumes:
+        {{- if .Values.outputPersistence.enabled }}
+        - name: output-storage
+          persistentVolumeClaim:
+            claimName: {{ include "raft-toolkit.fullname" . }}-output-pvc
+        {{- end }}
+        - name: temp-storage
+          emptyDir:
+            sizeLimit: 1Gi
+      
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

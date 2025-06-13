@@ -1,0 +1,133 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: raft-toolkit-cli-job
+  namespace: raft-toolkit
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: cli-job
+    app.kubernetes.io/part-of: raft-toolkit
+    app.kubernetes.io/version: "latest"
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: raft-toolkit
+        app.kubernetes.io/component: cli-job
+        app.kubernetes.io/part-of: raft-toolkit
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: raft-toolkit-cli
+        image: raft-toolkit:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python", "cli/main.py"]
+        args:
+        - "--datapath"
+        - "/app/input"
+        - "--output"
+        - "/app/output"
+        - "--rate-limit"
+        - "--rate-limit-preset"
+        - "openai_gpt4"
+        env:
+        # Configuration from ConfigMap
+        - name: RAFT_LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_LOG_LEVEL
+        - name: RAFT_LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_LOG_FORMAT
+        - name: RAFT_WORKERS
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_WORKERS
+        - name: RAFT_QUESTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_QUESTIONS
+        - name: RAFT_DISTRACTORS
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_DISTRACTORS
+        - name: RAFT_CHUNK_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_CHUNK_SIZE
+        - name: RAFT_RATE_LIMIT_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_RATE_LIMIT_ENABLED
+        - name: RAFT_RATE_LIMIT_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_RATE_LIMIT_STRATEGY
+        - name: RAFT_RATE_LIMIT_PRESET
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_RATE_LIMIT_PRESET
+        
+        # Secrets
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: raft-toolkit-secrets
+              key: OPENAI_API_KEY
+        - name: OPENAI_API_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: raft-toolkit-secrets
+              key: OPENAI_API_BASE_URL
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        
+        volumeMounts:
+        - name: input-storage
+          mountPath: /app/input
+          readOnly: true
+        - name: output-storage
+          mountPath: /app/output
+        - name: temp-storage
+          mountPath: /tmp
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: input-storage
+        persistentVolumeClaim:
+          claimName: raft-toolkit-input-pvc
+      - name: output-storage
+        persistentVolumeClaim:
+          claimName: raft-toolkit-output-pvc
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 2Gi
+      
+      restartPolicy: Never
+  backoffLimit: 3

@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raft-toolkit-web
+  namespace: raft-toolkit
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: raft-toolkit
+    app.kubernetes.io/version: "latest"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: raft-toolkit
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: raft-toolkit
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: raft-toolkit
+        app.kubernetes.io/version: "latest"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/health"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: raft-toolkit-web
+        image: raft-toolkit:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        # Configuration from ConfigMap
+        - name: WEB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: WEB_HOST
+        - name: WEB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: WEB_PORT
+        - name: WEB_DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: WEB_DEBUG
+        - name: RAFT_LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_LOG_LEVEL
+        - name: RAFT_LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_LOG_FORMAT
+        - name: RAFT_WORKERS
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_WORKERS
+        - name: RAFT_RATE_LIMIT_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_RATE_LIMIT_ENABLED
+        - name: RAFT_RATE_LIMIT_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_RATE_LIMIT_STRATEGY
+        - name: RAFT_RATE_LIMIT_PRESET
+          valueFrom:
+            configMapKeyRef:
+              name: raft-toolkit-config
+              key: RAFT_RATE_LIMIT_PRESET
+        
+        # Secrets
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: raft-toolkit-secrets
+              key: OPENAI_API_KEY
+        - name: OPENAI_API_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: raft-toolkit-secrets
+              key: OPENAI_API_BASE_URL
+        - name: AZURE_OPENAI_KEY
+          valueFrom:
+            secretKeyRef:
+              name: raft-toolkit-secrets
+              key: AZURE_OPENAI_KEY
+              optional: true
+        - name: AZURE_OPENAI_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: raft-toolkit-secrets
+              key: AZURE_OPENAI_ENDPOINT
+              optional: true
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: raft-toolkit-secrets
+              key: SENTRY_DSN
+              optional: true
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        
+        volumeMounts:
+        - name: output-storage
+          mountPath: /app/output
+        - name: temp-storage
+          mountPath: /tmp
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: output-storage
+        emptyDir:
+          sizeLimit: 5Gi
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 1Gi
+      
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

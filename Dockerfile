@@ -123,6 +123,9 @@ CMD ["python", "run_tests.py", "--coverage"]
 # Stage 5: Production
 FROM dependencies AS production
 
+# Build-time arguments for optimization
+ARG KUBERNETES_OPTIMIZED=false
+
 # Copy source code
 COPY . .
 
@@ -132,14 +135,32 @@ RUN rm -rf tests/ docs/ examples/ .git/ .github/ notebooks/ && \
     find . -name "__pycache__" -type d -exec rm -rf {} + || true && \
     find . -name "*.pytest_cache" -type d -exec rm -rf {} + || true
 
+# Install Kubernetes-specific dependencies if optimized build
+RUN if [ "$KUBERNETES_OPTIMIZED" = "true" ]; then \
+        echo "🚀 Installing Kubernetes optimizations..." && \
+        pip install --no-cache-dir -r requirements-k8s.txt && \
+        echo "✅ Kubernetes dependencies installed successfully"; \
+    fi
+
 # Create necessary directories and set permissions
 RUN mkdir -p /app/data /app/outputs /app/logs /app/uploads && \
     chown -R raft:raft /app
 
+# Add Kubernetes-specific labels when optimized
+LABEL io.kubernetes.container.name="raft-toolkit" \
+      io.kubernetes.container.component="web" \
+      io.openshift.expose-services="8000:http"
+
+# Set Kubernetes-friendly environment variables
+ENV PYTHONUNBUFFERED=1 \
+    RAFT_LOG_FORMAT=json \
+    RAFT_LOG_OUTPUT=stdout \
+    KUBERNETES_DEPLOYMENT=true
+
 # Switch to app user
 USER raft
 
-# Health check
+# Health check (Kubernetes-friendly)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 

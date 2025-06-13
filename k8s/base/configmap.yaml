@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: raft-toolkit-config
+  namespace: raft-toolkit
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: configmap
+    app.kubernetes.io/part-of: raft-toolkit
+data:
+  # General Configuration
+  RAFT_OUTPUT: "/app/output"
+  RAFT_OUTPUT_FORMAT: "hf"
+  RAFT_OUTPUT_TYPE: "jsonl"
+  RAFT_DISTRACTORS: "1"
+  RAFT_P: "1.0"
+  RAFT_QUESTIONS: "5"
+  RAFT_CHUNK_SIZE: "512"
+  RAFT_DOCTYPE: "pdf"
+  RAFT_CHUNKING_STRATEGY: "semantic"
+  
+  # Performance Configuration
+  RAFT_WORKERS: "2"
+  RAFT_EMBED_WORKERS: "1"
+  RAFT_PACE: "true"
+  RAFT_AUTO_CLEAN_CHECKPOINTS: "false"
+  
+  # AI Model Configuration
+  RAFT_EMBEDDING_MODEL: "text-embedding-ada-002"
+  RAFT_COMPLETION_MODEL: "gpt-4"
+  RAFT_SYSTEM_PROMPT_KEY: "gpt"
+  
+  # Rate Limiting Configuration
+  RAFT_RATE_LIMIT_ENABLED: "true"
+  RAFT_RATE_LIMIT_STRATEGY: "sliding_window"
+  RAFT_RATE_LIMIT_PRESET: "openai_gpt4"
+  RAFT_RATE_LIMIT_MAX_RETRIES: "3"
+  
+  # Web Interface Configuration
+  WEB_HOST: "0.0.0.0"
+  WEB_PORT: "8000"
+  WEB_DEBUG: "false"
+  
+  # Logging Configuration
+  RAFT_LOG_LEVEL: "INFO"
+  RAFT_LOG_FORMAT: "json"
+  RAFT_LOG_OUTPUT: "stdout"
+  
+  # Template Configuration
+  RAFT_TEMPLATES: "/app/templates"

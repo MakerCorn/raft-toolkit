@@ -386,8 +386,80 @@ jobs:
         name: docker-test-results
         path: docker-test-results/
 
+  kubernetes-tests:
+    needs: check-build
+    if: needs.check-build.outputs.build-success == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-k8s.txt
+        pip install yamllint
+    
+    - name: Install kubectl and kustomize
+      run: |
+        # Install kubectl
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+        
+        # Install kustomize
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+    
+    - name: Validate Kubernetes manifests
+      run: |
+        echo "## Kubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
+        
+        # Validate YAML syntax
+        for file in $(find k8s -name "*.yaml" -o -name "*.yml"); do
+          if ! yamllint -d relaxed "$file" >/dev/null 2>&1; then
+            echo "❌ YAML syntax error in $file" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+        done
+        echo "✅ All YAML files have valid syntax" >> $GITHUB_STEP_SUMMARY
+        
+        # Validate Kubernetes resources
+        for cloud in aks eks gks; do
+          cd k8s/overlays/$cloud
+          if kustomize build . | kubectl apply --dry-run=client -f - >/dev/null 2>&1; then
+            echo "✅ $cloud overlay is valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ $cloud overlay validation failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          cd ../../..
+        done
+    
+    - name: Test deployment scripts
+      run: |
+        echo "### Deployment Script Tests" >> $GITHUB_STEP_SUMMARY
+        
+        # Test script help functionality
+        for script in k8s/scripts/*.sh; do
+          if [ -f "$script" ]; then
+            script_name=$(basename "$script")
+            if bash "$script" --help >/dev/null 2>&1; then
+              echo "✅ $script_name help works" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ $script_name help failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+        done
+
   test-summary:
-    needs: [unit-tests, integration-tests, api-tests, cli-tests, docker-tests]
+    needs: [unit-tests, integration-tests, api-tests, cli-tests, docker-tests, kubernetes-tests]
     if: always() && needs.check-build.outputs.build-success == 'true'
     runs-on: ubuntu-latest
     
@@ -403,13 +475,15 @@ jobs:
         echo "| API Tests | ${{ needs.api-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
         echo "| CLI Tests | ${{ needs.cli-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Docker Tests | ${{ needs.docker-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Kubernetes Tests | ${{ needs.kubernetes-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
         
         # Set overall status
         if [[ "${{ needs.unit-tests.result }}" == "success" && 
               "${{ needs.integration-tests.result }}" == "success" && 
               "${{ needs.api-tests.result }}" == "success" && 
               "${{ needs.cli-tests.result }}" == "success" && 
-              "${{ needs.docker-tests.result }}" == "success" ]]; then
+              "${{ needs.docker-tests.result }}" == "success" && 
+              "${{ needs.kubernetes-tests.result }}" == "success" ]]; then
           echo "tests-passed=true" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🎉 **All tests passed!**" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raft-toolkit-web
+  namespace: raft-toolkit
+spec:
+  replicas: 3
+  template:
+    metadata:
+      annotations:
+        # AWS-specific annotations
+        iam.amazonaws.com/role: "raft-toolkit-eks-role"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      # AWS-specific configuration
+      serviceAccountName: raft-toolkit-aws-service-account
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+        node.kubernetes.io/instance-type: "m5.large"
+      tolerations:
+      - key: "eks.amazonaws.com/compute-type"
+        operator: "Equal"
+        value: "fargate"
+        effect: "NoSchedule"
+      containers:
+      - name: raft-toolkit-web
+        env:
+        # AWS-specific environment variables
+        - name: AWS_REGION
+          value: "us-west-2"
+        - name: AWS_DEFAULT_REGION
+          value: "us-west-2"
+        - name: AWS_ROLE_ARN
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials-secret
+              key: role-arn
+              optional: true
+        # Enable AWS Bedrock integration if available
+        - name: AWS_BEDROCK_ENABLED
+          value: "false"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"

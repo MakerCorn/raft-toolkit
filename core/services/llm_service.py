@@ -30,6 +30,7 @@ except ImportError:
 
 from ..models import DocumentChunk, Question, QADataPoint, ProcessingJob, ProcessingResult, DocType
 from ..config import RaftConfig
+from ..utils.rate_limiter import create_rate_limiter_from_config, get_common_rate_limits
 try:
     from ..clients import build_openai_client, ChatCompleter
 except ImportError:
@@ -81,6 +82,7 @@ class LLMService:
         self.client = self._build_client()
         self.chat_completer = ChatCompleter(self.client)
         self.prompt_templates = self._load_prompt_templates()
+        self.rate_limiter = self._create_rate_limiter()
     
     def _build_client(self):
         """Build OpenAI client."""
@@ -120,6 +122,53 @@ class LLMService:
             templates['llama_qa'] = "Generate %d questions based on the following context that can be answered from the text."
         
         return templates
+    
+    def _create_rate_limiter(self):
+        """Create and configure rate limiter based on config."""
+        if not self.config.rate_limit_enabled:
+            # Create a disabled rate limiter
+            return create_rate_limiter_from_config(enabled=False)
+        
+        # Start with preset configuration if specified
+        rate_limit_config = {}
+        if self.config.rate_limit_preset:
+            presets = get_common_rate_limits()
+            if self.config.rate_limit_preset in presets:
+                rate_limit_config = presets[self.config.rate_limit_preset].copy()
+                logger.info(f"Using rate limit preset: {self.config.rate_limit_preset}")
+            else:
+                logger.warning(f"Unknown rate limit preset: {self.config.rate_limit_preset}")
+        
+        # Override with explicit configuration
+        rate_limit_config.update({
+            'enabled': True,
+            'strategy': self.config.rate_limit_strategy,
+            'max_retries': self.config.rate_limit_max_retries,
+            'base_retry_delay': self.config.rate_limit_base_delay,
+            'burst_window_seconds': self.config.rate_limit_burst_window
+        })
+        
+        # Override with specific values if provided
+        if self.config.rate_limit_requests_per_minute is not None:
+            rate_limit_config['requests_per_minute'] = self.config.rate_limit_requests_per_minute
+        if self.config.rate_limit_requests_per_hour is not None:
+            rate_limit_config['requests_per_hour'] = self.config.rate_limit_requests_per_hour
+        if self.config.rate_limit_tokens_per_minute is not None:
+            rate_limit_config['tokens_per_minute'] = self.config.rate_limit_tokens_per_minute
+        if self.config.rate_limit_tokens_per_hour is not None:
+            rate_limit_config['tokens_per_hour'] = self.config.rate_limit_tokens_per_hour
+        if self.config.rate_limit_max_burst is not None:
+            rate_limit_config['max_burst_requests'] = self.config.rate_limit_max_burst
+        
+        rate_limiter = create_rate_limiter_from_config(**rate_limit_config)
+        
+        if rate_limiter.config.enabled:
+            logger.info(f"Rate limiting enabled with strategy: {rate_limiter.config.strategy.value}")
+            stats = rate_limiter.get_statistics()
+            if stats.get('current_rate_limit'):
+                logger.info(f"Rate limit: {stats['current_rate_limit']:.1f} requests/minute")
+        
+        return rate_limiter
     
     def process_chunks_batch(self, chunks: List[DocumentChunk]) -> List[ProcessingResult]:
         """Process multiple chunks in parallel."""
@@ -214,14 +263,105 @@ class LLMService:
                 error=str(e)
             )
     
-    @retry(wait=wait_exponential(multiplier=1, min=10, max=120), 
-           reraise=True, retry=retry_if_exception_type(RateLimitError))
     def _generate_questions(self, chunk: DocumentChunk) -> List[Question]:
-        """Generate questions for a document chunk."""
+        """Generate questions for a document chunk with rate limiting."""
+        return self._rate_limited_api_call(
+            self._generate_questions_impl,
+            chunk,
+            estimated_tokens=self._estimate_tokens_for_questions(chunk)
+        )
+    
+    def _generate_questions_impl(self, chunk: DocumentChunk) -> List[Question]:
+        """Implementation of question generation without rate limiting."""
         if self.config.doctype == "api":
             return self._generate_api_questions(chunk)
         else:
             return self._generate_general_questions(chunk)
+    
+    def _estimate_tokens_for_questions(self, chunk: DocumentChunk) -> int:
+        """Estimate tokens needed for question generation."""
+        # Rough estimation: chunk content + prompt + expected output
+        chunk_tokens = len(chunk.content.split()) * 1.3  # Words to tokens ratio
+        prompt_tokens = 100  # System prompt and instructions
+        output_tokens = self.config.questions * 15  # ~15 tokens per question
+        return int(chunk_tokens + prompt_tokens + output_tokens)
+    
+    def _rate_limited_api_call(self, func, *args, estimated_tokens=None, **kwargs):
+        """
+        Make a rate-limited API call with retry logic.
+        
+        Args:
+            func: Function to call
+            *args: Arguments for the function
+            estimated_tokens: Estimated token usage for this call
+            **kwargs: Keyword arguments for the function
+            
+        Returns:
+            Result of the function call
+        """
+        max_retries = self.rate_limiter.config.max_retries if self.rate_limiter.config.enabled else 1
+        base_delay = self.rate_limiter.config.base_retry_delay if self.rate_limiter.config.enabled else 1.0
+        
+        for attempt in range(max_retries + 1):
+            try:
+                # Apply rate limiting before the call
+                wait_time = self.rate_limiter.acquire(estimated_tokens)
+                if wait_time > 0:
+                    logger.debug(f"Rate limiting: waited {wait_time:.2f}s before API call")
+                
+                # Make the API call and time it
+                start_time = time.time()
+                result = func(*args, **kwargs)
+                response_time = time.time() - start_time
+                
+                # Record successful response
+                self.rate_limiter.record_response(response_time, estimated_tokens)
+                
+                return result
+                
+            except RateLimitError as e:
+                self.rate_limiter.record_error("rate_limit")
+                
+                if attempt >= max_retries:
+                    logger.error(f"Rate limit exceeded after {max_retries} retries")
+                    raise
+                
+                # Calculate exponential backoff delay
+                if self.rate_limiter.config.exponential_backoff:
+                    delay = base_delay * (2 ** attempt)
+                    if self.rate_limiter.config.jitter:
+                        import random
+                        delay *= (0.5 + random.random() * 0.5)  # Add 0-50% jitter
+                    delay = min(delay, self.rate_limiter.config.max_retry_delay)
+                else:
+                    delay = base_delay
+                
+                logger.warning(f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}), "
+                             f"retrying in {delay:.1f}s")
+                time.sleep(delay)
+                
+            except Exception as e:
+                # Record other errors but don't retry unless configured
+                error_type = "server_error" if "server" in str(e).lower() else "other_error"
+                self.rate_limiter.record_error(error_type)
+                
+                if ("auth" in str(e).lower() and self.rate_limiter.config.fail_fast_on_auth_error):
+                    logger.error("Authentication error, failing fast")
+                    raise
+                
+                if (error_type == "server_error" and 
+                    self.rate_limiter.config.retry_on_server_error and 
+                    attempt < max_retries):
+                    delay = base_delay * (attempt + 1)
+                    logger.warning(f"Server error (attempt {attempt + 1}/{max_retries + 1}), "
+                                 f"retrying in {delay:.1f}s: {e}")
+                    time.sleep(delay)
+                    continue
+                
+                raise
+        
+        # Should not reach here
+        raise Exception(f"Failed after {max_retries} retries")
     
     def _generate_api_questions(self, chunk: DocumentChunk) -> List[Question]:
         """Generate questions for API documentation."""
@@ -297,14 +437,29 @@ class LLMService:
             doctype=self.config.doctype
         )
     
-    @retry(wait=wait_exponential(multiplier=1, min=10, max=120), 
-           reraise=True, retry=retry_if_exception_type(RateLimitError))
     def _generate_answer(self, question: str, context: str) -> str:
-        """Generate an answer for a question given context."""
+        """Generate an answer for a question given context with rate limiting."""
+        return self._rate_limited_api_call(
+            self._generate_answer_impl,
+            question,
+            context,
+            estimated_tokens=self._estimate_tokens_for_answer(question, context)
+        )
+    
+    def _generate_answer_impl(self, question: str, context: str) -> str:
+        """Implementation of answer generation without rate limiting."""
         if self.config.doctype == "api":
             return self._generate_api_answer(question, context)
         else:
             return self._generate_general_answer(question, context)
+    
+    def _estimate_tokens_for_answer(self, question: str, context: str) -> int:
+        """Estimate tokens needed for answer generation."""
+        question_tokens = len(question.split()) * 1.3
+        context_tokens = len(context.split()) * 1.3
+        prompt_tokens = 100  # System prompt and instructions
+        output_tokens = 150  # Expected answer length
+        return int(question_tokens + context_tokens + prompt_tokens + output_tokens)
     
     def _generate_api_answer(self, question: str, context: str) -> str:
         """Generate answer for API question."""
@@ -345,3 +500,7 @@ class LLMService:
         )
         
         return response.choices[0].message.content
+    
+    def get_rate_limit_statistics(self) -> Dict[str, Any]:
+        """Get rate limiting statistics."""
+        return self.rate_limiter.get_statistics()

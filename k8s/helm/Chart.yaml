@@ -1,0 +1,21 @@
+apiVersion: v2
+name: raft-toolkit
+description: A Helm chart for RAFT Toolkit - Retrieval Augmentation Fine-Tuning Dataset Generator
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/your-org/raft-toolkit
+sources:
+  - https://github.com/your-org/raft-toolkit
+maintainers:
+  - name: RAFT Toolkit Team
+    email: maintainers@example.com
+keywords:
+  - raft
+  - ai
+  - machine-learning
+  - fine-tuning
+  - dataset-generation
+annotations:
+  category: AI/ML
+  licenses: MIT

@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: raft-toolkit-aks
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/part-of: raft-toolkit
+    cloud.provider: azure
+
+resources:
+- ../../base
+
+patchesStrategicMerge:
+- deployment-patch.yaml
+- service-patch.yaml
+- ingress-patch.yaml
+- pvc-patch.yaml
+
+configMapGenerator:
+- name: aks-specific-config
+  literals:
+  - CLOUD_PROVIDER=azure
+  - AZURE_REGION=eastus
+  - STORAGE_TYPE=azure-disk
+
+images:
+- name: raft-toolkit
+  newName: your-acr-registry.azurecr.io/raft-toolkit
+  newTag: latest
+
+commonLabels:
+  cloud.provider: azure
+  deployment.environment: aks
+
+namespace: raft-toolkit

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raft-toolkit-web
+  namespace: raft-toolkit
+spec:
+  replicas: 3
+  template:
+    metadata:
+      annotations:
+        # Azure-specific annotations
+        azure.workload.identity/use: "true"
+        azure.workload.identity/service-account-token-expiration: "3600"
+    spec:
+      # Azure-specific configuration
+      serviceAccountName: raft-toolkit-azure-identity
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      containers:
+      - name: raft-toolkit-web
+        env:
+        # Azure-specific environment variables
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-identity-secret
+              key: client-id
+              optional: true
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-identity-secret
+              key: tenant-id
+              optional: true
+        - name: AZURE_SUBSCRIPTION_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-identity-secret
+              key: subscription-id
+              optional: true
+        # Enable Azure OpenAI
+        - name: AZURE_OPENAI_ENABLED
+          value: "true"
+        - name: RAFT_USE_AZURE_IDENTITY
+          value: "true"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"

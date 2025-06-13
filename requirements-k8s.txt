@@ -1,0 +1,22 @@
+# Kubernetes deployment and management dependencies
+kubernetes>=29.0.0,<30.0.0
+pyyaml>=6.0.1,<7.0.0
+jinja2>=3.1.0,<4.0.0
+
+# Optional: Enhanced Kubernetes management
+# kubectl-client>=1.0.0,<2.0.0  # For programmatic kubectl operations
+# helm>=3.0.0,<4.0.0  # For Helm chart management
+# kustomize>=5.0.0,<6.0.0  # For Kustomize operations
+
+# Cloud provider specific clients (optional)
+azure-identity>=1.15.0,<2.0.0
+azure-mgmt-containerservice>=30.0.0,<31.0.0
+boto3>=1.34.0,<2.0.0
+google-cloud-container>=2.40.0,<3.0.0
+
+# Monitoring and observability
+prometheus-client>=0.19.0,<1.0.0
+opentelemetry-api>=1.22.0,<2.0.0
+opentelemetry-sdk>=1.22.0,<2.0.0
+opentelemetry-exporter-jaeger>=1.22.0,<2.0.0
+opentelemetry-instrumentation-logging>=0.43b0,<1.0.0

@@ -14,7 +14,7 @@ The RAFT Toolkit automates the creation of training datasets by generating `{que
 
 ```mermaid
 graph TD
-    A[📄 Input Documents<br/>PDF, TXT, JSON, PPTX] --> B{🔧 RAFT Toolkit<br/>CLI or Web UI}
+    A[📄 Input Sources<br/>Local, S3, SharePoint] --> B{🔧 RAFT Toolkit<br/>CLI or Web UI}
     
     B --> C[📑 Document Chunking<br/>Semantic/Fixed/Sentence]
     C --> D[❓ Question Generation<br/>LLM-powered Q&A creation]
@@ -260,10 +260,14 @@ RAFT takes an input document and creates a dataset of `{question, answer, docume
 - 🛠️ **Analysis Tools Suite**: Evaluation, answer generation, and PromptFlow analysis
 - 🏗️ **12-Factor Architecture**: Cloud-native, scalable design
 - 📄 **Multi-Format Support**: PDF, TXT, JSON, PPTX, and API documentation
+- ☁️ **Multiple Input Sources**: Local files, Amazon S3, SharePoint Online
+- 🔐 **Enterprise Authentication**: AWS credentials, Azure AD, SharePoint integration
 - 🎯 **Flexible Output**: HuggingFace, OpenAI completion/chat, and evaluation formats
 - ⚡ **Parallel Processing**: Configurable workers for optimal performance
+- 📋 **Enhanced Logging**: Production-ready logging with progress tracking, external service integration (Sentry, DataDog), and structured output
 - 🧪 **Comprehensive Testing**: Unit, integration, API, and CLI test suites
 - 🐳 **Container Ready**: Docker support for easy deployment
+- 🚀 **Kubernetes Ready**: Complete Kubernetes deployment configurations
 
 ## 📦 Installation
 
@@ -271,6 +275,8 @@ RAFT takes an input document and creates a dataset of `{question, answer, docume
 
 - Python 3.9+ (3.11 recommended)
 - OpenAI API key (or Azure OpenAI credentials)
+- Optional: AWS credentials for S3 input sources
+- Optional: Azure AD app registration for SharePoint input sources
 - Optional: Docker & Docker Compose for containerized deployment
 
 ### 🚀 Quick Start (Recommended)
@@ -284,8 +290,14 @@ cd raft-toolkit
 cp .env.example .env
 # Edit .env with your OpenAI API key
 
-# Install dependencies
+# Install core dependencies
 pip install -r requirements.txt
+
+# Optional: Install cloud storage dependencies
+pip install -r requirements-k8s.txt  # For S3 and enhanced cloud features
+
+# Optional: Install for development
+pip install -e ".[all]"  # Install all optional dependencies
 
 # Test installation
 python run_tests.py --unit --fast
@@ -373,7 +385,45 @@ WEB_DEBUG=false
 # Evaluation Configuration
 EVAL_MODEL=gpt-4
 EVAL_WORKERS=4
+
+# Rate Limiting Configuration (optional)
+RAFT_RATE_LIMIT_ENABLED=false
+RAFT_RATE_LIMIT_STRATEGY=sliding_window
+RAFT_RATE_LIMIT_PRESET=openai_gpt4
+RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=500
+RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=10000
+RAFT_RATE_LIMIT_MAX_BURST=50
+RAFT_RATE_LIMIT_MAX_RETRIES=3
 ```
+
+### 🌐 Kubernetes Deployment
+
+For production deployments, RAFT Toolkit supports Kubernetes across major cloud providers:
+
+```bash
+# Azure Kubernetes Service (AKS)
+export OPENAI_API_KEY="your-openai-api-key"
+./k8s/scripts/deploy-aks.sh
+
+# Amazon Elastic Kubernetes Service (EKS)  
+export OPENAI_API_KEY="your-openai-api-key"
+./k8s/scripts/deploy-eks.sh
+
+# Google Kubernetes Engine (GKE)
+export OPENAI_API_KEY="your-openai-api-key"
+export PROJECT_ID="your-gcp-project-id"
+./k8s/scripts/deploy-gks.sh
+```
+
+**Kubernetes Features:**
+- **🔄 Auto-scaling**: Horizontal and vertical pod autoscaling
+- **🛡️ Security**: Non-root containers, network policies, RBAC
+- **📊 Monitoring**: Health checks, Prometheus metrics, logging
+- **💾 Storage**: Persistent volumes for input/output data
+- **🌐 Ingress**: Load balancing and SSL termination
+- **🔧 Configuration**: Environment-based config management
+
+See the complete [Kubernetes Deployment Guide](docs/KUBERNETES.md) for detailed instructions.
 
 ## ⚙️ Main Arguments
 
@@ -395,6 +445,195 @@ EVAL_WORKERS=4
 - **`--use-azure-identity`**: Use Azure Default Credentials for token retrieval
 - **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
 - **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
+
+### 🚦 Rate Limiting Arguments
+
+- **`--rate-limit`**: Enable rate limiting for API requests (default: disabled)
+- **`--rate-limit-strategy`**: Rate limiting strategy (`fixed_window`, `sliding_window` [default], `token_bucket`, `adaptive`)
+- **`--rate-limit-preset`**: Use preset configuration (`openai_gpt4`, `openai_gpt35_turbo`, `azure_openai_standard`, `anthropic_claude`, `conservative`, `aggressive`)
+- **`--rate-limit-requests-per-minute`**: Maximum requests per minute (overrides preset)
+- **`--rate-limit-tokens-per-minute`**: Maximum tokens per minute (overrides preset)
+- **`--rate-limit-max-burst`**: Maximum burst requests allowed (overrides preset)
+- **`--rate-limit-max-retries`**: Maximum retries on rate limit errors (default: 3)
+
+## 🚦 Rate Limiting for Cloud AI Services
+
+The RAFT Toolkit includes comprehensive rate limiting to handle the constraints imposed by cloud-based AI services. Rate limiting is **disabled by default** to maintain backward compatibility, but is highly recommended for production use to avoid hitting API limits and reduce costs.
+
+### Why Rate Limiting Matters
+
+**Common Issues Without Rate Limiting:**
+- API rate limit errors (HTTP 429) causing processing failures
+- Unexpected costs from burst API usage
+- Inconsistent processing times due to throttling
+- Failed batches requiring expensive reprocessing
+
+**Benefits of Rate Limiting:**
+- **Predictable Costs**: Control API spending with token and request limits
+- **Reliable Processing**: Avoid rate limit errors through intelligent throttling
+- **Optimized Performance**: Adaptive strategies adjust to service response times
+- **Better Monitoring**: Detailed statistics on API usage and throttling
+
+### Quick Start Examples
+
+#### Using Preset Configurations
+```bash
+# OpenAI GPT-4 with recommended limits
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset openai_gpt4
+
+# Azure OpenAI with conservative limits  
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset azure_openai_standard
+
+# Anthropic Claude with aggressive processing
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset anthropic_claude
+```
+
+#### Custom Rate Limiting
+```bash
+# Custom limits for your specific API tier
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit \
+  --rate-limit-strategy sliding_window \
+  --rate-limit-requests-per-minute 100 \
+  --rate-limit-tokens-per-minute 5000 \
+  --rate-limit-max-burst 20
+
+# Adaptive rate limiting (adjusts based on response times)
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-strategy adaptive \
+  --rate-limit-requests-per-minute 200
+```
+
+### Rate Limiting Strategies
+
+#### 1. **Sliding Window** (Recommended)
+- **Best for**: Most production use cases
+- **How it works**: Tracks requests over a rolling time window
+- **Advantages**: Smooth rate distribution, handles bursts well
+```bash
+--rate-limit-strategy sliding_window
+```
+
+#### 2. **Fixed Window**
+- **Best for**: Simple rate limiting scenarios
+- **How it works**: Resets limits at fixed intervals (every minute)
+- **Advantages**: Simple to understand, predictable behavior
+```bash
+--rate-limit-strategy fixed_window
+```
+
+#### 3. **Token Bucket**
+- **Best for**: Bursty workloads with occasional high throughput needs
+- **How it works**: Accumulates "tokens" over time, consumes them for requests
+- **Advantages**: Allows controlled bursts above average rate
+```bash
+--rate-limit-strategy token_bucket
+```
+
+#### 4. **Adaptive**
+- **Best for**: Unknown or variable API performance
+- **How it works**: Automatically adjusts rate based on response times
+- **Advantages**: Self-tuning, optimizes for service performance
+```bash
+--rate-limit-strategy adaptive
+```
+
+### Available Presets
+
+| Preset | Service | Requests/min | Tokens/min | Burst | Use Case |
+|--------|---------|--------------|------------|-------|----------|
+| `openai_gpt4` | OpenAI GPT-4 | 500 | 10,000 | 50 | Production GPT-4 |
+| `openai_gpt35_turbo` | OpenAI GPT-3.5 Turbo | 3,500 | 90,000 | 100 | High-throughput GPT-3.5 |
+| `azure_openai_standard` | Azure OpenAI | 120 | 6,000 | 20 | Standard Azure tier |
+| `anthropic_claude` | Anthropic Claude | 1,000 | 100,000 | 50 | Claude API |
+| `conservative` | Any service | 60 | 2,000 | 10 | Safe/cautious processing |
+| `aggressive` | Any service | 1,000 | 50,000 | 100 | Fast processing |
+
+### Environment Configuration
+
+Set rate limiting via environment variables for consistent configuration across deployments:
+
+```bash
+# Enable rate limiting
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=openai_gpt4
+
+# Custom configuration
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=sliding_window
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=200
+export RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=8000
+export RAFT_RATE_LIMIT_MAX_BURST=30
+export RAFT_RATE_LIMIT_MAX_RETRIES=5
+```
+
+### Rate Limiting Statistics
+
+When rate limiting is enabled, the toolkit provides detailed statistics:
+
+```
+Rate Limiting Statistics:
+  Strategy: sliding_window
+  Total Wait Time: 45.2s
+  Rate Limit Hits: 12
+  Average Response Time: 1.85s
+  Current Rate Limit: 450.0 req/min
+```
+
+**Understanding the Statistics:**
+- **Total Wait Time**: Time spent waiting due to rate limiting
+- **Rate Limit Hits**: Number of times rate limiting delayed requests
+- **Average Response Time**: Mean API response time (for adaptive tuning)
+- **Current Rate Limit**: Effective rate limit (may adapt based on performance)
+
+### Advanced Configuration
+
+#### Fine-Tuning Retry Behavior
+```bash
+# Aggressive retry with exponential backoff
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset openai_gpt4 \
+  --rate-limit-max-retries 5
+
+# Conservative approach (default: 3 retries)
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset conservative
+```
+
+#### Token-Aware Rate Limiting
+The toolkit automatically estimates token usage for more accurate rate limiting:
+- **Question generation**: ~15 tokens per question + context size
+- **Answer generation**: ~150 tokens output + question + context
+- **Adaptive estimation**: Learns from actual usage patterns
+
+### Best Practices
+
+#### Production Deployments
+1. **Always enable rate limiting**: `--rate-limit` or `RAFT_RATE_LIMIT_ENABLED=true`
+2. **Start with presets**: Use service-specific presets then fine-tune
+3. **Monitor statistics**: Watch for high wait times or frequent rate limit hits
+4. **Use adaptive strategy**: For unknown or variable service performance
+
+#### Development and Testing
+1. **Use conservative preset**: Avoid accidental high usage during development
+2. **Test with rate limiting**: Ensure your workflows work with production settings
+3. **Monitor costs**: Track token usage with rate limiting statistics
+
+#### Cost Optimization
+```bash
+# Very conservative for cost control
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset conservative \
+  --questions 3 --workers 1
+
+# Balanced approach for production
+python raft.py --datapath docs/ --output training_data/ \
+  --rate-limit --rate-limit-preset openai_gpt4 \
+  --workers 2
+```
 
 ## 🧪 Testing & Release Infrastructure
 
@@ -665,11 +904,12 @@ If `AZURE_OPENAI_ENABLED` is not set or is set to `0`/`false`, the toolkit will 
 
 ### 🖥️ Command Line Interface
 
+#### 📁 Local Files (Traditional)
 ```bash
 # Set up environment variables
 export OPENAI_API_KEY="your_api_key_here"
 
-# Run CLI tool
+# Run CLI tool with local files
 python raft.py \
   --datapath sample_data/United_States_PDF.pdf \
   --output ./sample_output \
@@ -683,6 +923,79 @@ python raft.py --datapath sample.pdf --preview
 
 # Validate configuration only
 python raft.py --datapath sample.pdf --validate
+```
+
+#### ☁️ Amazon S3 Input Sources
+```bash
+# Using environment variables for AWS credentials
+export AWS_ACCESS_KEY_ID="your_access_key"
+export AWS_SECRET_ACCESS_KEY="your_secret_key"
+export AWS_DEFAULT_REGION="us-east-1"
+
+# Process documents from S3 bucket
+python raft.py \
+  --source-type s3 \
+  --source-uri "s3://my-bucket/documents/" \
+  --doctype pdf \
+  --output ./s3_output \
+  --questions 3
+
+# Using credentials in command line
+python raft.py \
+  --source-type s3 \
+  --source-uri "s3://my-bucket/documents/" \
+  --source-credentials '{"aws_access_key_id":"key","aws_secret_access_key":"secret","region_name":"us-east-1"}' \
+  --output ./s3_output
+
+# Preview S3 source before processing
+python raft.py \
+  --source-type s3 \
+  --source-uri "s3://my-bucket/documents/" \
+  --preview
+```
+
+#### 🏢 SharePoint Online Input Sources
+```bash
+# Using client credentials (app registration)
+python raft.py \
+  --source-type sharepoint \
+  --source-uri "https://company.sharepoint.com/sites/mysite/Shared Documents" \
+  --source-credentials '{"auth_method":"client_credentials","client_id":"app_id","client_secret":"secret","tenant_id":"tenant_id"}' \
+  --output ./sharepoint_output
+
+# Using device code flow (interactive login)
+python raft.py \
+  --source-type sharepoint \
+  --source-uri "https://company.sharepoint.com/sites/mysite/Documents" \
+  --source-credentials '{"auth_method":"device_code","client_id":"app_id","tenant_id":"tenant_id"}' \
+  --output ./sharepoint_output
+
+# Validate SharePoint configuration
+python raft.py \
+  --source-type sharepoint \
+  --source-uri "https://company.sharepoint.com/sites/mysite/Shared Documents" \
+  --source-credentials '{"auth_method":"client_credentials","client_id":"app_id","client_secret":"secret","tenant_id":"tenant_id"}' \
+  --validate
+```
+
+#### 🎯 Advanced Filtering & Configuration
+```bash
+# Filter specific file types and patterns
+python raft.py \
+  --source-type s3 \
+  --source-uri "s3://my-bucket/docs/" \
+  --source-include-patterns '["**/*.pdf", "**/reports/*.txt"]' \
+  --source-exclude-patterns '["**/temp/**", "**/.DS_Store"]' \
+  --source-max-file-size 10485760 \
+  --output ./filtered_output
+
+# Environment variable configuration
+export RAFT_SOURCE_TYPE=s3
+export RAFT_SOURCE_URI=s3://my-bucket/documents/
+export RAFT_SOURCE_CREDENTIALS='{"region_name":"us-west-2"}'
+export RAFT_SOURCE_MAX_FILE_SIZE=52428800
+
+python raft.py --output ./env_output
 ```
 
 ### 🌐 Web Interface
@@ -761,6 +1074,293 @@ python3 raft.py --datapath sample_data/United_States_PDF.pdf \
   --openai_key OPENAI_KEY \
   --chunking-strategy semantic \
   --chunking-params '{"overlap": 50, "min_chunk_size": 200}'
+```
+
+## 📊 Enhanced CLI Logging
+
+The RAFT Toolkit features a comprehensive logging system designed for production use, debugging, and integration with external monitoring tools.
+
+### 🎯 **Logging Features**
+
+**Default Open Source Integration:**
+- **Colored console output** with timestamps and log levels
+- **Progress tracking** with visual indicators for operation phases
+- **JSON structured logging** for external analysis tools
+- **Multiple output formats** (colored, standard, minimal, JSON)
+- **Environment-based configuration** for easy deployment
+- **Optional enhanced libraries** with graceful fallbacks
+
+**Distributed Tracing (Default):**
+- **OpenTelemetry integration** for distributed tracing with fallback support
+- **Automatic trace correlation** with unique trace IDs in all log messages
+- **Operation tracking** with start/end spans and custom attributes
+- **Jaeger export support** for trace visualization and analysis
+- **UUID fallback traces** when OpenTelemetry is not available
+- **Trace-aware logging** for complete operation correlation
+
+**External Service Integration:**
+- **Sentry integration** for error tracking and performance monitoring
+- **DataDog integration** for metrics and logging aggregation
+- **Custom handlers** for other logging services
+- **Structured data export** compatible with log analysis platforms
+
+### 🚀 **Quick Start - Enhanced Logging**
+
+**Basic Usage:**
+```bash
+# Enhanced colored logging (default)
+python raft.py --datapath docs.pdf --output ./results
+
+# JSON structured logging for external tools
+RAFT_LOG_FORMAT=json python raft.py --datapath docs.pdf --output ./results
+
+# Debug level with file output
+RAFT_LOG_LEVEL=DEBUG RAFT_LOG_OUTPUT=both python raft.py --datapath docs.pdf --output ./results
+```
+
+**Environment Configuration:**
+```bash
+# Set in .env file or environment
+RAFT_LOG_LEVEL=INFO           # DEBUG, INFO, WARNING, ERROR, CRITICAL
+RAFT_LOG_FORMAT=colored       # colored, standard, json, minimal
+RAFT_LOG_OUTPUT=console       # console, file, both
+RAFT_LOG_STRUCTURED=false     # Enable structured logging with structlog
+RAFT_LOG_DIR=./logs          # Directory for log files
+
+# Tracing Configuration
+RAFT_TRACING_ENABLED=true     # Enable distributed tracing (default: true)
+RAFT_TRACE_SERVICE_NAME=raft-toolkit  # Service name for traces
+RAFT_TRACE_SAMPLING_RATE=1.0  # Sampling rate (0.0 to 1.0)
+RAFT_JAEGER_ENDPOINT=         # Jaeger collector endpoint (optional)
+RAFT_TRACE_CONSOLE=false      # Export traces to console
+```
+
+### 🔧 **Progress Tracking**
+
+The enhanced logging system provides visual progress indicators throughout RAFT operations:
+
+```bash
+2025-06-12 22:16:12     INFO [INIT] raft_cli: Loading configuration
+2025-06-12 22:16:12     INFO [INIT] raft_cli: Initializing RAFT engine
+2025-06-12 22:16:13     INFO [PROC] raft_cli: Beginning dataset generation
+2025-06-12 22:18:45     INFO [DONE] raft_cli: RAFT dataset generation completed successfully
+```
+
+**Progress States:**
+- `INIT` - Initialization and configuration loading
+- `VALD` - Validation of inputs and configuration
+- `PREV` - Preview generation
+- `PROC` - Main processing and dataset generation
+- `DONE` - Successful completion
+- `FAIL` - Error occurred
+- `STOP` - User interruption
+
+### 🔍 **Distributed Tracing**
+
+The enhanced logging system includes built-in distributed tracing capabilities:
+
+```bash
+# Tracing with automatic trace IDs
+2025-06-12 22:16:12     INFO [trace:a1b2c3d4] [INIT] raft_cli: Loading configuration
+2025-06-12 22:16:13     INFO [trace:a1b2c3d4] [PROC] raft_cli: Beginning dataset generation
+2025-06-12 22:18:45     INFO [trace:a1b2c3d4] [DONE] raft_cli: RAFT dataset generation completed
+```
+
+**Tracing Features:**
+- **Automatic trace correlation** across all operations
+- **Unique trace IDs** for debugging and monitoring
+- **Operation spans** with start/end tracking
+- **Custom attributes** for processing metadata
+- **Jaeger integration** for trace visualization
+
+**Jaeger Integration:**
+```bash
+# Start Jaeger (Docker)
+docker run -d --name jaeger \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  jaegertracing/all-in-one:latest
+
+# Configure RAFT to use Jaeger
+export RAFT_JAEGER_ENDPOINT="http://localhost:14268/api/traces"
+export RAFT_TRACE_CONSOLE=true
+
+# Run with tracing
+python raft.py --datapath docs.pdf --output ./results
+
+# View traces at http://localhost:16686
+```
+
+### 📈 **Contextual Logging**
+
+Enhanced logging includes operation metadata and tracing information for better debugging and monitoring:
+
+```json
+{
+  "timestamp": "2025-06-12T22:16:32.329519",
+  "level": "INFO",
+  "logger": "raft_cli",
+  "message": "Beginning dataset generation",
+  "progress": "PROC",
+  "trace_id": "a1b2c3d4",
+  "span_id": "e5f6g7h8",
+  "operation_id": "raft_dataset_generation",
+  "context": {
+    "input_path": "/path/to/document.pdf",
+    "output_path": "./results",
+    "doctype": "pdf",
+    "chunk_strategy": "semantic",
+    "model": "gpt-4",
+    "workers": 4
+  }
+}
+```
+
+### 🔗 **External Service Integration**
+
+**Sentry Error Tracking:**
+```bash
+# Set environment variables
+export RAFT_SENTRY_DSN="https://your-sentry-dsn@sentry.io/project"
+export RAFT_SENTRY_ENVIRONMENT="production"
+
+# Automatic error tracking and performance monitoring
+python raft.py --datapath docs.pdf --output ./results
+```
+
+**DataDog Metrics:**
+```bash
+# Set environment variables  
+export RAFT_DATADOG_API_KEY="your-datadog-api-key"
+export RAFT_DATADOG_SERVICE="raft-toolkit"
+
+# Automatic metrics collection
+python raft.py --datapath docs.pdf --output ./results
+```
+
+**Custom Integration:**
+```python
+from core.logging.setup import setup_external_logging
+
+def custom_handler(log_entry, record):
+    # Send to your logging service
+    your_service.send_log(log_entry)
+
+setup_external_logging(custom_handler)
+```
+
+### 🛠️ **Optional Dependencies**
+
+Enhanced logging works with optional libraries for improved features:
+
+```bash
+# Enhanced colored output
+pip install coloredlogs
+
+# Structured logging with processors
+pip install structlog  
+
+# YAML configuration support
+pip install pyyaml
+
+# Distributed tracing (OpenTelemetry)
+pip install opentelemetry-api opentelemetry-sdk
+pip install opentelemetry-exporter-jaeger
+pip install opentelemetry-instrumentation-logging
+
+# External service integrations
+pip install sentry-sdk datadog
+```
+
+**Note:** All dependencies are optional. The system gracefully falls back to:
+- Standard Python logging if enhanced libraries aren't installed
+- UUID-based trace IDs if OpenTelemetry isn't available
+- Basic formatters if coloredlogs/structlog aren't available
+
+### 📁 **Log Files and Rotation**
+
+**File Output Configuration:**
+```bash
+# Enable file logging
+RAFT_LOG_OUTPUT=both  # console and file
+RAFT_LOG_DIR=./logs   # custom log directory
+
+# Automatic log rotation (production)
+RAFT_LOG_ROTATION=true
+RAFT_LOG_MAX_SIZE=10MB
+RAFT_LOG_BACKUP_COUNT=5
+```
+
+**Log File Formats:**
+- `logs/raft.log` - Standard formatted logs  
+- `logs/raft.json` - JSON structured logs
+- `logs/raft_rotating.log` - Rotated logs for production
+
+### 🚀 **Production Deployment**
+
+**Docker with Enhanced Logging:**
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  raft-toolkit:
+    environment:
+      RAFT_LOG_LEVEL: INFO
+      RAFT_LOG_FORMAT: json
+      RAFT_LOG_OUTPUT: both
+      RAFT_SENTRY_DSN: ${SENTRY_DSN}
+    volumes:
+      - ./logs:/app/logs
+```
+
+**Kubernetes ConfigMap:**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: raft-logging-config
+data:
+  RAFT_LOG_LEVEL: "INFO"
+  RAFT_LOG_FORMAT: "json"
+  RAFT_LOG_OUTPUT: "both"
+  RAFT_LOG_STRUCTURED: "true"
+```
+
+### 📋 **Log Analysis Examples**
+
+**Query JSON logs with jq:**
+```bash
+# Filter by log level
+cat logs/raft.json | jq 'select(.level == "ERROR")'
+
+# Extract processing statistics
+cat logs/raft.json | jq 'select(.context.total_time) | .context'
+
+# Monitor progress states
+cat logs/raft.json | jq 'select(.progress) | {timestamp, progress, message}'
+
+# Trace correlation - find all logs for specific operation
+cat logs/raft.json | jq 'select(.trace_id == "a1b2c3d4")'
+
+# Extract trace timing information
+cat logs/raft.json | jq 'select(.trace_id) | {timestamp, trace_id, operation_id, progress, message}'
+
+# Monitor operation performance by trace
+cat logs/raft.json | jq 'group_by(.trace_id) | map({trace_id: .[0].trace_id, count: length, operation: .[0].operation_id})'
+```
+
+**Integration with Log Aggregation:**
+```bash
+# Filebeat configuration
+filebeat.inputs:
+- type: log
+  paths:
+    - /app/logs/raft.json
+  json.keys_under_root: true
+  json.add_error_key: true
+  fields:
+    service: raft-toolkit
+    environment: production
 ```
 
 ## 📝 Workflow

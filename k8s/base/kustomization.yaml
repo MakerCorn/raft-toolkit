@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: raft-toolkit-base
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/part-of: raft-toolkit
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- secret.yaml
+- deployment.yaml
+- service.yaml
+- job.yaml
+- pvc.yaml
+- ingress.yaml
+
+images:
+- name: raft-toolkit
+  newTag: latest
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/version: "latest"
+
+namespace: raft-toolkit

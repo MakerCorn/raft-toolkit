@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: raft-toolkit-input-pvc
+  namespace: raft-toolkit
+spec:
+  storageClassName: gp3-csi
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: raft-toolkit-output-pvc
+  namespace: raft-toolkit
+spec:
+  storageClassName: efs-sc
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi

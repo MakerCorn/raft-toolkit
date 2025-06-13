@@ -1,6 +1,7 @@
 """
 Main RAFT engine that orchestrates the entire process.
 """
+import asyncio
 import logging
 import time
 from pathlib import Path
@@ -9,8 +10,10 @@ from typing import List, Dict, Any, Optional
 from .config import RaftConfig
 from .models import DocumentChunk, ProcessingResult
 from .services.document_service import DocumentService
+from .services.input_service import InputService
 from .services.llm_service import LLMService
 from .services.dataset_service import DatasetService
+from .sources import SourceValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +24,50 @@ class RaftEngine:
         self.config = config
         self.llm_service = LLMService(config)
         self.document_service = DocumentService(config, self.llm_service)
+        self.input_service = InputService(config, self.llm_service)
         self.dataset_service = DatasetService(config)
     
-    def generate_dataset(self, data_path: Path, output_path: str) -> Dict[str, Any]:
+    async def validate_input_source(self) -> None:
+        """Validate input source configuration and connectivity."""
+        try:
+            await self.input_service.validate_source()
+            logger.info("Input source validation successful")
+        except SourceValidationError as e:
+            logger.error(f"Input validation failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during input validation: {e}")
+            raise
+    
+    async def get_processing_preview_async(self) -> Dict[str, Any]:
+        """Get a preview of what will be processed without actually processing."""
+        try:
+            return await self.input_service.get_processing_preview()
+        except Exception as e:
+            logger.error(f"Failed to get processing preview: {e}")
+            raise
+    
+    def generate_dataset(self, data_path: Optional[Path] = None, output_path: str = None) -> Dict[str, Any]:
         """
         Main method to generate a RAFT dataset.
         
         Args:
-            data_path: Path to input documents
-            output_path: Path to save output dataset
+            data_path: Legacy path parameter (optional, uses config if not provided)
+            output_path: Path to save output dataset (uses config if not provided)
+            
+        Returns:
+            Dictionary with generation statistics and metadata
+        """
+        # Use asyncio to run the async version
+        return asyncio.run(self.generate_dataset_async(data_path, output_path))
+    
+    async def generate_dataset_async(self, data_path: Optional[Path] = None, output_path: str = None) -> Dict[str, Any]:
+        """
+        Async version of dataset generation.
+        
+        Args:
+            data_path: Legacy path parameter (optional, uses config if not provided)
+            output_path: Path to save output dataset (uses config if not provided)
             
         Returns:
             Dictionary with generation statistics and metadata
@@ -37,21 +75,29 @@ class RaftEngine:
         start_time = time.time()
         logger.info("Starting RAFT dataset generation")
         
+        # Use output path from parameter or config
+        if not output_path:
+            output_path = self.config.output
+        
         try:
-            # Step 1: Process documents into chunks
-            logger.info("Step 1: Processing documents and creating chunks")
-            chunks = self.document_service.process_documents(data_path)
+            # Step 1: Validate input source
+            logger.info("Step 1: Validating input source")
+            await self.validate_input_source()
+            
+            # Step 2: Process documents into chunks
+            logger.info("Step 2: Processing documents and creating chunks")
+            chunks = await self.input_service.process_documents()
             logger.info(f"Created {len(chunks)} chunks from documents")
             
             if not chunks:
                 raise ValueError("No chunks were created from the input documents")
             
-            # Step 2: Generate QA data points
-            logger.info("Step 2: Generating questions and answers")
+            # Step 3: Generate QA data points
+            logger.info("Step 3: Generating questions and answers")
             results = self.llm_service.process_chunks_batch(chunks)
             
-            # Step 3: Create and save dataset
-            logger.info("Step 3: Creating and saving dataset")
+            # Step 4: Create and save dataset
+            logger.info("Step 4: Creating and saving dataset")
             dataset = self.dataset_service.create_dataset_from_results(results)
             self.dataset_service.save_dataset(dataset, output_path)
             
@@ -78,6 +124,9 @@ class RaftEngine:
         total_prompt_tokens = sum(r.token_usage.get('prompt_tokens', 0) for r in successful_results)
         total_completion_tokens = sum(r.token_usage.get('completion_tokens', 0) for r in successful_results)
         
+        # Get rate limiting statistics from LLM service
+        rate_limit_stats = self.llm_service.get_rate_limit_statistics()
+        
         return {
             'total_qa_points': total_qa_points,
             'successful_chunks': len(successful_results),
@@ -90,6 +139,8 @@ class RaftEngine:
                 'completion_tokens': total_completion_tokens,
                 'tokens_per_second': total_tokens / processing_time if processing_time > 0 else 0
             },
+            'rate_limiting': rate_limit_stats,
+            'input_source': self.input_service.get_source_info(),
             'config_used': {
                 'doctype': self.config.doctype,
                 'chunk_size': self.config.chunk_size,
@@ -97,12 +148,22 @@ class RaftEngine:
                 'distractors': self.config.distractors,
                 'chunking_strategy': self.config.chunking_strategy,
                 'completion_model': self.config.completion_model,
-                'embedding_model': self.config.embedding_model
+                'embedding_model': self.config.embedding_model,
+                'rate_limiting_enabled': self.config.rate_limit_enabled,
+                'rate_limiting_strategy': self.config.rate_limit_strategy if self.config.rate_limit_enabled else None
             }
         }
     
     def validate_inputs(self, data_path: Path) -> None:
-        """Validate input parameters and paths."""
+        """
+        Legacy method for validating local file inputs.
+        For new input sources, use validate_inputs() without parameters.
+        """
+        if self.config.source_type != "local":
+            # For non-local sources, use the new async validation
+            asyncio.run(self.validate_input_source())
+            return
+        
         if not data_path.exists():
             raise FileNotFoundError(f"Input data path does not exist: {data_path}")
         
@@ -116,8 +177,21 @@ class RaftEngine:
         
         logger.info("Input validation completed successfully")
     
-    def get_processing_preview(self, data_path: Path) -> Dict[str, Any]:
-        """Get a preview of what would be processed without actually processing."""
+    def get_processing_preview(self, data_path: Optional[Path] = None) -> Dict[str, Any]:
+        """
+        Get a preview of what would be processed without actually processing.
+        
+        Args:
+            data_path: Legacy parameter for local files (optional)
+        """
+        if self.config.source_type != "local":
+            # For non-local sources, use the new async method
+            return asyncio.run(self.get_processing_preview_async())
+        
+        # Legacy local file handling
+        if data_path is None:
+            data_path = self.config.datapath
+            
         if not data_path.exists():
             raise FileNotFoundError(f"Input data path does not exist: {data_path}")
         

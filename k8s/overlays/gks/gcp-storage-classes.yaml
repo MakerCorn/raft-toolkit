@@ -1,0 +1,30 @@
+# StorageClass for Persistent Disk SSD
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: pd-ssd-csi
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: storage
+provisioner: pd.csi.storage.gke.io
+parameters:
+  type: pd-ssd
+  replication-type: regional-pd
+  zones: us-central1-a,us-central1-b,us-central1-c
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+---
+# StorageClass for Filestore
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: filestore-csi
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: storage
+provisioner: filestore.csi.storage.gke.io
+parameters:
+  tier: standard
+  network: projects/your-project-id/global/networks/default
+volumeBindingMode: Immediate
+allowVolumeExpansion: true

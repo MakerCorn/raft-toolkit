@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: raft-toolkit-input-pvc
+  namespace: raft-toolkit
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: raft-toolkit
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: default
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: raft-toolkit-output-pvc
+  namespace: raft-toolkit
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: raft-toolkit
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: default

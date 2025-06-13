@@ -30,6 +30,15 @@ class RaftConfig:
     output_completion_prompt_column: str = "prompt"
     output_completion_completion_column: str = "completion"
     
+    # Input Source Configuration
+    source_type: str = "local"  # local, s3, sharepoint
+    source_uri: Optional[str] = None  # If None, uses datapath
+    source_credentials: Dict[str, Any] = field(default_factory=dict)
+    source_include_patterns: list = field(default_factory=lambda: ['**/*'])
+    source_exclude_patterns: list = field(default_factory=list)
+    source_max_file_size: int = 50 * 1024 * 1024  # 50MB
+    source_batch_size: int = 100
+    
     # Processing Configuration
     distractors: int = 1
     p: float = 1.0
@@ -55,6 +64,19 @@ class RaftConfig:
     pace: bool = True
     auto_clean_checkpoints: bool = False
     
+    # Rate Limiting Configuration
+    rate_limit_enabled: bool = False
+    rate_limit_strategy: str = "sliding_window"
+    rate_limit_requests_per_minute: Optional[int] = None
+    rate_limit_requests_per_hour: Optional[int] = None
+    rate_limit_tokens_per_minute: Optional[int] = None
+    rate_limit_tokens_per_hour: Optional[int] = None
+    rate_limit_max_burst: Optional[int] = None
+    rate_limit_burst_window: float = 60.0
+    rate_limit_max_retries: int = 3
+    rate_limit_base_delay: float = 1.0
+    rate_limit_preset: Optional[str] = None
+    
     # Template Configuration
     templates: str = "./"
     
@@ -78,6 +100,35 @@ class RaftConfig:
         config.output_chat_system_prompt = os.getenv('RAFT_OUTPUT_CHAT_SYSTEM_PROMPT')
         config.output_completion_prompt_column = os.getenv('RAFT_OUTPUT_COMPLETION_PROMPT_COLUMN', config.output_completion_prompt_column)
         config.output_completion_completion_column = os.getenv('RAFT_OUTPUT_COMPLETION_COMPLETION_COLUMN', config.output_completion_completion_column)
+        
+        # Input Source Configuration
+        config.source_type = os.getenv('RAFT_SOURCE_TYPE', config.source_type)
+        config.source_uri = os.getenv('RAFT_SOURCE_URI', config.source_uri)
+        config.source_max_file_size = int(os.getenv('RAFT_SOURCE_MAX_FILE_SIZE', config.source_max_file_size))
+        config.source_batch_size = int(os.getenv('RAFT_SOURCE_BATCH_SIZE', config.source_batch_size))
+        
+        # Parse source credentials from JSON string
+        source_credentials_str = os.getenv('RAFT_SOURCE_CREDENTIALS')
+        if source_credentials_str:
+            try:
+                config.source_credentials = json.loads(source_credentials_str)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse RAFT_SOURCE_CREDENTIALS: {e}")
+        
+        # Parse include/exclude patterns from JSON strings
+        source_include_str = os.getenv('RAFT_SOURCE_INCLUDE_PATTERNS')
+        if source_include_str:
+            try:
+                config.source_include_patterns = json.loads(source_include_str)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse RAFT_SOURCE_INCLUDE_PATTERNS: {e}")
+        
+        source_exclude_str = os.getenv('RAFT_SOURCE_EXCLUDE_PATTERNS')
+        if source_exclude_str:
+            try:
+                config.source_exclude_patterns = json.loads(source_exclude_str)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse RAFT_SOURCE_EXCLUDE_PATTERNS: {e}")
         
         # Processing Configuration
         config.distractors = int(os.getenv('RAFT_DISTRACTORS', config.distractors))
@@ -111,6 +162,27 @@ class RaftConfig:
         config.pace = os.getenv('RAFT_PACE', 'true').lower() in ('true', '1', 'yes')
         config.auto_clean_checkpoints = os.getenv('RAFT_AUTO_CLEAN_CHECKPOINTS', 'false').lower() in ('true', '1', 'yes')
         
+        # Rate Limiting Configuration
+        config.rate_limit_enabled = os.getenv('RAFT_RATE_LIMIT_ENABLED', 'false').lower() in ('true', '1', 'yes')
+        config.rate_limit_strategy = os.getenv('RAFT_RATE_LIMIT_STRATEGY', config.rate_limit_strategy)
+        config.rate_limit_preset = os.getenv('RAFT_RATE_LIMIT_PRESET')
+        
+        # Parse numeric rate limits
+        if os.getenv('RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE'):
+            config.rate_limit_requests_per_minute = int(os.getenv('RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE'))
+        if os.getenv('RAFT_RATE_LIMIT_REQUESTS_PER_HOUR'):
+            config.rate_limit_requests_per_hour = int(os.getenv('RAFT_RATE_LIMIT_REQUESTS_PER_HOUR'))
+        if os.getenv('RAFT_RATE_LIMIT_TOKENS_PER_MINUTE'):
+            config.rate_limit_tokens_per_minute = int(os.getenv('RAFT_RATE_LIMIT_TOKENS_PER_MINUTE'))
+        if os.getenv('RAFT_RATE_LIMIT_TOKENS_PER_HOUR'):
+            config.rate_limit_tokens_per_hour = int(os.getenv('RAFT_RATE_LIMIT_TOKENS_PER_HOUR'))
+        if os.getenv('RAFT_RATE_LIMIT_MAX_BURST'):
+            config.rate_limit_max_burst = int(os.getenv('RAFT_RATE_LIMIT_MAX_BURST'))
+        
+        config.rate_limit_burst_window = float(os.getenv('RAFT_RATE_LIMIT_BURST_WINDOW', config.rate_limit_burst_window))
+        config.rate_limit_max_retries = int(os.getenv('RAFT_RATE_LIMIT_MAX_RETRIES', config.rate_limit_max_retries))
+        config.rate_limit_base_delay = float(os.getenv('RAFT_RATE_LIMIT_BASE_DELAY', config.rate_limit_base_delay))
+        
         # Template Configuration
         config.templates = os.getenv('RAFT_TEMPLATES', config.templates)
         
@@ -118,8 +190,18 @@ class RaftConfig:
     
     def validate(self) -> None:
         """Validate configuration."""
-        if not self.datapath.exists() and str(self.datapath) != ".":
-            raise ValueError(f"Data path does not exist: {self.datapath}")
+        # For local sources, validate datapath
+        if self.source_type == "local" and not self.source_uri:
+            if not self.datapath.exists() and str(self.datapath) != ".":
+                raise ValueError(f"Data path does not exist: {self.datapath}")
+        
+        # Validate source type
+        if self.source_type not in ["local", "s3", "sharepoint"]:
+            raise ValueError(f"Invalid source type: {self.source_type}")
+        
+        # For non-local sources, require source_uri
+        if self.source_type != "local" and not self.source_uri:
+            raise ValueError(f"source_uri is required for source type: {self.source_type}")
         
         if self.doctype not in ["pdf", "txt", "json", "api", "pptx"]:
             raise ValueError(f"Invalid doctype: {self.doctype}")
@@ -135,6 +217,13 @@ class RaftConfig:
         
         if self.output_chat_system_prompt and self.output_format != "chat":
             raise ValueError("output_chat_system_prompt can only be used with chat output format")
+        
+        # Validate source file size limit
+        if self.source_max_file_size <= 0:
+            raise ValueError("source_max_file_size must be positive")
+        
+        if self.source_batch_size <= 0:
+            raise ValueError("source_batch_size must be positive")
         
         # Allow demo mode with mock API key
         if not self.openai_key and not self.use_azure_identity:
