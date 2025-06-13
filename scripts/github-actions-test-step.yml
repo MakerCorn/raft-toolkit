@@ -1,0 +1,75 @@
+# Example GitHub Actions step for test results summary
+# Use this in your .github/workflows/*.yml file
+
+- name: Generate Test Results Summary
+  shell: bash
+  env:
+    # Set these based on your actual test results
+    UNIT_TESTS_STATUS: "success"
+    INTEGRATION_TESTS_STATUS: "success" 
+    API_TESTS_STATUS: "success"
+    CLI_TESTS_STATUS: "success"
+    DOCKER_TESTS_STATUS: "success"
+    KUBERNETES_TESTS_STATUS: ""  # Empty string for skipped
+    # Set to true if you want to continue workflow even with test failures
+    ALLOW_TEST_FAILURES: "false"
+  run: |
+    # Make script executable (if not already)
+    chmod +x ./scripts/test-results-summary.sh
+    
+    # Run the test results summary script
+    ./scripts/test-results-summary.sh
+
+# Alternative: Inline script (if you prefer not to use external script)
+- name: Generate Test Results Summary (Inline)
+  shell: bash
+  env:
+    UNIT_TESTS_STATUS: ${{ needs.unit-tests.outputs.status }}
+    INTEGRATION_TESTS_STATUS: ${{ needs.integration-tests.outputs.status }}
+    API_TESTS_STATUS: ${{ needs.api-tests.outputs.status }}
+    CLI_TESTS_STATUS: ${{ needs.cli-tests.outputs.status }}
+    DOCKER_TESTS_STATUS: ${{ needs.docker-tests.outputs.status }}
+    KUBERNETES_TESTS_STATUS: ${{ needs.kubernetes-tests.outputs.status }}
+  run: |
+    # Function to convert status to emoji
+    status_to_emoji() {
+        case "$1" in
+            "success") echo "✅ Passed" ;;
+            "failure") echo "❌ Failed" ;;
+            "skipped") echo "⏭️ Skipped" ;;
+            "") echo "⏭️ Skipped" ;;
+            *) echo "❓ Unknown" ;;
+        esac
+    }
+    
+    # Generate test results summary
+    echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+    echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+    echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+    echo "| Unit Tests | $(status_to_emoji "$UNIT_TESTS_STATUS") |" >> $GITHUB_STEP_SUMMARY
+    echo "| Integration Tests | $(status_to_emoji "$INTEGRATION_TESTS_STATUS") |" >> $GITHUB_STEP_SUMMARY
+    echo "| API Tests | $(status_to_emoji "$API_TESTS_STATUS") |" >> $GITHUB_STEP_SUMMARY
+    echo "| CLI Tests | $(status_to_emoji "$CLI_TESTS_STATUS") |" >> $GITHUB_STEP_SUMMARY
+    echo "| Docker Tests | $(status_to_emoji "$DOCKER_TESTS_STATUS") |" >> $GITHUB_STEP_SUMMARY
+    echo "| Kubernetes Tests | $(status_to_emoji "$KUBERNETES_TESTS_STATUS") |" >> $GITHUB_STEP_SUMMARY
+    
+    # Count failures
+    failed_count=0
+    for status in "$UNIT_TESTS_STATUS" "$INTEGRATION_TESTS_STATUS" "$API_TESTS_STATUS" "$CLI_TESTS_STATUS" "$DOCKER_TESTS_STATUS" "$KUBERNETES_TESTS_STATUS"; do
+        if [[ "$status" == "failure" ]]; then
+            ((failed_count++))
+        fi
+    done
+    
+    echo "" >> $GITHUB_STEP_SUMMARY
+    
+    # Set overall status
+    if [[ $failed_count -eq 0 ]]; then
+        echo "tests-passed=true" >> $GITHUB_OUTPUT
+        echo "🎉 **Core tests passed!**" >> $GITHUB_STEP_SUMMARY
+        exit 0
+    else
+        echo "tests-passed=false" >> $GITHUB_OUTPUT
+        echo "💥 **$failed_count test suite(s) failed. Please check the individual test results.**" >> $GITHUB_STEP_SUMMARY
+        exit 1
+    fi
