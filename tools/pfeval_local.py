@@ -1,23 +1,30 @@
-import os
-import json
-from datetime import datetime
-from azure.ai.evaluation import AzureOpenAIModelConfiguration
-from azure.ai.evaluation import RelevanceEvaluator, GroundednessEvaluator, FluencyEvaluator, CoherenceEvaluator, SimilarityEvaluator
-from azure.ai.evaluation import evaluate
-from dotenv import load_dotenv
 import argparse
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 import logging
-from logconf import log_setup
-from tenacity import retry, wait_exponential, retry_if_exception_type
-from openai import RateLimitError
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+
+from azure.ai.evaluation import (
+    AzureOpenAIModelConfiguration,
+    CoherenceEvaluator,
+    FluencyEvaluator,
+    GroundednessEvaluator,
+    RelevanceEvaluator,
+    SimilarityEvaluator,
+    evaluate,
+)
 from client_utils import build_openai_client, is_azure
-from openai import OpenAI
+from dotenv import load_dotenv
+from logconf import log_setup
+from openai import OpenAI, RateLimitError
+from tenacity import retry, retry_if_exception_type, wait_exponential
+from tqdm import tqdm
 
 logger = logging.getLogger("pfeval")
 
 load_dotenv()
+
 
 def get_args() -> argparse.Namespace:
     """
@@ -30,9 +37,10 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--mode", type=str, default="local", help="local or remote")
     parser.add_argument("--workers", type=int, default="1", help="Number of worker threads in local mode")
     parser.add_argument("--score-model", type=str, default="gpt-35-instruct", help="The model to use for scoring")
-    
+
     args = parser.parse_args()
     return args
+
 
 def evaluate_aistudio(model_config, project_scope, project_scope_report, data_path, workers=1, score_model=None):
     """Evaluate using AI Studio.
@@ -57,7 +65,7 @@ def evaluate_aistudio(model_config, project_scope, project_scope_report, data_pa
         evaluation_name=run_id,
         data=data_path,
         azure_ai_project=project_scope_report,
-        model=score_model,        
+        model=score_model,
         evaluators={
             "similarity": SimilarityEvaluator(model_config),
             "groundedness": GroundednessEvaluator(project_scope=project_scope),
@@ -73,6 +81,7 @@ def evaluate_aistudio(model_config, project_scope, project_scope_report, data_pa
     )
     print(f"studio_url=f{result['studio_url']}")
     return result
+
 
 def evaluate_local(model_config, project_scope, project_scope_report, data_path, workers=2, score_model=None):
     """Evaluate locally.
@@ -101,14 +110,18 @@ def evaluate_local(model_config, project_scope, project_scope_report, data_path,
         SimilarityEvaluator(model_config),
     ]
 
-    @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
+    @retry(
+        wait=wait_exponential(multiplier=1, min=10, max=120),
+        reraise=True,
+        retry=retry_if_exception_type(RateLimitError),
+    )
     def evaluate_row_with(row, evaluator):
         result = evaluator(
             model=score_model,
-            question=row['question'],
-            answer=row['final_answer'],
-            context=row['context'],
-            ground_truth=row['gold_final_answer']
+            question=row["question"],
+            answer=row["final_answer"],
+            context=row["context"],
+            ground_truth=row["gold_final_answer"],
         )
         return result
 
@@ -126,9 +139,7 @@ def evaluate_local(model_config, project_scope, project_scope_report, data_path,
             try:
                 result = evaluate_row_with(row, evaluator)
             except Exception as e:
-                result = {
-                    "error": str(e)
-                }
+                result = {"error": str(e)}
             row.update(result)
             pbar.update(1)
         return row
@@ -144,8 +155,10 @@ def evaluate_local(model_config, project_scope, project_scope_report, data_path,
 
     return results
 
+
 if __name__ == "__main__":
     import time
+
     import jsonlines
 
     log_setup()
@@ -165,20 +178,17 @@ if __name__ == "__main__":
     logger.info(f"azure_endpoint={azure_endpoint}")
 
     # Project Scope
-    subscription_id=os.environ["GROUNDEDNESS_SUB_ID"]
-    resource_group_name=os.environ["GROUNDEDNESS_GROUP"]
-    project_name=os.environ["GROUNDEDNESS_PROJECT_NAME"]
+    subscription_id = os.environ["GROUNDEDNESS_SUB_ID"]
+    resource_group_name = os.environ["GROUNDEDNESS_GROUP"]
+    project_name = os.environ["GROUNDEDNESS_PROJECT_NAME"]
 
     logger.info(f"subscription_id={subscription_id}")
     logger.info(f"resource_group_name={resource_group_name}")
     logger.info(f"project_name={project_name}")
 
     model_config = AzureOpenAIModelConfiguration(
-            azure_deployment=deployment,
-            api_key=api_key,
-            api_version=api_version,
-            azure_endpoint=azure_endpoint
-        )
+        azure_deployment=deployment, api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+    )
 
     project_scope = {
         "subscription_id": subscription_id,
@@ -200,20 +210,27 @@ if __name__ == "__main__":
         "project_name": project_name,
     }
 
-    start=time.time()
+    start = time.time()
     logger.info(f"Starting evaluate...")
 
     modes = {"local": evaluate_local, "remote": evaluate_aistudio}
     evaluate_func = modes[args.mode]
     logger.info(f"Evaluating {args.input} with mode {args.mode}")
     logger.info(f"Output file will be saved to {args.output}")
-    eval_result = evaluate_func(model_config=model_config, data_path=args.input, project_scope=project_scope, project_scope_report=project_scope_report, score_model=args.score-model, workers=args.workers)
+    eval_result = evaluate_func(
+        model_config=model_config,
+        data_path=args.input,
+        project_scope=project_scope,
+        project_scope_report=project_scope_report,
+        score_model=args.score - model,
+        workers=args.workers,
+    )
 
-    end=time.time()
+    end = time.time()
     logger.info(f"Finished evaluate in {end - start}s")
     logger.info(f"Writing {len(eval_result)} results to {args.output}")
 
-    #save evaluation results to a JSONL file
+    # save evaluation results to a JSONL file
     if args.mode == "local":
-        with jsonlines.open(args.output, 'w') as writer:
+        with jsonlines.open(args.output, "w") as writer:
             writer.write_all(eval_result)

@@ -1,9 +1,11 @@
 """
 OpenAI and Azure OpenAI client management.
 """
+
 import logging
-from typing import Any
 from os import environ
+from typing import Any
+
 try:
     from openai import AzureOpenAI, OpenAI
 except ImportError:
@@ -13,6 +15,7 @@ except ImportError:
 from ..utils.env_config import read_env_config, set_env
 
 logger = logging.getLogger(__name__)
+
 
 def is_azure() -> bool:
     """Check if the environment is configured for Azure OpenAI.
@@ -25,8 +28,11 @@ def is_azure() -> bool:
     if azure:
         logger.debug("Azure OpenAI support is enabled via AZURE_OPENAI_ENABLED.")
     else:
-        logger.debug("Azure OpenAI support is disabled (AZURE_OPENAI_ENABLED not set or false). Using OpenAI environment variables.")
+        logger.debug(
+            "Azure OpenAI support is disabled (AZURE_OPENAI_ENABLED not set or false). Using OpenAI environment variables."
+        )
     return azure
+
 
 def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> OpenAI:
     """Build OpenAI or AzureOpenAI client based on environment variables.
@@ -45,18 +51,19 @@ def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> OpenAI
         else:
             return OpenAI(**kwargs)
 
+
 def build_langchain_embeddings(**kwargs):
     """Build LangChain embeddings for semantic chunking.
-    
+
     Args:
         **kwargs: Additional arguments for embeddings initialization.
-        
+
     Returns:
         Embeddings instance for LangChain.
     """
     try:
-        from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
-        
+        from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+
         if is_azure():
             return AzureOpenAIEmbeddings(**kwargs)
         else:
@@ -66,8 +73,8 @@ def build_langchain_embeddings(**kwargs):
         class MockEmbeddings:
             def embed_documents(self, texts):
                 return [[0.1, 0.2, 0.3] for _ in texts]
-            
+
             def embed_query(self, text):
                 return [0.1, 0.2, 0.3]
-        
+
         return MockEmbeddings()

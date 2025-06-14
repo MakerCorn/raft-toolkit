@@ -1,11 +1,13 @@
 """
 Pytest configuration and shared fixtures.
 """
+
 import os
 import tempfile
-import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import pytest
 
 from core.config import RaftConfig
 from core.models import DocumentChunk, QADataPoint
@@ -24,7 +26,7 @@ def sample_config():
         questions=3,
         distractors=2,
         workers=1,
-        embed_workers=1
+        embed_workers=1,
     )
 
 
@@ -34,7 +36,7 @@ def sample_document_chunk():
     return DocumentChunk.create(
         content="This is a test document chunk about artificial intelligence.",
         source="test_document.pdf",
-        metadata={"type": "pdf", "chunk_index": 0}
+        metadata={"type": "pdf", "chunk_index": 0},
     )
 
 
@@ -48,7 +50,7 @@ def sample_qa_datapoint():
         context="This is a test document chunk about artificial intelligence.",
         oracle_context="This is a test document chunk about artificial intelligence.",
         cot_answer="Artificial intelligence is a field of computer science focused on creating systems that can perform tasks that typically require human intelligence.",
-        instruction="Answer the following question based on the context provided."
+        instruction="Answer the following question based on the context provided.",
     )
 
 
@@ -95,19 +97,15 @@ def mock_embeddings():
 @pytest.fixture(autouse=True)
 def set_test_env():
     """Set test environment variables."""
-    test_env = {
-        "OPENAI_API_KEY": "test-key",
-        "COMPLETION_MODEL": "gpt-4",
-        "EMBEDDING_MODEL": "text-embedding-ada-002"
-    }
-    
+    test_env = {"OPENAI_API_KEY": "test-key", "COMPLETION_MODEL": "gpt-4", "EMBEDDING_MODEL": "text-embedding-ada-002"}
+
     original_env = {}
     for key, value in test_env.items():
         original_env[key] = os.environ.get(key)
         os.environ[key] = value
-    
+
     yield
-    
+
     # Restore original environment
     for key, value in original_env.items():
         if value is None:

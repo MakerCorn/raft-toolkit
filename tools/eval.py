@@ -1,25 +1,28 @@
-from typing import Any
-from openai import RateLimitError
-from openai.types.chat import ChatCompletion
-import multiprocessing as mp
-import time
 import argparse
 import json
+import multiprocessing as mp
 import os
 import sys
-import os
+import time
+from typing import Any
+
+from openai import RateLimitError
+from openai.types.chat import ChatCompletion
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.clients import StatsCompleter, UsageStats, build_openai_client
 import logging
-from core.logging import log_setup
-from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from dotenv import load_dotenv
-from tenacity import Retrying, retry, wait_exponential, retry_if_exception_type, before_sleep_log
-from core.clients import CompletionsCompleter
+from tenacity import Retrying, before_sleep_log, retry, retry_if_exception_type, wait_exponential
+from tqdm import tqdm
+
+from core.clients import CompletionsCompleter, StatsCompleter, UsageStats, build_openai_client
+from core.logging import log_setup
 
 load_dotenv()  # take environment variables from .env.
+
 
 def get_args() -> argparse.Namespace:
     """
@@ -32,7 +35,9 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--model", type=str, default="gpt-4", help="The model to evaluate")
     parser.add_argument("--input-prompt-key", type=str, default="instruction", help="The column to use as input prompt")
     parser.add_argument("--output-answer-key", type=str, default="answer", help="The column to use as output answer")
-    parser.add_argument("--workers", type=int, default=1, help="The number of worker threads to use to evaluate the dataset")
+    parser.add_argument(
+        "--workers", type=int, default=1, help="The number of worker threads to use to evaluate the dataset"
+    )
 
     args = parser.parse_args()
     return args
@@ -41,11 +46,16 @@ def get_args() -> argparse.Namespace:
 if __name__ == "__main__":
 
     log_setup()
-    client = build_openai_client(env_prefix = "EVAL", azure_deployment="gpt-4-0613-ft-88d65450f4204c35b7857e330659e247")
+    client = build_openai_client(env_prefix="EVAL", azure_deployment="gpt-4-0613-ft-88d65450f4204c35b7857e330659e247")
 
-    logger = logging.getLogger('eval')
+    logger = logging.getLogger("eval")
 
-    @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError), before_sleep=before_sleep_log(logger, logging.INFO))
+    @retry(
+        wait=wait_exponential(multiplier=1, min=10, max=120),
+        reraise=True,
+        retry=retry_if_exception_type(RateLimitError),
+        before_sleep=before_sleep_log(logger, logging.INFO),
+    )
     def retry_complete(*args, **kwargs):
         return client.completions.create(*args, **kwargs)
 
@@ -56,9 +66,7 @@ if __name__ == "__main__":
     prompt_key = args.input_prompt_key
     answer_key = args.output_answer_key
 
-    def get_openai_response(
-        prompt: str
-    ) -> str | None :
+    def get_openai_response(prompt: str) -> str | None:
         """Gets a response from the OpenAI API for a given prompt.
 
         Args:
@@ -67,13 +75,7 @@ if __name__ == "__main__":
         Returns:
             str | None: The response from the API, or None if an error occurs.
         """
-        response = completions_completer(
-            model=model,
-            prompt=prompt,
-            temperature=0.02,
-            max_tokens=8192,
-            stop='<STOP>'
-        )
+        response = completions_completer(model=model, prompt=prompt, temperature=0.02, max_tokens=8192, stop="<STOP>")
 
         try:
             return response.choices[0].text
@@ -95,13 +97,10 @@ if __name__ == "__main__":
             result = get_openai_response(prompt)
             input_json[answer_key] = result
         except Exception as e:
-            input_json['error'] = str(e)
+            input_json["error"] = str(e)
         return input_json
 
-    def write_result_to_file(
-        result: dict[str, Any], 
-        write_file_name: str
-    ) -> None:
+    def write_result_to_file(result: dict[str, Any], write_file_name: str) -> None:
         """Writes the result dictionary to a file in JSON Lines format.
 
         Args:
@@ -114,7 +113,6 @@ if __name__ == "__main__":
                 json.dump(result, outfile)
                 outfile.write("\n")
 
-
     write_file_name = args.answer_file
     if os.path.isfile(write_file_name):
         os.remove(write_file_name)
@@ -122,17 +120,17 @@ if __name__ == "__main__":
     num_workers = args.workers
     file_write_lock = mp.Lock()
     inputs = []
-    with open(args.question_file, 'r') as f:
+    with open(args.question_file, "r") as f:
         for line in f:
             inputs.append(json.loads(line))
 
-    logger.info(f'number of questions: {len(inputs)}')
+    logger.info(f"number of questions: {len(inputs)}")
     start_time = time.time()
     usage_stats = UsageStats()
     tps = 0
     retrying: Retrying = retry_complete.retry
     with tqdm(total=len(inputs), unit="answers") as pbar:
-        if (num_workers > 1):
+        if num_workers > 1:
             with ThreadPoolExecutor(num_workers) as executor:
                 futures = [executor.submit(get_answer, input) for input in inputs]
 
@@ -141,36 +139,38 @@ if __name__ == "__main__":
 
                     stats = completions_completer.get_stats_and_reset()
                     if stats:
-                        if (stats.duration > 0):
+                        if stats.duration > 0:
                             tps = stats.total_tokens / stats.duration
                             usage_stats += stats
 
                     retry_stats = retrying.statistics
                     if len(retry_stats.keys()) > 0:
                         logger.info(f"retrying stats: {retry_stats}")
-                    
-                    if (usage_stats.duration > 0):
-                        pbar.set_postfix({'last tok/s': tps, 'avg tok/s': usage_stats.total_tokens / usage_stats.duration})
+
+                    if usage_stats.duration > 0:
+                        pbar.set_postfix(
+                            {"last tok/s": tps, "avg tok/s": usage_stats.total_tokens / usage_stats.duration}
+                        )
                     pbar.update(1)
                     write_result_to_file(result, write_file_name)
         else:
             for input in inputs:
-                
+
                 logger.debug(f"Processing input {input}")
 
                 result = get_answer(input)
                 stats = completions_completer.get_stats_and_reset()
                 if stats:
-                    if (stats.duration > 0):
+                    if stats.duration > 0:
                         tps = stats.total_tokens / stats.duration
                         usage_stats += stats
 
                 retry_stats = retrying.statistics
                 if len(retry_stats.keys()) > 0:
                     logger.info(f"retrying stats: {retry_stats}")
-                
-                if (usage_stats.duration > 0):
-                    pbar.set_postfix({'last tok/s': tps, 'avg tok/s': usage_stats.total_tokens / usage_stats.duration})
+
+                if usage_stats.duration > 0:
+                    pbar.set_postfix({"last tok/s": tps, "avg tok/s": usage_stats.total_tokens / usage_stats.duration})
                 pbar.update(1)
                 write_result_to_file(result, write_file_name)
 

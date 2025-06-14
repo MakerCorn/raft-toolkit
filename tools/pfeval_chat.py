@@ -1,23 +1,30 @@
-import os
-import json
-from datetime import datetime
-from azure.ai.evaluation import AzureOpenAIModelConfiguration
-from azure.ai.evaluation import RelevanceEvaluator, GroundednessEvaluator, FluencyEvaluator, CoherenceEvaluator, SimilarityEvaluator
-from azure.ai.evaluation import evaluate
-from dotenv import load_dotenv
 import argparse
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 import logging
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+
+from azure.ai.evaluation import (
+    AzureOpenAIModelConfiguration,
+    CoherenceEvaluator,
+    FluencyEvaluator,
+    GroundednessEvaluator,
+    RelevanceEvaluator,
+    SimilarityEvaluator,
+    evaluate,
+)
+from client_utils import ChatCompleter, build_openai_client, is_azure
+from dotenv import load_dotenv
 from logconf import log_setup
-from tenacity import retry, wait_exponential, retry_if_exception_type
-from openai import RateLimitError
-from client_utils import build_openai_client, ChatCompleter, is_azure
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
+from tenacity import retry, retry_if_exception_type, wait_exponential
+from tqdm import tqdm
 
 logger = logging.getLogger("pfeval-chat")
 
 load_dotenv()
+
 
 def get_args() -> argparse.Namespace:
     """Parses and returns the arguments specified by the user's command
@@ -39,6 +46,7 @@ def get_args() -> argparse.Namespace:
     args = parser.parse_args()
     return args
 
+
 def load_prompt_template(file_path: str) -> str:
     """Loads a prompt template from a file
 
@@ -48,15 +56,19 @@ def load_prompt_template(file_path: str) -> str:
     Returns:
         str: The content of the template file
     """
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         return file.read()
 
+
 prompt_templates = {
-    'gpt': 'You are a helpful assistant who can provide an answer given a question and relevant context.',
-    'llama': 'You are a a helpful assistant who can provide an answer given a question and relevant context.'
+    "gpt": "You are a helpful assistant who can provide an answer given a question and relevant context.",
+    "llama": "You are a a helpful assistant who can provide an answer given a question and relevant context.",
 }
 
-@retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
+
+@retry(
+    wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError)
+)
 def get_answer(chat_completer, context, question, model, system_prompt):
     """Gets an answer from the chat model given a context and question
 
@@ -74,13 +86,14 @@ def get_answer(chat_completer, context, question, model, system_prompt):
         model=model,
         messages=[
             {"role": "system", "content": prompt_templates[system_prompt]},
-            {"role": "user", "content": question}
+            {"role": "user", "content": question},
         ],
         temperature=0.02,
         max_tokens=8192,
     )
-    answer = response.choices[0].message['content']
+    answer = response.choices[0].message["content"]
     return {"final_answer": answer}
+
 
 def format_prompt(context, question):
     """Formats the prompt for the model by combining context and question
@@ -93,6 +106,7 @@ def format_prompt(context, question):
         str: The formatted prompt
     """
     return f"{context}\n{question}"
+
 
 def evaluate_aistudio(chat_completer, model_config, project_scope, project_scope_report, data_path, model, score_model):
     """Evaluates the model using the Aistudio platform
@@ -114,7 +128,13 @@ def evaluate_aistudio(chat_completer, model_config, project_scope, project_scope
     run_id = f"chat_evaluation_sdk_{time_str}"
     print(run_id)
 
-    final_answer = get_answer(chat_completer=chat_completer, question=data_path.question, context=data_path.context, model=model, system_prompt="gpt")
+    final_answer = get_answer(
+        chat_completer=chat_completer,
+        question=data_path.question,
+        context=data_path.context,
+        model=model,
+        system_prompt="gpt",
+    )
 
     result = evaluate(
         evaluation_name=run_id,
@@ -140,6 +160,7 @@ def evaluate_aistudio(chat_completer, model_config, project_scope, project_scope
     )
     print(f"studio_url=f{result['studio_url']}")
     return result
+
 
 def evaluate_local(chat_completer, model_config, project_scope, project_scope_report, data_path, model, score_model):
     """Evaluates the model locally using the provided data
@@ -169,7 +190,11 @@ def evaluate_local(chat_completer, model_config, project_scope, project_scope_re
         SimilarityEvaluator(model_config),
     ]
 
-    @retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
+    @retry(
+        wait=wait_exponential(multiplier=1, min=10, max=120),
+        reraise=True,
+        retry=retry_if_exception_type(RateLimitError),
+    )
     def evaluate_row_with(row, evaluator):
         """Evaluates a single row of data with the given evaluator
 
@@ -180,13 +205,19 @@ def evaluate_local(chat_completer, model_config, project_scope, project_scope_re
         Returns:
             dict: The evaluation result for the row
         """
-        final_answer = get_answer(chat_completer=chat_completer, question=data_path.question, context=data_path.context, model=model, system_prompt="gpt")
+        final_answer = get_answer(
+            chat_completer=chat_completer,
+            question=data_path.question,
+            context=data_path.context,
+            model=model,
+            system_prompt="gpt",
+        )
         result = evaluator(
             model=score_model,
-            question=row['question'],
+            question=row["question"],
             answer=final_answer,
-            context=row['context'],
-            ground_truth=row['gold_final_answer']
+            context=row["context"],
+            ground_truth=row["gold_final_answer"],
         )
         return result
 
@@ -217,8 +248,10 @@ def evaluate_local(chat_completer, model_config, project_scope, project_scope_re
 
     return results
 
+
 if __name__ == "__main__":
     import time
+
     import jsonlines
 
     log_setup()
@@ -227,17 +260,19 @@ if __name__ == "__main__":
     # Initialize Azure OpenAI Connection for the model used for answer generation
     logger.info("Loading evaluation model configuration for answer generation.")
 
-    base_url=os.environ["EVAL_OPENAI_BASE_URL"]
-    api_key=os.environ["EVAL_OPENAI_API_KEY"]
-    api_version=os.environ["EVAL_OPENAI_DEPLOYMENT"]
+    base_url = os.environ["EVAL_OPENAI_BASE_URL"]
+    api_key = os.environ["EVAL_OPENAI_API_KEY"]
+    api_version = os.environ["EVAL_OPENAI_DEPLOYMENT"]
 
     logger.info(f"eval_base_url={base_url}")
     logger.info(f"eval_api_key={api_key}")
     logger.info(f"eval_api_version={api_version}")
 
-    prompt_templates[args.system_prompt_key] = load_prompt_template(args.templates + args.system_prompt_key + '_template.txt')
+    prompt_templates[args.system_prompt_key] = load_prompt_template(
+        args.templates + args.system_prompt_key + "_template.txt"
+    )
 
-    target_model=args.model
+    target_model = args.model
     client = build_openai_client("EVAL", azure_deployment=args.deployment)
 
     chat_completer = ChatCompleter(client)
@@ -256,20 +291,17 @@ if __name__ == "__main__":
     logger.info(f"azure_endpoint={azure_endpoint}")
 
     # Project Scope
-    subscription_id=os.environ["GROUNDEDNESS_SUB_ID"]
-    resource_group_name=os.environ["GROUNDEDNESS_GROUP"]
-    project_name=os.environ["GROUNDEDNESS_PROJECT_NAME"]
+    subscription_id = os.environ["GROUNDEDNESS_SUB_ID"]
+    resource_group_name = os.environ["GROUNDEDNESS_GROUP"]
+    project_name = os.environ["GROUNDEDNESS_PROJECT_NAME"]
 
     logger.info(f"subscription_id={subscription_id}")
     logger.info(f"resource_group_name={resource_group_name}")
     logger.info(f"project_name={project_name}")
 
     model_config = AzureOpenAIModelConfiguration(
-            azure_deployment=deployment,
-            api_key=api_key,
-            api_version=api_version,
-            azure_endpoint=azure_endpoint
-        )
+        azure_deployment=deployment, api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+    )
 
     project_scope = {
         "subscription_id": subscription_id,
@@ -291,20 +323,28 @@ if __name__ == "__main__":
         "project_name": project_name,
     }
 
-    start=time.time()
+    start = time.time()
     logger.info(f"Starting evaluate...")
 
     modes = {"local": evaluate_local, "remote": evaluate_aistudio}
     evaluate_func = modes[args.mode]
     logger.info(f"Evaluating {args.input} with mode {args.mode}")
     logger.info(f"Output file will be saved to {args.output}")
-    eval_result = evaluate_func(chat_completer, model_config=model_config, data_path=args.input, project_scope=project_scope, project_scope_report=project_scope_report, model=args.model, score_model=args.score_model)
+    eval_result = evaluate_func(
+        chat_completer,
+        model_config=model_config,
+        data_path=args.input,
+        project_scope=project_scope,
+        project_scope_report=project_scope_report,
+        model=args.model,
+        score_model=args.score_model,
+    )
 
-    end=time.time()
+    end = time.time()
     logger.info(f"Finished evaluate in {end - start}s")
     logger.info(f"Writing {len(eval_result)} results to {args.output}")
 
-    #save evaluation results to a JSONL file
+    # save evaluation results to a JSONL file
     if args.mode == "local":
-        with jsonlines.open(args.output, 'w') as writer:
+        with jsonlines.open(args.output, "w") as writer:
             writer.write_all(eval_result)

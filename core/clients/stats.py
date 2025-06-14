@@ -1,10 +1,12 @@
 import time
-from threading import Lock
 from abc import ABC
+from threading import Lock
 from typing import Any, Optional
+
 
 class UsageStats:
     """Tracks and aggregates usage statistics for API calls."""
+
     def __init__(self) -> None:
         self.start = time.time()
         self.completion_tokens = 0
@@ -14,7 +16,7 @@ class UsageStats:
         self.duration = 0
         self.calls = 0
 
-    def __add__(self, other: 'UsageStats') -> 'UsageStats':
+    def __add__(self, other: "UsageStats") -> "UsageStats":
         """Aggregate two UsageStats instances."""
         stats = UsageStats()
         stats.start = min(self.start, other.start)
@@ -26,8 +28,10 @@ class UsageStats:
         stats.calls = self.calls + other.calls
         return stats
 
+
 class StatsCompleter(ABC):
     """Abstract base class for completers that collect statistics on usage."""
+
     def __init__(self, create_func):
         """
         Args:
@@ -48,7 +52,7 @@ class StatsCompleter(ABC):
             self.stats.total_tokens += response.usage.total_tokens
             self.stats.calls += 1
             return response
-    
+
     def get_stats_and_reset(self) -> Optional[UsageStats]:
         """Get the current statistics and reset the collector."""
         with self.lock:
@@ -60,8 +64,10 @@ class StatsCompleter(ABC):
                 self.stats = None
             return stats
 
+
 class ChatCompleter(StatsCompleter):
     """Completer for chat-based interactions."""
+
     def __init__(self, client):
         """
         Args:
@@ -69,8 +75,10 @@ class ChatCompleter(StatsCompleter):
         """
         super().__init__(client.chat.completions.create)
 
+
 class CompletionsCompleter(StatsCompleter):
     """Completer for standard text completions."""
+
     def __init__(self, client):
         """
         Args:

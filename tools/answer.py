@@ -1,22 +1,23 @@
-import json
-from datetime import datetime
-from dotenv import load_dotenv
 import argparse
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 import logging
-from logconf import log_setup
-from tenacity import retry, wait_exponential, retry_if_exception_type
-from openai import RateLimitError
-from client_utils import ChatCompleter, build_openai_client
-from openai import OpenAI
 import random
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+
+from client_utils import ChatCompleter, build_openai_client
+from dotenv import load_dotenv
+from logconf import log_setup
+from openai import OpenAI, RateLimitError
+from tenacity import retry, retry_if_exception_type, wait_exponential
+from tqdm import tqdm
 
 logger = logging.getLogger("answer")
 log_setup()
 
 load_dotenv()
+
 
 def get_args() -> argparse.Namespace:
     """
@@ -27,14 +28,21 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--input", type=str, default="input.jsonl", help="The input data JSONL file to load")
     parser.add_argument("--output", type=str, default="output.jsonl", help="The output data JSONL file to export to")
     parser.add_argument("--workers", type=int, default="1", help="Number of worker threads")
-    parser.add_argument("--model", type=str, default="gpt-4", help="Model name to generate answers for the evaluation data")
-    parser.add_argument("--deployment", type=str, default="gpt-4", help="Deployment name for the model used for answer generation")
-    parser.add_argument("--system-prompt-key", type=str, default="gpt", help="The system prompt to use to generate the dataset")
+    parser.add_argument(
+        "--model", type=str, default="gpt-4", help="Model name to generate answers for the evaluation data"
+    )
+    parser.add_argument(
+        "--deployment", type=str, default="gpt-4", help="Deployment name for the model used for answer generation"
+    )
+    parser.add_argument(
+        "--system-prompt-key", type=str, default="gpt", help="The system prompt to use to generate the dataset"
+    )
     parser.add_argument("--templates", type=str, default="./", help="The system prompt template location")
     parser.add_argument("--count", type=int, default="-1", help="Count of a random set of questions to answer")
-        
+
     args = parser.parse_args()
     return args
+
 
 def load_prompt_template(file_path: str) -> str:
     """Loads the prompt template from the specified file.
@@ -45,16 +53,19 @@ def load_prompt_template(file_path: str) -> str:
     Returns:
         str: The content of the prompt template file.
     """
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         return file.read()
 
+
 prompt_templates = {
-    'gpt': 'You are a helpful assistant who can provide an answer given a question and relevant context.',
-    'llama': 'You are a a helpful assistant who can provide an answer given a question and relevant context.'
+    "gpt": "You are a helpful assistant who can provide an answer given a question and relevant context.",
+    "llama": "You are a a helpful assistant who can provide an answer given a question and relevant context.",
 }
 
 
-@retry(wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError))
+@retry(
+    wait=wait_exponential(multiplier=1, min=10, max=120), reraise=True, retry=retry_if_exception_type(RateLimitError)
+)
 def get_answer(chat_completer, context, question, model, system_prompt):
     """Generates an answer to a question based on the provided context.
 
@@ -72,7 +83,7 @@ def get_answer(chat_completer, context, question, model, system_prompt):
         model=model,
         messages=[
             {"role": "system", "content": prompt_templates[system_prompt]},
-            {"role": "user", "content": question}
+            {"role": "user", "content": question},
         ],
         temperature=0.02,
         max_tokens=2048,
@@ -105,10 +116,10 @@ def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt
     def answer_row_with(row):
         result = get_answer(
             chat_completer=chat_completer,
-            question=row['question'],            
-            context=row['context'],
+            question=row["question"],
+            context=row["context"],
             model=model,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
         )
         return result
 
@@ -125,10 +136,8 @@ def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt
         try:
             result = answer_row_with(row)
         except Exception as e:
-            result = {
-                "error": str(e)
-            }
-        
+            result = {"error": str(e)}
+
         row.update(result)
         pbar.update(1)
 
@@ -136,7 +145,7 @@ def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt
 
     results = []
     futures = []
-    if (total_records > 0):
+    if total_records > 0:
         # Regular expression to match strings that start with a number followed by a period
         pattern = r"^\d+\."
 
@@ -156,29 +165,39 @@ def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt
 
     return results
 
+
 if __name__ == "__main__":
     import time
+
     import jsonlines
 
     args = get_args()
 
-    prompt_templates[args.system_prompt_key] = load_prompt_template(args.templates + args.system_prompt_key + '_template.txt')
+    prompt_templates[args.system_prompt_key] = load_prompt_template(
+        args.templates + args.system_prompt_key + "_template.txt"
+    )
 
-
-    client = build_openai_client("EVAL", azure_deployment=args.deployment)   
+    client = build_openai_client("EVAL", azure_deployment=args.deployment)
     chat_completer = ChatCompleter(client)
- 
+
     start = time.time()
     logger.info(f"Starting answer generation...")
 
     logger.info(f"Building answers for {args.input} with model {args.model}")
     logger.info(f"Output file will be saved to {args.output}")
-    answer_result = answer_local(chat_completer=chat_completer, model=args.model, data_path=args.input, workers=args.workers, system_prompt=args.system_prompt_key, total_records=args.count)
+    answer_result = answer_local(
+        chat_completer=chat_completer,
+        model=args.model,
+        data_path=args.input,
+        workers=args.workers,
+        system_prompt=args.system_prompt_key,
+        total_records=args.count,
+    )
 
     end = time.time()
     logger.info(f"Finished answer generation in {end - start}s")
     logger.info(f"Writing {len(answer_result)} results to {args.output}")
 
     # Save evaluation results to a JSONL file
-    with jsonlines.open(args.output, 'w') as writer:
+    with jsonlines.open(args.output, "w") as writer:
         writer.write_all(answer_result)
