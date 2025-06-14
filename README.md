@@ -1,12 +1,10 @@
 # RAFT Toolkit
 
-> **Retrieval Augmentation Fine-Tuning Toolkit**  
-
 ## 🚀 Overview
 
 ### What is RAFT?
 
-**RAFT (Retrieval Augmentation Fine-Tuning)** is a technique that trains language models to better utilize retrieved documents when answering questions. Unlike traditional RAG systems that rely on frozen pre-trained models, RAFT fine-tunes models specifically for document-based reasoning tasks.
+**RAFT (Retrieval Augmented Fine-Tuning)** is a technique that trains language models to better utilize retrieved documents when answering questions. Unlike traditional RAG systems that rely on frozen pre-trained models, RAFT fine-tunes models specifically for document-based reasoning tasks.
 
 The RAFT Toolkit automates the creation of training datasets by generating `{question, answer, documents}` triplets from your documents, enabling you to fine-tune models that excel at retrieval-augmented generation tasks.
 
@@ -93,6 +91,8 @@ graph TD
 - General-purpose question answering is sufficient
 
 ### Best Practices for RAFT Training Data
+
+> 📚 **See also**: [Complete Configuration Guide](docs/CONFIGURATION.md) for advanced RAFT configuration options and best practices.
 
 #### Document Preparation
 - **Quality Over Quantity**: Use high-quality, authoritative documents
@@ -595,6 +595,9 @@ python raft.py --datapath sample.pdf --validate
 ```
 
 #### ☁️ Amazon S3 Input Sources
+
+> 📚 **See also**: [Input Sources Guide](docs/INPUT_SOURCES.md) for comprehensive documentation on all input source types and authentication methods.
+
 ```bash
 # Using environment variables for AWS credentials
 export AWS_ACCESS_KEY_ID="your_access_key"
@@ -668,6 +671,8 @@ python raft.py --output ./env_output
 ```
 
 ### 🌐 Web Interface
+
+> 📚 **See also**: [Web Interface Guide](docs/WEB_INTERFACE.md) for detailed documentation on all web UI features, analysis tools, and job management.
 
 ```bash
 # Start the web server
@@ -1369,7 +1374,7 @@ export HOST_TEST_RESULTS_DIR=/shared/test-results
 docker compose -f docker-compose.test.yml up
 ```
 
-See [`docs/TEST_DIRECTORIES.md`](docs/TEST_DIRECTORIES.md) for complete configuration guide.
+See [Test Directories Configuration Guide](docs/TEST_DIRECTORIES.md) for complete configuration guide.
 
 ### Dependency Troubleshooting
 
@@ -1386,7 +1391,7 @@ pip check
 pip install -r requirements.txt --force-reinstall
 ```
 
-See [`docs/DEPENDENCY_TROUBLESHOOTING.md`](docs/DEPENDENCY_TROUBLESHOOTING.md) for comprehensive troubleshooting guide.
+See [Dependency Troubleshooting Guide](docs/DEPENDENCY_TROUBLESHOOTING.md) for comprehensive troubleshooting guide.
 
 ### Docker Testing
 
@@ -1433,7 +1438,7 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 
 ### Model Fine-tuning
 
-- See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for Azure AI Studio fine-tuning guidance
+- See [Deployment Guide](docs/DEPLOYMENT.md) for Azure AI Studio fine-tuning guidance
 - Use generated datasets with popular fine-tuning frameworks:
   - HuggingFace Transformers
   - OpenAI Fine-tuning API
@@ -1811,7 +1816,7 @@ git tag -a v1.0.2 -m "Release v1.0.2"
 git push origin v1.0.2
 ```
 
-See [`docs/RELEASES.md`](docs/RELEASES.md) for the complete release management guide.
+See [Release Management Guide](docs/RELEASES.md) for the complete release management guide.
 
 ## 🤝 Contributing
 

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📚 Enhanced
 
+#### Documentation Cross-References
+- **🔗 Enhanced documentation links**: Added and standardized links to documentation files throughout README
+  - **Installation section**: Added link to Dependency Troubleshooting Guide for conflict resolution
+  - **Testing section**: Added link to Test Directories Configuration Guide for custom directory setup
+  - **Fine-tuning section**: Enhanced link to Deployment Guide with descriptive text
+  - **Release section**: Added link to Release Management Guide for comprehensive release workflow
+  - **Consistent formatting**: Standardized all documentation links with descriptive titles for better navigation
+
 #### Major Documentation Reorganization
 - **🔄 README.md restructured**: Complete reorganization of README.md for improved user experience and logical information flow
   - **📋 Grouped Installation & Configuration**: All setup information consolidated into single cohesive section
