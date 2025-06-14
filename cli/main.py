@@ -143,6 +143,24 @@ def create_parser() -> argparse.ArgumentParser:
     # Template Arguments
     parser.add_argument("--templates", type=str, default="./templates/",
                         help="Directory containing prompt templates")
+    parser.add_argument("--embedding-prompt-template", type=str,
+                        help="Path to custom embedding prompt template file")
+    parser.add_argument("--qa-prompt-template", type=str,
+                        help="Path to custom Q&A generation prompt template file")
+    parser.add_argument("--answer-prompt-template", type=str,
+                        help="Path to custom answer generation prompt template file")
+
+    # LangWatch Observability Arguments
+    parser.add_argument("--langwatch-enabled", action="store_true",
+                        help="Enable LangWatch observability and tracing")
+    parser.add_argument("--langwatch-api-key", type=str,
+                        help="LangWatch API key (can also use LANGWATCH_API_KEY env var)")
+    parser.add_argument("--langwatch-endpoint", type=str,
+                        help="Custom LangWatch endpoint URL")
+    parser.add_argument("--langwatch-project", type=str,
+                        help="LangWatch project name")
+    parser.add_argument("--langwatch-debug", action="store_true",
+                        help="Enable LangWatch debug logging")
 
     # Utility Arguments
     parser.add_argument("--preview", action="store_true",
@@ -266,6 +284,26 @@ def override_config_from_args(config: RaftConfig, args: argparse.Namespace) -> R
     
     if args.templates != "./templates/":
         config.templates = args.templates
+    
+    # Template file paths
+    if args.embedding_prompt_template:
+        config.embedding_prompt_template = args.embedding_prompt_template
+    if args.qa_prompt_template:
+        config.qa_prompt_template = args.qa_prompt_template
+    if args.answer_prompt_template:
+        config.answer_prompt_template = args.answer_prompt_template
+    
+    # LangWatch arguments
+    if args.langwatch_enabled:
+        config.langwatch_enabled = args.langwatch_enabled
+    if args.langwatch_api_key:
+        config.langwatch_api_key = args.langwatch_api_key
+    if args.langwatch_endpoint:
+        config.langwatch_endpoint = args.langwatch_endpoint
+    if args.langwatch_project:
+        config.langwatch_project = args.langwatch_project
+    if args.langwatch_debug:
+        config.langwatch_debug = args.langwatch_debug
     
     return config
 

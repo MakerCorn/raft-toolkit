@@ -78,7 +78,17 @@ class RaftConfig:
     rate_limit_preset: Optional[str] = None
     
     # Template Configuration
-    templates: str = "./"
+    templates: str = "./templates"
+    embedding_prompt_template: Optional[str] = None
+    qa_prompt_template: Optional[str] = None
+    answer_prompt_template: Optional[str] = None
+    
+    # LangWatch Observability Configuration
+    langwatch_enabled: bool = False
+    langwatch_api_key: Optional[str] = None
+    langwatch_endpoint: Optional[str] = None
+    langwatch_project: Optional[str] = None
+    langwatch_debug: bool = False
     
     @classmethod
     def from_env(cls, env_file: Optional[str] = None) -> 'RaftConfig':
@@ -185,6 +195,16 @@ class RaftConfig:
         
         # Template Configuration
         config.templates = os.getenv('RAFT_TEMPLATES', config.templates)
+        config.embedding_prompt_template = os.getenv('RAFT_EMBEDDING_PROMPT_TEMPLATE')
+        config.qa_prompt_template = os.getenv('RAFT_QA_PROMPT_TEMPLATE')
+        config.answer_prompt_template = os.getenv('RAFT_ANSWER_PROMPT_TEMPLATE')
+        
+        # LangWatch Configuration
+        config.langwatch_enabled = os.getenv('LANGWATCH_ENABLED', 'false').lower() in ('true', '1', 'yes')
+        config.langwatch_api_key = os.getenv('LANGWATCH_API_KEY')
+        config.langwatch_endpoint = os.getenv('LANGWATCH_ENDPOINT')
+        config.langwatch_project = os.getenv('LANGWATCH_PROJECT')
+        config.langwatch_debug = os.getenv('LANGWATCH_DEBUG', 'false').lower() in ('true', '1', 'yes')
         
         return config
     

@@ -57,6 +57,7 @@ RUN pip install --upgrade pip && \
     python -c "import openai; print('OpenAI', openai.__version__, 'OK')" && \
     python -c "import sys; sys.stdout.write('Azure AI Evaluation: '); exec('try: from azure.ai.evaluation import evaluate; print(\"OK\")\\nexcept ImportError: print(\"not available (optional)\")')" && \
     python -c "import fastapi; print('FastAPI', fastapi.__version__, 'OK')" && \
+    python -c "import sys; sys.stdout.write('LangWatch: '); exec('try: import langwatch; print(\"OK\")\\nexcept ImportError: print(\"not available (optional)\")')" && \
     # Run dependency conflict check
     echo "Checking for dependency conflicts..." && \
     pip check && \

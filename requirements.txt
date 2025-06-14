@@ -51,6 +51,9 @@ opentelemetry-instrumentation>=0.40b0,<1.0.0
 # Rate limiting and performance
 tenacity>=8.2.0,<9.0.0
 
+# LangWatch observability (optional)
+langwatch>=0.2.0,<1.0.0
+
 # Cloud storage support (optional)
 boto3>=1.34.0,<2.0.0
 botocore>=1.34.0,<2.0.0

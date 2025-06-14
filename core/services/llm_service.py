@@ -31,6 +31,8 @@ except ImportError:
 from ..models import DocumentChunk, Question, QADataPoint, ProcessingJob, ProcessingResult, DocType
 from ..config import RaftConfig
 from ..utils.rate_limiter import create_rate_limiter_from_config, get_common_rate_limits
+from ..utils.template_loader import create_template_loader
+from .langwatch_service import create_langwatch_service
 try:
     from ..clients import build_openai_client, ChatCompleter
 except ImportError:
@@ -81,8 +83,10 @@ class LLMService:
         self.config = config
         self.client = self._build_client()
         self.chat_completer = ChatCompleter(self.client)
+        self.template_loader = create_template_loader(config)
         self.prompt_templates = self._load_prompt_templates()
         self.rate_limiter = self._create_rate_limiter()
+        self.langwatch_service = create_langwatch_service(config)
     
     def _build_client(self):
         """Build OpenAI client."""
@@ -98,28 +102,37 @@ class LLMService:
             return build_openai_client()
     
     def _load_prompt_templates(self) -> Dict[str, str]:
-        """Load prompt templates from files."""
+        """Load prompt templates using the template loader with robust fallback."""
         templates = {}
         
-        # Load main template
+        # Load embedding template
         try:
-            template_path = f"{self.config.templates}/{self.config.system_prompt_key}_template.txt"
-            with open(template_path, 'r') as f:
-                templates[self.config.system_prompt_key] = f.read()
-        except FileNotFoundError:
-            # Fallback to default templates
-            templates['gpt'] = 'You are a helpful assistant who can provide an answer given a question and relevant context.'
-            templates['llama'] = 'You are a helpful assistant who can provide an answer given a question and relevant context.'
+            templates['embedding'] = self.template_loader.load_embedding_template(
+                self.config.embedding_prompt_template
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load embedding template: {e}. Using default.")
+            templates['embedding'] = "Generate an embedding for: {content}"
         
-        # Load QA template
+        # Load answer template for the current model type
         try:
-            qa_template_path = f"{self.config.templates}/{self.config.system_prompt_key}_qa_template.txt"
-            with open(qa_template_path, 'r') as f:
-                templates[f"{self.config.system_prompt_key}_qa"] = f.read()
-        except FileNotFoundError:
-            # Fallback QA templates
-            templates['gpt_qa'] = "Generate %d questions based on the following context that can be answered from the text."
-            templates['llama_qa'] = "Generate %d questions based on the following context that can be answered from the text."
+            templates[self.config.system_prompt_key] = self.template_loader.load_answer_template(
+                self.config.system_prompt_key, 
+                self.config.answer_prompt_template
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load answer template: {e}. Using default.")
+            templates[self.config.system_prompt_key] = "Question: {question}\nContext: {context}\nAnswer:"
+        
+        # Load QA template for the current model type
+        try:
+            templates[f"{self.config.system_prompt_key}_qa"] = self.template_loader.load_qa_template(
+                self.config.system_prompt_key,
+                self.config.qa_prompt_template
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load QA template: {e}. Using default.")
+            templates[f"{self.config.system_prompt_key}_qa"] = "Generate %d questions based on: {context}"
         
         return templates
     
@@ -171,7 +184,7 @@ class LLMService:
         return rate_limiter
     
     def process_chunks_batch(self, chunks: List[DocumentChunk]) -> List[ProcessingResult]:
-        """Process multiple chunks in parallel."""
+        """Process multiple chunks in parallel with LangWatch tracking."""
         jobs = [
             ProcessingJob.create(
                 chunk=chunk,
@@ -182,19 +195,49 @@ class LLMService:
             for chunk in chunks
         ]
         
-        results = []
-        futures = []
+        batch_start_time = time.time()
         
-        with tqdm(total=len(jobs), desc="Processing chunks", unit="chunk") as pbar:
-            if self.config.workers > 1:
-                with ThreadPoolExecutor(max_workers=self.config.workers) as executor:
+        # Track the entire batch processing operation
+        with self.langwatch_service.trace_operation(
+            "process_chunks_batch",
+            metadata={
+                "chunks_count": len(chunks),
+                "jobs_count": len(jobs),
+                "workers": self.config.workers,
+                "questions_per_chunk": self.config.questions,
+                "distractors_per_qa": self.config.distractors
+            }
+        ) as trace:
+            # Setup OpenAI tracking if trace is active
+            if trace:
+                self.langwatch_service.setup_openai_tracking(self.client)
+            
+            results = []
+            futures = []
+            
+            with tqdm(total=len(jobs), desc="Processing chunks", unit="chunk") as pbar:
+                if self.config.workers > 1:
+                    with ThreadPoolExecutor(max_workers=self.config.workers) as executor:
+                        for job in jobs:
+                            future = executor.submit(self._process_single_job, job, chunks)
+                            futures.append(future)
+                        
+                        for future in as_completed(futures):
+                            try:
+                                result = future.result()
+                                results.append(result)
+                                pbar.set_postfix({
+                                    'completed': len(results),
+                                    'qa_points': sum(len(r.qa_data_points) for r in results if r.success)
+                                })
+                                pbar.update(1)
+                            except Exception as e:
+                                logger.error(f"Error processing chunk: {e}")
+                                pbar.update(1)
+                else:
                     for job in jobs:
-                        future = executor.submit(self._process_single_job, job, chunks)
-                        futures.append(future)
-                    
-                    for future in as_completed(futures):
                         try:
-                            result = future.result()
+                            result = self._process_single_job(job, chunks)
                             results.append(result)
                             pbar.set_postfix({
                                 'completed': len(results),
@@ -204,19 +247,20 @@ class LLMService:
                         except Exception as e:
                             logger.error(f"Error processing chunk: {e}")
                             pbar.update(1)
-            else:
-                for job in jobs:
-                    try:
-                        result = self._process_single_job(job, chunks)
-                        results.append(result)
-                        pbar.set_postfix({
-                            'completed': len(results),
-                            'qa_points': sum(len(r.qa_data_points) for r in results if r.success)
-                        })
-                        pbar.update(1)
-                    except Exception as e:
-                        logger.error(f"Error processing chunk: {e}")
-                        pbar.update(1)
+            
+            # Track the complete QA dataset generation
+            total_processing_time = time.time() - batch_start_time
+            all_qa_points = [qa for result in results if result.success for qa in result.qa_data_points]
+            
+            self.langwatch_service.track_qa_dataset_generation(
+                all_qa_points,
+                total_processing_time,
+                metadata={
+                    "successful_jobs": sum(1 for r in results if r.success),
+                    "failed_jobs": sum(1 for r in results if not r.success),
+                    "total_token_usage": sum(r.token_usage.get('total_tokens', 0) for r in results if r.token_usage)
+                }
+            )
         
         return results
     
@@ -273,10 +317,20 @@ class LLMService:
     
     def _generate_questions_impl(self, chunk: DocumentChunk) -> List[Question]:
         """Implementation of question generation without rate limiting."""
+        start_time = time.time()
+        
         if self.config.doctype == "api":
-            return self._generate_api_questions(chunk)
+            questions = self._generate_api_questions(chunk)
         else:
-            return self._generate_general_questions(chunk)
+            questions = self._generate_general_questions(chunk)
+        
+        # Track question generation
+        processing_time = time.time() - start_time
+        self.langwatch_service.track_question_generation(
+            chunk, questions, processing_time, self.config.completion_model
+        )
+        
+        return questions
     
     def _estimate_tokens_for_questions(self, chunk: DocumentChunk) -> int:
         """Estimate tokens needed for question generation."""
@@ -448,10 +502,20 @@ class LLMService:
     
     def _generate_answer_impl(self, question: str, context: str) -> str:
         """Implementation of answer generation without rate limiting."""
+        start_time = time.time()
+        
         if self.config.doctype == "api":
-            return self._generate_api_answer(question, context)
+            answer = self._generate_api_answer(question, context)
         else:
-            return self._generate_general_answer(question, context)
+            answer = self._generate_general_answer(question, context)
+        
+        # Track answer generation
+        processing_time = time.time() - start_time
+        self.langwatch_service.track_answer_generation(
+            question, context, answer, processing_time, self.config.completion_model
+        )
+        
+        return answer
     
     def _estimate_tokens_for_answer(self, question: str, context: str) -> int:
         """Estimate tokens needed for answer generation."""

@@ -37,6 +37,7 @@ except ImportError:
 from ..models import DocumentChunk, DocType, ChunkingStrategy
 from ..config import RaftConfig
 from .llm_service import LLMService
+from .embedding_service import create_embedding_service
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ class DocumentService:
     def __init__(self, config: RaftConfig, llm_service: LLMService):
         self.config = config
         self.llm_service = llm_service
+        self.embedding_service = create_embedding_service(config)
     
     def process_documents(self, data_path: Path) -> List[DocumentChunk]:
         """Process documents and return chunks."""
@@ -110,6 +112,10 @@ class DocumentService:
                     except Exception as e:
                         logger.error(f"Error processing file: {e}")
                         pbar.update(1)
+        
+        # Create embeddings using the embedding service with template
+        if self.config.embedding_prompt_template or True:  # Always use the embedding service for consistency
+            all_chunks = self.embedding_service.create_embeddings_with_template(all_chunks)
         
         return all_chunks
     

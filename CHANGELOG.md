@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 📝 Added
+
+#### Template System Enhancement
+- **Enhanced template support**: Updated template system to match nBEDR app approach
+  - **New embedding template**: Added `embedding_prompt_template.txt` for document embedding generation
+    - Provides context and instructions for generating document embeddings
+    - Supports variables: `{content}`, `{document_type}`, `{metadata}`
+    - Customizable for domain-specific embedding optimization
+  - **Comprehensive template documentation**: Enhanced `templates/README.md` with detailed usage guide
+    - Domain-specific examples for medical, legal, and technical documents
+    - Template variable reference and configuration instructions
+    - Integration examples with RAFT Toolkit configuration system
+  - **Main README integration**: Added complete template system documentation to main README
+    - Configuration examples using environment variables and programmatic setup
+    - Template variable reference for both embedding and QA generation
+    - Domain-specific customization examples
+
+#### Advanced Template Support
+- **Custom prompt template support**: Added comprehensive support for using different prompt templates for embeddings and Q&A generation
+  - **Template loader utility**: New `TemplateLoader` class for managing and loading prompt templates
+    - Supports fallback to default templates when custom templates are not found
+    - Template validation and formatting with variable substitution
+    - Caching for improved performance
+  - **Enhanced configuration**: Extended `RaftConfig` with template-specific configuration options
+    - `embedding_prompt_template`: Path to custom embedding prompt template
+    - `qa_prompt_template`: Path to custom Q&A generation prompt template  
+    - `answer_prompt_template`: Path to custom answer generation prompt template
+    - Environment variable support: `RAFT_EMBEDDING_PROMPT_TEMPLATE`, `RAFT_QA_PROMPT_TEMPLATE`, `RAFT_ANSWER_PROMPT_TEMPLATE`
+  - **Embedding service**: New `EmbeddingService` for template-based embedding generation
+    - Uses custom embedding prompts to improve embedding quality for specific domains
+    - Supports variable substitution for `{content}`, `{document_type}`, `{metadata}`, etc.
+    - Seamless integration with existing embedding pipeline
+  - **Enhanced LLM service**: Updated to use template loader for dynamic template loading
+    - Supports different templates for different model types (GPT, Llama, etc.)
+    - Template-aware Q&A generation and answer generation
+  - **CLI support**: Added command-line arguments for template configuration
+    - `--embedding-prompt-template`: Specify custom embedding template
+    - `--qa-prompt-template`: Specify custom Q&A generation template
+    - `--answer-prompt-template`: Specify custom answer generation template
+    - `--templates`: Set custom templates directory
+  - **Comprehensive documentation**: Updated templates README and main README with usage examples
+
+#### LangWatch Observability Integration
+- **LangWatch observability support**: Added comprehensive LangWatch integration for LLM call tracking and performance monitoring
+  - **Service implementation**: New `LangWatchService` for managing observability and tracing operations
+    - Context managers for operation tracing with automatic span creation
+    - Support for tracking question generation, answer generation, and embedding operations
+    - Automatic OpenAI client instrumentation for zero-code LLM call tracking
+    - Graceful fallback when LangWatch SDK is not available
+  - **Configuration support**: Extended `RaftConfig` with LangWatch-specific options
+    - `langwatch_enabled`: Enable/disable LangWatch integration
+    - `langwatch_api_key`: API key for LangWatch service authentication
+    - `langwatch_endpoint`: Custom endpoint URL for self-hosted instances
+    - `langwatch_project`: Project name for organizing traces
+    - `langwatch_debug`: Enable debug logging for troubleshooting
+    - Environment variable support: `LANGWATCH_ENABLED`, `LANGWATCH_API_KEY`, `LANGWATCH_ENDPOINT`, `LANGWATCH_PROJECT`, `LANGWATCH_DEBUG`
+  - **Comprehensive integration**: LangWatch tracking integrated throughout the processing pipeline
+    - Document chunk processing with metadata tracking
+    - Question generation with prompt and response logging
+    - Answer generation with context and performance metrics
+    - Embedding generation with model and timing information
+    - QA dataset generation with comprehensive statistics
+  - **CLI support**: Added command-line arguments for LangWatch configuration
+    - `--langwatch-enabled`: Enable LangWatch observability
+    - `--langwatch-api-key`: Set LangWatch API key
+    - `--langwatch-endpoint`: Set custom LangWatch endpoint
+    - `--langwatch-project`: Set project name for trace organization
+    - `--langwatch-debug`: Enable debug mode for detailed logging
+  - **Docker and deployment support**: Updated containerization and CI/CD workflows
+    - Added LangWatch SDK to requirements files as optional dependency
+    - Updated Docker builds to include LangWatch verification
+    - Enhanced CI/CD workflows with LangWatch dependency handling
+    - Kubernetes deployment support with LangWatch configuration options
+  - **Documentation**: Comprehensive LangWatch documentation in README
+    - Quick setup guide with environment variables and CLI usage
+    - Feature overview with automatic tracking capabilities
+    - Performance insights and integration benefits
+    - Configuration examples for programmatic and environment-based setup
+    - Environment variable configuration examples
+    - CLI usage examples
+    - Programmatic configuration examples
+    - Domain-specific template examples for medical, legal, and technical documents
+
 ### 📚 Enhanced
 
 #### Documentation Cross-References

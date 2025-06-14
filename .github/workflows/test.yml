@@ -75,6 +75,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
+        # Install LangWatch for observability testing
+        pip install langwatch>=0.2.0 || echo "LangWatch installation failed (optional dependency)"
     
     - name: Clear pytest cache
       run: |
@@ -87,6 +89,7 @@ jobs:
         OPENAI_API_KEY: test-key
         USE_MOCK_API: true
         REDIS_URL: redis://localhost:6379
+        LANGWATCH_ENABLED: false
       run: |
         python run_tests.py --unit --coverage --output-dir test-results
     
@@ -136,6 +139,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
+        # Install LangWatch for observability testing
+        pip install langwatch>=0.2.0 || echo "LangWatch installation failed (optional dependency)"
     
     - name: Clear pytest cache and verify configuration  
       run: |
@@ -149,6 +154,7 @@ jobs:
         OPENAI_API_KEY: test-key
         USE_MOCK_API: true
         REDIS_URL: redis://localhost:6379
+        LANGWATCH_ENABLED: false
       run: |
         python run_tests.py --integration --coverage --output-dir test-results
     
@@ -211,6 +217,7 @@ jobs:
         OPENAI_API_KEY: test-key
         USE_MOCK_API: true
         REDIS_URL: redis://localhost:6379
+        LANGWATCH_ENABLED: false
         WEB_HOST: 127.0.0.1
         WEB_PORT: 8000
       run: |
@@ -250,6 +257,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
+        # Install LangWatch for observability testing
+        pip install langwatch>=0.2.0 || echo "LangWatch installation failed (optional dependency)"
     
     - name: Clear pytest cache and verify configuration
       run: |

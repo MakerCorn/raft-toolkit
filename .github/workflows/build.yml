@@ -30,6 +30,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-test.txt
         pip install safety bandit
+        # Install LangWatch for dependency checking
+        pip install langwatch>=0.2.0 || echo "LangWatch installation failed (optional dependency)"
     
     - name: Run quality checks
       run: |

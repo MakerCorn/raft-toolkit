@@ -1,0 +1,12 @@
+Question: {question}
+Context: {context}
+
+Please answer the question using only the information provided in the context above.
+
+Instructions:
+- Provide a clear, direct answer based on the context
+- If you quote from the context, use quotation marks
+- Do not include information not present in the context
+- Keep your answer concise and focused
+
+Answer:

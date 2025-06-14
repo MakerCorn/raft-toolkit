@@ -1,0 +1,10 @@
+Generate %d questions based on the following context that can be answered from the text.
+
+Instructions:
+- Each question should be answerable using only the provided context
+- Questions should be clear and specific
+- Vary the complexity from simple factual to more analytical questions
+- Return only the questions, one per line
+- No explanations or additional commentary
+
+Context: {context}

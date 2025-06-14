@@ -59,6 +59,7 @@ graph TD
 - 🎯 **Flexible Output**: HuggingFace, OpenAI completion/chat, and evaluation formats
 - ⚡ **Parallel Processing**: Configurable workers for optimal performance
 - 📋 **Enhanced Logging**: Production-ready logging with progress tracking, external service integration (Sentry, DataDog), and structured output
+- 📊 **Observability**: Optional LangWatch integration for LLM call tracing and performance monitoring
 - 🧪 **Comprehensive Testing**: Unit, integration, API, and CLI test suites
 - 🐳 **Container Ready**: Docker support for easy deployment
 - 🚀 **Kubernetes Ready**: Complete Kubernetes deployment configurations
@@ -745,6 +746,13 @@ See the [tools/README.md](tools/README.md) for comprehensive documentation on al
 - **`--chunking-strategy`**: Chunking algorithm (`semantic` [default], `fixed`, `sentence`)
 - **`--chunking-params`**: JSON string of extra chunker params (e.g. `'{"overlap": 50, "min_chunk_size": 200}'`)
 
+### 📝 Template Arguments
+
+- **`--templates`**: Directory containing prompt templates (default: `./templates/`)
+- **`--embedding-prompt-template`**: Path to custom embedding prompt template file
+- **`--qa-prompt-template`**: Path to custom Q&A generation prompt template file
+- **`--answer-prompt-template`**: Path to custom answer generation prompt template file
+
 ### 🚦 Rate Limiting Arguments
 
 - **`--rate-limit`**: Enable rate limiting for API requests (default: disabled)
@@ -835,6 +843,126 @@ python3 raft.py \
 
 - Ollama's API is compatible with the OpenAI API, but some advanced features may not be supported.
 - You can specify different models by running `ollama run <model_name>` and setting the appropriate model in your RAFT command if needed.
+
+## 📝 Template System
+
+RAFT Toolkit includes a comprehensive template system for customizing prompts used in embedding generation and question-answer pair creation. Templates can be customized to improve quality and relevance for specific domains.
+
+### Default Template Behavior
+
+**No Configuration Required**: RAFT Toolkit works out of the box with intelligent defaults:
+- Automatically selects appropriate templates based on model type (GPT, Llama, etc.)
+- Provides robust fallback mechanisms if custom templates are not found
+- Includes multiple layers of default templates for different complexity levels
+- Gracefully handles missing template directories or malformed template files
+
+```bash
+# Works immediately with defaults - no template configuration needed
+python raft.py --datapath docs/ --output training_data/
+```
+
+### Available Templates
+
+#### Embedding Templates
+- **`embedding_prompt_template.txt`**: Default template for embedding generation
+  - Provides context and instructions for generating document embeddings
+  - Supports variables: `{content}`, `{document_type}`, `{metadata}`
+  - Customizable for domain-specific embedding optimization
+
+#### Question-Answer Generation Templates
+- **`gpt_template.txt`**: GPT-style question-answering template with reasoning and citations
+- **`gpt_qa_template.txt`**: GPT question generation template with content filtering
+- **`llama_template.txt`**: Llama-style question-answering template optimized for Llama models
+- **`llama_qa_template.txt`**: Llama question generation template with complexity guidelines
+
+### Template Configuration
+
+**Environment Variables:**
+```bash
+# Custom prompt templates
+export RAFT_EMBEDDING_PROMPT_TEMPLATE="/path/to/templates/my_embedding_template.txt"
+export RAFT_QA_PROMPT_TEMPLATE="/path/to/templates/my_qa_template.txt"
+export RAFT_ANSWER_PROMPT_TEMPLATE="/path/to/templates/my_answer_template.txt"
+
+# Templates directory
+export RAFT_TEMPLATES="/path/to/templates/"
+```
+
+**CLI Arguments:**
+```bash
+# Use custom templates
+python raft.py --datapath docs/ --output training_data/ \
+  --embedding-prompt-template "/path/to/custom_embedding.txt" \
+  --qa-prompt-template "/path/to/custom_qa.txt" \
+  --answer-prompt-template "/path/to/custom_answer.txt"
+
+# Use custom templates directory
+python raft.py --datapath docs/ --output training_data/ \
+  --templates "/path/to/custom/templates/"
+```
+
+**Programmatic Configuration:**
+```python
+config = RAFTConfig(
+    templates="./templates",
+    embedding_prompt_template="templates/my_custom_embedding.txt",
+    qa_prompt_template="templates/gpt_qa_template.txt",
+    answer_prompt_template="templates/gpt_template.txt"
+)
+```
+
+### Template Variables
+
+#### Embedding Templates
+- `{content}`: The document content to be embedded
+- `{document_type}`: File type (pdf, txt, json, pptx, etc.)
+- `{metadata}`: Additional document metadata
+- `{chunk_index}`: Index of the current chunk within the document
+- `{chunking_strategy}`: The chunking method used
+
+#### QA Generation Templates
+- `{question}`: The question to be answered (for answer templates)
+- `{context}`: The context/chunk for question generation
+- `%s`: Placeholder for number of questions to generate
+
+### Domain-Specific Examples
+
+#### Medical Documents
+```
+Generate embeddings for medical literature that capture:
+- Clinical terminology and procedures
+- Drug names and dosages
+- Symptoms and diagnoses
+- Treatment protocols and outcomes
+
+Content: {content}
+```
+
+#### Legal Documents
+```
+Generate embeddings for legal documents focusing on:
+- Legal terminology and concepts
+- Case citations and precedents
+- Statutory references
+- Contractual terms and conditions
+
+Document Type: {document_type}
+Content: {content}
+```
+
+#### Technical Documentation
+```
+Generate embeddings for technical documentation emphasizing:
+- API endpoints and parameters
+- Code examples and syntax
+- Configuration options
+- Error messages and troubleshooting
+
+Content: {content}
+Metadata: {metadata}
+```
+
+See the [templates/README.md](templates/README.md) for comprehensive template documentation and customization examples.
 
 ## 🔧 Advanced Configuration
 
@@ -1116,6 +1244,9 @@ pip install opentelemetry-instrumentation-logging
 
 # External service integrations
 pip install sentry-sdk datadog
+
+# LangWatch observability (optional)
+pip install langwatch
 ```
 
 **Note:** All dependencies are optional. The system gracefully falls back to:
@@ -1194,6 +1325,71 @@ cat logs/raft.json | jq 'select(.trace_id) | {timestamp, trace_id, operation_id,
 # Monitor operation performance by trace
 cat logs/raft.json | jq 'group_by(.trace_id) | map({trace_id: .[0].trace_id, count: length, operation: .[0].operation_id})'
 ```
+
+### 🔍 LangWatch Observability
+
+LangWatch provides comprehensive observability for LLM operations, offering insights into model performance, costs, and usage patterns.
+
+#### Quick Setup
+
+**Environment Variables:**
+```bash
+# Enable LangWatch integration
+export LANGWATCH_ENABLED=true
+export LANGWATCH_API_KEY="your-langwatch-api-key"
+export LANGWATCH_PROJECT="raft-toolkit"
+export LANGWATCH_DEBUG=false  # Set to true for verbose logging
+```
+
+**CLI Usage:**
+```bash
+# Enable LangWatch tracing for all operations
+python raft.py --datapath docs/ --output training_data/ \
+  --langwatch-enabled \
+  --langwatch-api-key "your-api-key" \
+  --langwatch-project "my-raft-project"
+
+# Debug mode for troubleshooting
+python raft.py --datapath docs/ --output training_data/ \
+  --langwatch-enabled \
+  --langwatch-debug
+```
+
+#### Features
+
+**Automatic Tracking:**
+- 🎯 Question generation operations
+- 📝 Answer generation operations
+- 🔄 Batch processing workflows
+- 📊 Embedding generation
+- 💾 Dataset creation statistics
+
+**Performance Insights:**
+- ⏱️ Processing time per operation
+- 💰 Token usage and costs
+- 📈 Throughput metrics
+- ❌ Error rates and failures
+
+**Integration Benefits:**
+- 🔍 Zero-code instrumentation of OpenAI calls
+- 📊 Real-time dashboards and alerts
+- 🎯 Performance optimization insights
+- 🔧 A/B testing for different prompts/models
+
+#### Configuration Options
+
+```python
+# Programmatic configuration
+config = RaftConfig(
+    langwatch_enabled=True,
+    langwatch_api_key="your-api-key",
+    langwatch_project="my-project",
+    langwatch_endpoint="https://app.langwatch.ai",  # Optional custom endpoint
+    langwatch_debug=False
+)
+```
+
+**Note:** LangWatch integration is completely optional and gracefully degrades if the SDK is not installed.
 
 **Integration with Log Aggregation:**
 ```bash

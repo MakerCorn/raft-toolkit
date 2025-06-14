@@ -38,6 +38,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-k8s.txt
         pip install yamllint
+        # Install LangWatch for Kubernetes compatibility testing
+        pip install langwatch>=0.2.0 || echo "LangWatch installation failed (optional dependency)"
     
     - name: Install kubectl
       uses: azure/setup-kubectl@v3

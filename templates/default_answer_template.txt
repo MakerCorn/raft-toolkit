@@ -1,0 +1,12 @@
+Question: {question}
+Context: {context}
+
+Please answer the question using only the information provided in the context above.
+
+Instructions:
+- Begin with clear reasoning explaining how you arrive at the answer
+- Reference relevant parts of the context in your reasoning
+- Provide a direct answer based on the context
+- Do not include information that is not present in the context
+
+Answer:
