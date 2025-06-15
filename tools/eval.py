@@ -4,7 +4,7 @@ import multiprocessing as mp
 import os
 import sys
 import time
-from typing import Any
+from typing import Any, Dict, Optional
 
 from openai import RateLimitError
 from openai.types.chat import ChatCompletion
@@ -66,14 +66,14 @@ if __name__ == "__main__":
     prompt_key = args.input_prompt_key
     answer_key = args.output_answer_key
 
-    def get_openai_response(prompt: str) -> str | None:
+    def get_openai_response(prompt: str) -> Optional[str]:
         """Gets a response from the OpenAI API for a given prompt.
 
         Args:
             prompt (str): The prompt to send to the OpenAI API.
 
         Returns:
-            str | None: The response from the API, or None if an error occurs.
+            Optional[str]: The response from the API, or None if an error occurs.
         """
         response = completions_completer(model=model, prompt=prompt, temperature=0.02, max_tokens=8192, stop="<STOP>")
 
@@ -83,14 +83,14 @@ if __name__ == "__main__":
             print(e)
             return response
 
-    def get_answer(input_json: dict[str, Any]) -> dict[str, Any]:
+    def get_answer(input_json: Dict[str, Any]) -> Dict[str, Any]:
         """Processes the input JSON to generate an answer using the OpenAI API.
 
         Args:
-            input_json (dict[str, Any]): The input data as a dictionary.
+            input_json (Dict[str, Any]): The input data as a dictionary.
 
         Returns:
-            dict[str, Any]: The input JSON with the generated answer added.
+            Dict[str, Any]: The input JSON with the generated answer added.
         """
         prompt = input_json[prompt_key]
         try:
@@ -100,11 +100,11 @@ if __name__ == "__main__":
             input_json["error"] = str(e)
         return input_json
 
-    def write_result_to_file(result: dict[str, Any], write_file_name: str) -> None:
+    def write_result_to_file(result: Dict[str, Any], write_file_name: str) -> None:
         """Writes the result dictionary to a file in JSON Lines format.
 
         Args:
-            result (dict[str, Any]): The result to write to the file.
+            result (Dict[str, Any]): The result to write to the file.
             write_file_name (str): The name of the file to write to.
         """
         global file_write_lock

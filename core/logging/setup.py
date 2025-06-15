@@ -317,7 +317,10 @@ def setup_structlog():
 
 
 def setup_tracing(
-    service_name: str = None, jaeger_endpoint: str = None, sampling_rate: float = None, console_export: bool = False
+    service_name: Optional[str] = None,
+    jaeger_endpoint: Optional[str] = None,
+    sampling_rate: Optional[float] = None,
+    console_export: bool = False,
 ):
     """
     Set up distributed tracing with OpenTelemetry.
@@ -364,16 +367,16 @@ def setup_tracing(
 
 
 def configure_logging(
-    level: str = None,
-    format_type: str = None,
-    output: str = None,
-    structured: bool = None,
+    level: Optional[str] = None,
+    format_type: Optional[str] = None,
+    output: Optional[str] = None,
+    structured: Optional[bool] = None,
     external_handler=None,
-    progress_tracking: bool = None,
-    tracing_enabled: bool = None,
-    trace_sampling_rate: float = None,
-    jaeger_endpoint: str = None,
-    trace_service_name: str = None,
+    progress_tracking: Optional[bool] = None,
+    tracing_enabled: Optional[bool] = None,
+    trace_sampling_rate: Optional[float] = None,
+    jaeger_endpoint: Optional[str] = None,
+    trace_service_name: Optional[str] = None,
     **context,
 ):
     """

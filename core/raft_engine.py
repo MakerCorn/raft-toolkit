@@ -49,7 +49,7 @@ class RaftEngine:
             logger.error(f"Failed to get processing preview: {e}")
             raise
 
-    def generate_dataset(self, data_path: Optional[Path] = None, output_path: str = None) -> Dict[str, Any]:
+    def generate_dataset(self, data_path: Optional[Path] = None, output_path: Optional[str] = None) -> Dict[str, Any]:
         """
         Main method to generate a RAFT dataset.
 
@@ -63,7 +63,9 @@ class RaftEngine:
         # Use asyncio to run the async version
         return asyncio.run(self.generate_dataset_async(data_path, output_path))
 
-    async def generate_dataset_async(self, data_path: Optional[Path] = None, output_path: str = None) -> Dict[str, Any]:
+    async def generate_dataset_async(
+        self, data_path: Optional[Path] = None, output_path: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Async version of dataset generation.
 

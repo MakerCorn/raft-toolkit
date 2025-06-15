@@ -5,7 +5,7 @@ Amazon S3 input source implementation.
 import asyncio
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
 try:
@@ -36,7 +36,7 @@ class S3InputSource(BaseInputSource):
         self.s3_client = None
         self._setup_s3_client()
 
-    def _parse_s3_uri(self, uri: str) -> tuple[str, str]:
+    def _parse_s3_uri(self, uri: str) -> Tuple[str, str]:
         """Parse S3 URI into bucket and prefix."""
         # Support formats: s3://bucket/prefix, s3://bucket, bucket/prefix, bucket
         if uri.startswith("s3://"):
@@ -98,8 +98,11 @@ class S3InputSource(BaseInputSource):
         """Validate S3 bucket access and credentials."""
         try:
             # Test bucket access by listing objects with limit
+            if self.s3_client is None:
+                raise ValueError("S3 client is not initialized")
+            s3_client = self.s3_client  # Create local reference for lambda
             response = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=self.prefix, MaxKeys=1)
+                None, lambda: s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=self.prefix, MaxKeys=1)
             )
 
             self._validated = True
@@ -138,8 +141,11 @@ class S3InputSource(BaseInputSource):
                     list_params["ContinuationToken"] = continuation_token
 
                 # List objects
+                if self.s3_client is None:
+                    raise ValueError("S3 client is not initialized")
+                s3_client = self.s3_client  # Create local reference for lambda
                 response = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: self.s3_client.list_objects_v2(**list_params)
+                    None, lambda: s3_client.list_objects_v2(**list_params)
                 )
 
                 # Process objects
@@ -179,8 +185,11 @@ class S3InputSource(BaseInputSource):
         """Retrieve document content from S3."""
         try:
             # Download object content
+            if self.s3_client is None:
+                raise ValueError("S3 client is not initialized")
+            s3_client = self.s3_client  # Create local reference for lambda
             response = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.s3_client.get_object(Bucket=self.bucket_name, Key=document.metadata["s3_key"])
+                None, lambda: s3_client.get_object(Bucket=self.bucket_name, Key=document.metadata["s3_key"])
             )
 
             # Read content

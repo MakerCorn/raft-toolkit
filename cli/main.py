@@ -256,7 +256,7 @@ def override_config_from_args(config: RaftConfig, args: argparse.Namespace) -> R
         try:
             config.chunking_params = json.loads(args.chunking_params)
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid chunking params JSON: {e}")
+            print(f"Error: Invalid chunking params JSON: {e}")
             sys.exit(1)
 
     if args.openai_key:

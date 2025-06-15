@@ -107,8 +107,9 @@ class RaftConfig:
         config = cls()
 
         # I/O Configuration
-        if os.getenv("RAFT_DATAPATH"):
-            config.datapath = Path(os.getenv("RAFT_DATAPATH"))
+        datapath_env = os.getenv("RAFT_DATAPATH")
+        if datapath_env:
+            config.datapath = Path(datapath_env)
         config.output = os.getenv("RAFT_OUTPUT", config.output)
         config.output_format = os.getenv("RAFT_OUTPUT_FORMAT", config.output_format)
         config.output_type = os.getenv("RAFT_OUTPUT_TYPE", config.output_type)
@@ -191,16 +192,21 @@ class RaftConfig:
         config.rate_limit_preset = os.getenv("RAFT_RATE_LIMIT_PRESET")
 
         # Parse numeric rate limits
-        if os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE"):
-            config.rate_limit_requests_per_minute = int(os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE"))
-        if os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_HOUR"):
-            config.rate_limit_requests_per_hour = int(os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_HOUR"))
-        if os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_MINUTE"):
-            config.rate_limit_tokens_per_minute = int(os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_MINUTE"))
-        if os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_HOUR"):
-            config.rate_limit_tokens_per_hour = int(os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_HOUR"))
-        if os.getenv("RAFT_RATE_LIMIT_MAX_BURST"):
-            config.rate_limit_max_burst = int(os.getenv("RAFT_RATE_LIMIT_MAX_BURST"))
+        requests_per_minute = os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE")
+        if requests_per_minute:
+            config.rate_limit_requests_per_minute = int(requests_per_minute)
+        requests_per_hour = os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_HOUR")
+        if requests_per_hour:
+            config.rate_limit_requests_per_hour = int(requests_per_hour)
+        tokens_per_minute = os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_MINUTE")
+        if tokens_per_minute:
+            config.rate_limit_tokens_per_minute = int(tokens_per_minute)
+        tokens_per_hour = os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_HOUR")
+        if tokens_per_hour:
+            config.rate_limit_tokens_per_hour = int(tokens_per_hour)
+        max_burst = os.getenv("RAFT_RATE_LIMIT_MAX_BURST")
+        if max_burst:
+            config.rate_limit_max_burst = int(max_burst)
 
         config.rate_limit_burst_window = float(
             os.getenv("RAFT_RATE_LIMIT_BURST_WINDOW", config.rate_limit_burst_window)

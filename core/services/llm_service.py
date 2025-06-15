@@ -26,8 +26,15 @@ except ImportError:
 
         return decorator
 
-    wait_exponential = None
-    retry_if_exception_type = None
+    # Create dummy classes for type safety
+    class wait_exponential:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class retry_if_exception_type:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+
 
 try:
     from openai import RateLimitError
@@ -306,13 +313,22 @@ class LLMService:
             }
 
             return ProcessingResult(
-                job_id=job.id, qa_data_points=qa_data_points, processing_time=processing_time, token_usage=token_usage
+                job_id=job.id,
+                success=True,
+                qa_data_points=qa_data_points,
+                processing_time=processing_time,
+                token_usage=token_usage,
             )
 
         except Exception as e:
             processing_time = time.time() - start_time
             return ProcessingResult(
-                job_id=job.id, qa_data_points=[], processing_time=processing_time, token_usage={}, error=str(e)
+                job_id=job.id,
+                success=False,
+                qa_data_points=[],
+                processing_time=processing_time,
+                token_usage={},
+                error=str(e),
             )
 
     def _generate_questions(self, chunk: DocumentChunk) -> List[Question]:

@@ -4,19 +4,24 @@ try:
     credential = DefaultAzureCredential()
     AZURE_AVAILABLE = True
 except ImportError:
-    DefaultAzureCredential = None
-    CredentialUnavailableError = Exception
+    # Create dummy classes for type safety
+    class DefaultAzureCredential:  # type: ignore
+        pass
+
+    class CredentialUnavailableError(Exception):  # type: ignore
+        pass
+
     credential = None
     AZURE_AVAILABLE = False
 
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Dict, Optional
 
 log = logging.getLogger(__name__)
 
-tokens = {}
+tokens: Dict[str, str] = {}
 
 
 def get_db_token() -> Optional[str]:

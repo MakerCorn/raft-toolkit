@@ -1,11 +1,12 @@
 import contextlib
 import os
+from typing import Dict, Any, Optional
 
 # List of environment variables prefixes that are allowed to be used for configuration.
 env_prefix_whitelist = ["OPENAI", "AZURE_OPENAI"]
 
 
-def read_env_config(use_prefix: str, env: dict = os.environ) -> str:
+def read_env_config(use_prefix: str, env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """Reads whitelisted environment variables and returns them in a dictionary.
 
     Overrides the whitelisted environment variable with ones prefixed with the given use_prefix if available.
@@ -15,15 +16,19 @@ def read_env_config(use_prefix: str, env: dict = os.environ) -> str:
         env (dict, optional): The environment variables dictionary. Defaults to os.environ.
 
     Returns:
-        str: A dictionary with the whitelisted environment variables.
+        Dict[str, Any]: A dictionary with the whitelisted environment variables.
     """
-    config = {}
+    if env is None:
+        env = dict(os.environ)
+    config: Dict[str, Any] = {}
     for prefix in [None, use_prefix]:
         read_env_config_prefixed(prefix, config, env)
     return config
 
 
-def read_env_config_prefixed(use_prefix: str, config: dict, env: dict = os.environ) -> str:
+def read_env_config_prefixed(
+    use_prefix: Optional[str], config: Dict[str, Any], env: Optional[Dict[str, str]] = None
+) -> None:
     """Reads whitelisted environment variables prefixed with use_prefix and adds them to the dictionary
     with use_prefix stripped.
 
@@ -32,6 +37,10 @@ def read_env_config_prefixed(use_prefix: str, config: dict, env: dict = os.envir
         config (dict): The dictionary to store the filtered environment variables.
         env (dict, optional): The environment variables dictionary. Defaults to os.environ.
     """
+    if env is None:
+        env = dict(os.environ)
+    if use_prefix is None:
+        use_prefix = ""
     use_prefix = format_prefix(use_prefix)
     for key in env:
         for env_prefix in env_prefix_whitelist:
@@ -58,13 +67,13 @@ def format_prefix(prefix: str) -> str:
 
 
 @contextlib.contextmanager
-def set_env(**environ: dict[str, str]):
+def set_env(**environ: str):
     """Temporarily set the process environment variables.
 
     Warning, this is not thread safe as the environment is updated for the whole process.
 
     Args:
-        environ (dict[str, str]): Environment variables to set.
+        environ (Dict[str, str]): Environment variables to set.
 
     Yields:
         None

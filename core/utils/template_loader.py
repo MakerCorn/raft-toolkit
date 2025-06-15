@@ -30,7 +30,8 @@ Content: {content}
 Focus on understanding the main themes, technical concepts, factual information, 
 and relationships described in the content to create meaningful embeddings.
 """.strip(),
-        "gpt_qa": """You are a synthetic question-answer pair generator. Given a chunk of context about some topic(s), generate %s example questions a user could ask that:
+        "gpt_qa": """You are a synthetic question-answer pair generator. Given a chunk of context about """
+        """some topic(s), generate %s example questions a user could ask that:
 - Comply with OpenAI's content filtering policies (no unsafe, offensive, or inappropriate content).
 - Can be answered using only the information present in the provided context.
 - Are clear, specific, and relevant to the context.

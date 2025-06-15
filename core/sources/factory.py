@@ -2,7 +2,7 @@
 Factory for creating input source instances.
 """
 
-from typing import Any, Dict, Type
+from typing import Any, Dict, List, Optional, Type
 
 from .base import BaseInputSource, InputSourceConfig, SourceValidationError
 from .local import LocalInputSource
@@ -44,7 +44,7 @@ class InputSourceFactory:
         return source_class(config)
 
     @classmethod
-    def create_from_uri(cls, source_uri: str, source_type: str = None, **kwargs) -> BaseInputSource:
+    def create_from_uri(cls, source_uri: str, source_type: Optional[str] = None, **kwargs) -> BaseInputSource:
         """
         Create an input source from a URI, auto-detecting type if not specified.
 
@@ -116,7 +116,7 @@ class InputSourceFactory:
         cls._source_types[name.lower()] = source_class
 
     @classmethod
-    def get_supported_types(cls) -> list[str]:
+    def get_supported_types(cls) -> List[str]:
         """Get list of supported source types."""
         return list(cls._source_types.keys())
 
@@ -128,7 +128,7 @@ class InputSourceFactory:
 
     @classmethod
     def create_s3_source(
-        cls, bucket: str, prefix: str = "", credentials: Dict[str, Any] = None, **kwargs
+        cls, bucket: str, prefix: str = "", credentials: Optional[Dict[str, Any]] = None, **kwargs
     ) -> S3InputSource:
         """Convenience method to create an S3 source."""
         if prefix:
@@ -141,7 +141,11 @@ class InputSourceFactory:
 
     @classmethod
     def create_sharepoint_source(
-        cls, site_url: str, library_path: str = "Shared Documents", credentials: Dict[str, Any] = None, **kwargs
+        cls,
+        site_url: str,
+        library_path: str = "Shared Documents",
+        credentials: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> SharePointInputSource:
         """Convenience method to create a SharePoint source."""
         if not site_url.endswith("/"):

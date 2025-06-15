@@ -14,20 +14,34 @@ from typing import Any, Dict, List, Optional
 try:
     import pypdf
 except ImportError:
-    pypdf = None
+    pypdf = None  # type: ignore
 
 try:
     from pptx import Presentation
 except ImportError:
-    Presentation = None
+
+    class Presentation:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+
 
 try:
     from langchain_experimental.text_splitter import SemanticChunker
     from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
 except ImportError:
-    SemanticChunker = None
-    OpenAIEmbeddings = None
-    AzureOpenAIEmbeddings = None
+
+    class SemanticChunker:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class OpenAIEmbeddings:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class AzureOpenAIEmbeddings:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+
 
 try:
     from tqdm import tqdm

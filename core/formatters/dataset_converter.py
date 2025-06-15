@@ -262,7 +262,7 @@ class EvalDatasetFormatter(DatasetFormatter):
                 batched=True,
             )
         else:
-            # Assuming you want to add a column with empty values initially, you can use the length of the dataset to create an empty list
+            # Add a column with empty values initially, using the dataset length to create an empty list
             newds = newds.add_column("final_answer", [None] * len(newds))
             keep_columns.append("final_answer")
 

@@ -11,7 +11,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Deque, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -73,15 +73,15 @@ class RateLimiter:
         self._lock = threading.RLock()
 
         # Request tracking
-        self._request_times: deque[float] = deque()
-        self._token_usage: deque[Tuple[float, int]] = deque()
+        self._request_times: Deque[float] = deque()
+        self._token_usage: Deque[Tuple[float, int]] = deque()
 
         # Token bucket state
         self._tokens = 0.0
         self._last_refill = time.time()
 
         # Adaptive rate limiting state
-        self._response_times: deque[float] = deque(maxlen=100)
+        self._response_times: Deque[float] = deque(maxlen=100)
         self._current_rate_limit: float = float(config.requests_per_minute or 60)
         self._last_adaptation = time.time()
 
@@ -261,7 +261,7 @@ class RateLimiter:
         self._last_refill = now
 
         # Check if we have enough tokens
-        tokens_needed = 1
+        tokens_needed: float = 1.0
         if estimated_tokens and self.config.tokens_per_minute:
             # Scale token cost based on estimated token usage
             token_cost_ratio = estimated_tokens / (self.config.tokens_per_minute / 60.0)
