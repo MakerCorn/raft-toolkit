@@ -6,14 +6,19 @@ All configuration should be loaded from environment variables.
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv as original_load_dotenv
+
+    # Create a wrapper with consistent signature
+    def load_dotenv(*args, **kwargs):
+        return original_load_dotenv(*args, **kwargs)
+
 except ImportError:
     # Fallback for environments where python-dotenv is not available
     def load_dotenv(*args, **kwargs):
-        pass
+        return False
 
 
 import json
@@ -27,7 +32,7 @@ class RaftConfig:
     """Configuration class for RAFT application following 12-factor principles."""
 
     # I/O Configuration
-    datapath: Path = field(default_factory=lambda: Path("."))
+    datapath: Union[str, Path] = field(default_factory=lambda: Path("."))
     output: str = "./"
     output_format: str = "hf"
     output_type: str = "jsonl"
@@ -94,6 +99,11 @@ class RaftConfig:
     langwatch_endpoint: Optional[str] = None
     langwatch_project: Optional[str] = None
     langwatch_debug: bool = False
+
+    def __post_init__(self):
+        """Convert string paths to Path objects."""
+        if isinstance(self.datapath, str):
+            self.datapath = Path(self.datapath)
 
     @classmethod
     def from_env(cls, env_file: Optional[str] = None) -> "RaftConfig":
@@ -231,6 +241,10 @@ class RaftConfig:
 
     def validate(self) -> None:
         """Validate configuration."""
+        # Ensure datapath is a Path object
+        if isinstance(self.datapath, str):
+            self.datapath = Path(self.datapath)
+
         # For local sources, validate datapath
         if self.source_type == "local" and not self.source_uri:
             if not self.datapath.exists() and str(self.datapath) != ".":

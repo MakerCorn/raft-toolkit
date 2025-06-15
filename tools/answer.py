@@ -181,7 +181,7 @@ if __name__ == "__main__":
     chat_completer = ChatCompleter(client)
 
     start = time.time()
-    logger.info(f"Starting answer generation...")
+    logger.info("Starting answer generation...")
 
     logger.info(f"Building answers for {args.input} with model {args.model}")
     logger.info(f"Output file will be saved to {args.output}")

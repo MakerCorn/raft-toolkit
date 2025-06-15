@@ -1,4 +1,5 @@
 try:
+    from azure.core.credentials import AccessToken
     from azure.identity import CredentialUnavailableError, DefaultAzureCredential
 
     credential = DefaultAzureCredential()
@@ -6,22 +7,27 @@ try:
 except ImportError:
     # Create dummy classes for type safety
     class DefaultAzureCredential:  # type: ignore
-        pass
+        def __init__(self):
+            pass
 
     class CredentialUnavailableError(Exception):  # type: ignore
         pass
 
-    credential = None
+    class AccessToken:  # type: ignore
+        token: str
+        expires_on: int
+
+    credential = DefaultAzureCredential()  # Create an instance of the dummy class
     AZURE_AVAILABLE = False
 
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 log = logging.getLogger(__name__)
 
-tokens: Dict[str, str] = {}
+tokens: Dict[str, Any] = {}
 
 
 def get_db_token() -> Optional[str]:
@@ -56,7 +62,7 @@ def _format_datetime(dt):
     return datetime.utcfromtimestamp(dt).replace(tzinfo=timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _get_token(token_key, resource) -> Optional[str]:
+def _get_token(token_key: str, resource: str) -> Optional[str]:
     """Retrieves and caches an Azure AD token for the specified resource.
 
     Args:
@@ -72,20 +78,48 @@ def _get_token(token_key, resource) -> Optional[str]:
 
     now = int(time.time())
     global tokens
-    token = tokens.get(token_key)
+    # Get token from cache
+    cached_token = tokens.get(token_key)
+
     try:
-        if token is None or now > token.expires_on - 60:
+        # Check if we need a new token
+        need_new_token = True
+        if cached_token is not None and hasattr(cached_token, "expires_on"):
+            if now <= cached_token.expires_on - 60:
+                need_new_token = False
+
+        if need_new_token:
             log.debug(f"Requesting new Azure AD token for {resource}...")
-            token = credential.get_token(resource)
-            tokens[token_key] = token
-            log.debug(
-                f"Got new Azure AD token for {resource} (expires: {_format_datetime(token.expires_on)}, now: {_format_datetime(now)})"
-            )
+            # Get new token
+            token_obj = credential.get_token(resource)
+
+            # Store token object
+            if token_obj is not None:
+                # Store the token object directly
+                tokens[token_key] = token_obj
+
+                # Extract token string
+                if hasattr(token_obj, "token"):
+                    token_str = str(token_obj.token)
+                    expires = getattr(token_obj, "expires_on", 0)
+                    log.debug(
+                        f"Got new Azure AD token for {resource} (expires: {_format_datetime(expires)}, now: {_format_datetime(now)})"
+                    )
+                    return token_str
+            return None
         else:
-            log.debug(
-                f"Using cached Azure AD token for {resource} (expires: {_format_datetime(token.expires_on)}, now: {_format_datetime(now)})"
-            )
-        return token.token
+            # Use cached token - we already checked it's not None above
+            assert cached_token is not None
+
+            # Extract token string
+            if hasattr(cached_token, "token"):
+                token_str = str(cached_token.token)
+                expires = getattr(cached_token, "expires_on", 0)
+                log.debug(
+                    f"Using cached Azure AD token for {resource} (expires: {_format_datetime(expires)}, now: {_format_datetime(now)})"
+                )
+                return token_str
+            return None
     except CredentialUnavailableError as e:
         log.error(f"Azure credential unavailable: {e}")
         return None

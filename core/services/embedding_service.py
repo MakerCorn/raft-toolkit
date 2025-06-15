@@ -6,11 +6,36 @@ import logging
 import time
 from typing import Any, Dict, List, Optional
 
+
+# Define classes for type checking
+class OpenAIEmbeddings:
+    def embed_documents(self, texts):
+        pass
+
+    def embed_query(self, text):
+        pass
+
+
+class AzureOpenAIEmbeddings:
+    def embed_documents(self, texts):
+        pass
+
+    def embed_query(self, text):
+        pass
+
+
+# Try to import real implementations
 try:
-    from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
+    from langchain_openai.embeddings import AzureOpenAIEmbeddings as RealAzureOpenAIEmbeddings
+    from langchain_openai.embeddings import OpenAIEmbeddings as RealOpenAIEmbeddings
+
+    # Replace stub classes with real implementations
+    OpenAIEmbeddings = RealOpenAIEmbeddings  # type: ignore
+    AzureOpenAIEmbeddings = RealAzureOpenAIEmbeddings  # type: ignore
+    HAS_EMBEDDINGS = True
 except ImportError:
-    OpenAIEmbeddings = None
-    AzureOpenAIEmbeddings = None
+    # Keep the stub classes
+    HAS_EMBEDDINGS = False
 
 from ..config import RaftConfig
 from ..models import DocumentChunk
@@ -30,6 +55,19 @@ class EmbeddingService:
         self.embedding_template = self._load_embedding_template()
         self.langwatch_service = create_langwatch_service(config)
 
+    def _create_mock_embeddings(self) -> Any:
+        """Create a mock embeddings model for testing or when real implementation is unavailable."""
+
+        class MockEmbeddings:
+            def embed_documents(self, texts):
+                return [[0.1, 0.2, 0.3] for _ in texts]
+
+            def embed_query(self, text):
+                return [0.1, 0.2, 0.3]
+
+        logger.warning("Langchain embeddings not available, using mock implementation")
+        return MockEmbeddings()
+
     def _build_embeddings_model(self) -> Any:
         """Build the underlying embeddings model."""
         try:
@@ -48,9 +86,40 @@ class EmbeddingService:
             except ImportError:
                 # Fall back to direct langchain integration
                 if self.config.azure_openai_enabled:
-                    return AzureOpenAIEmbeddings(openai_api_key=api_key, model=self.config.embedding_model)
+                    # Create a mock embeddings model if real implementation not available
+                    if not HAS_EMBEDDINGS:
+                        return self._create_mock_embeddings()
+
+                    # Parameters may vary based on the version - use **kwargs for flexibility
+                    kwargs = {
+                        "deployment": self.config.embedding_model,
+                        "api_version": "2023-05-15",
+                    }
+
+                    if hasattr(self.config, "azure_endpoint"):
+                        kwargs["endpoint"] = self.config.azure_endpoint
+
+                    if api_key:
+                        # Convert SecretStr to string for compatibility
+                        kwargs["api_key"] = api_key
+
+                    return AzureOpenAIEmbeddings(**kwargs)
                 else:
-                    return OpenAIEmbeddings(openai_api_key=api_key, model=self.config.embedding_model)
+                    # Create a mock embeddings model if real implementation not available
+                    if not HAS_EMBEDDINGS:
+                        return self._create_mock_embeddings()
+
+                    # Use the real implementation with appropriate parameters
+                    kwargs = {}
+
+                    if self.config.embedding_model:
+                        kwargs["model"] = self.config.embedding_model
+
+                    if api_key:
+                        # Use raw string instead of SecretStr
+                        kwargs["api_key"] = api_key
+
+                    return OpenAIEmbeddings(**kwargs)
         except ImportError:
             # Mock implementation for demo purposes
             class MockEmbeddings:
@@ -137,7 +206,11 @@ class EmbeddingService:
 
         try:
             embedding = self.embeddings_model.embed_query(formatted_query)
-            return embedding
+            if isinstance(embedding, list):
+                return embedding
+            else:
+                logger.warning(f"Unexpected embedding type: {type(embedding)}, converting to list")
+                return list(embedding)
         except Exception as e:
             logger.error(f"Failed to create query embedding: {e}")
             # Return a zero vector as fallback

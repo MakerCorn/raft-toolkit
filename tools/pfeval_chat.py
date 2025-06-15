@@ -147,7 +147,7 @@ def evaluate_aistudio(chat_completer, model_config, project_scope, project_scope
             "fluency": FluencyEvaluator(model_config),
             "coherence": CoherenceEvaluator(model_config),
             "similarity": SimilarityEvaluator(model_config),
-            "groundedness": GroundednessEvaluator(project_scope=project_scope),
+            "groundedness": GroundednessEvaluator(model_config=model_config, project_scope=project_scope),
         },
         evaluator_config={
             "defaults": {
@@ -186,7 +186,7 @@ def evaluate_local(chat_completer, model_config, project_scope, project_scope_re
         RelevanceEvaluator(model_config),
         FluencyEvaluator(model_config),
         CoherenceEvaluator(model_config),
-        GroundednessEvaluator(model_config),
+        GroundednessEvaluator(model_config=model_config),
         SimilarityEvaluator(model_config),
     ]
 

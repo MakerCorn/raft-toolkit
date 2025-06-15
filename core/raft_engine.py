@@ -6,10 +6,10 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .config import RaftConfig
-from .models import DocumentChunk, ProcessingResult
+from .models import ProcessingResult
 from .services.dataset_service import DatasetService
 from .services.document_service import DocumentService
 from .services.input_service import InputService
@@ -106,7 +106,8 @@ class RaftEngine:
             self.dataset_service.save_dataset(dataset, output_path)
 
             # Calculate statistics
-            processing_time = time.time() - start_time
+            end_time = time.time()
+            processing_time = float(end_time - start_time)
             stats = self._calculate_stats(results, processing_time)
 
             logger.info(f"RAFT dataset generation completed in {processing_time:.2f}s")
@@ -123,26 +124,29 @@ class RaftEngine:
         successful_results = [r for r in results if r.success]
         failed_results = [r for r in results if not r.success]
 
-        total_qa_points = sum(len(r.qa_data_points) for r in successful_results)
-        total_tokens = sum(r.token_usage.get("total_tokens", 0) for r in successful_results)
-        total_prompt_tokens = sum(r.token_usage.get("prompt_tokens", 0) for r in successful_results)
-        total_completion_tokens = sum(r.token_usage.get("completion_tokens", 0) for r in successful_results)
+        # Calculate token usage statistics
+        token_usage: Dict[str, Union[int, float]] = {
+            "total_tokens": sum(r.token_usage.get("total_tokens", 0) for r in successful_results),
+            "prompt_tokens": sum(r.token_usage.get("prompt_tokens", 0) for r in successful_results),
+            "completion_tokens": sum(r.token_usage.get("completion_tokens", 0) for r in successful_results),
+        }
+
+        # Add tokens per second if processing time is valid
+        if processing_time > 0:
+            token_usage["tokens_per_second"] = float(token_usage["total_tokens"]) / float(processing_time)
+        else:
+            token_usage["tokens_per_second"] = 0.0
 
         # Get rate limiting statistics from LLM service
         rate_limit_stats = self.llm_service.get_rate_limit_statistics()
 
         return {
-            "total_qa_points": total_qa_points,
+            "total_qa_points": sum(len(r.qa_data_points) for r in successful_results),
             "successful_chunks": len(successful_results),
             "failed_chunks": len(failed_results),
             "total_processing_time": processing_time,
             "avg_time_per_chunk": processing_time / len(results) if results else 0,
-            "token_usage": {
-                "total_tokens": total_tokens,
-                "prompt_tokens": total_prompt_tokens,
-                "completion_tokens": total_completion_tokens,
-                "tokens_per_second": total_tokens / processing_time if processing_time > 0 else 0,
-            },
+            "token_usage": token_usage,
             "rate_limiting": rate_limit_stats,
             "input_source": self.input_service.get_source_info(),
             "config_used": {
@@ -198,6 +202,10 @@ class RaftEngine:
         if data_path is None:
             data_path = self.config.datapath
 
+        # Ensure data_path is a Path object
+        if isinstance(data_path, str):
+            data_path = Path(data_path)
+
         if not data_path.exists():
             raise FileNotFoundError(f"Input data path does not exist: {data_path}")
 
@@ -224,10 +232,24 @@ class RaftEngine:
         else:
             # For text documents, rough estimate based on average file size
             total_chars = sum(f.stat().st_size for f in files if f.exists())
-            preview["estimated_chunks"] = max(
-                1, total_chars // (self.config.chunk_size * 4)
-            )  # Rough char to token ratio
+            # Ensure chunk_size is an integer for division
+            chunk_size_int = int(self.config.chunk_size)
+            # Ensure we're using integer division
+            ratio = 4  # Rough char to token ratio
+            if total_chars > 0 and chunk_size_int > 0:
+                estimated = total_chars // (chunk_size_int * ratio)
+                preview["estimated_chunks"] = max(1, estimated)
+            else:
+                preview["estimated_chunks"] = 1
 
-        preview["estimated_qa_points"] = preview["estimated_chunks"] * self.config.questions
+        # Ensure questions is an integer for multiplication
+        questions_int = int(self.config.questions)
+        # Use a direct integer value to avoid type issues
+        estimated_chunks = preview["estimated_chunks"]
+        if isinstance(estimated_chunks, int):
+            chunks_count = estimated_chunks
+        else:
+            chunks_count = int(float(str(estimated_chunks)))
+        preview["estimated_qa_points"] = chunks_count * questions_int
 
         return preview

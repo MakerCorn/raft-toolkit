@@ -1,7 +1,8 @@
 import argparse
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Literal, get_args
+from typing import Any, Dict, List, Literal, Optional
+from typing import get_args as typing_get_args
 
 from datasets import Dataset, load_dataset
 
@@ -12,13 +13,13 @@ This file allows to convert raw HuggingFace Datasets into files suitable to fine
 """
 
 OutputDatasetType = Literal["parquet", "jsonl"]
-outputDatasetTypes = list(get_args(OutputDatasetType))
+outputDatasetTypes = list(typing_get_args(OutputDatasetType))
 
 InputDatasetType = Literal["arrow", "jsonl"]
-inputDatasetTypes = list(get_args(InputDatasetType))
+inputDatasetTypes = list(typing_get_args(InputDatasetType))
 
 DatasetFormat = Literal["hf", "completion", "chat", "eval"]
-datasetFormats = list(get_args(DatasetFormat))
+datasetFormats = list(typing_get_args(DatasetFormat))
 
 
 def get_args() -> argparse.Namespace:
@@ -119,10 +120,10 @@ class DatasetConverter:
         output_type: OutputDatasetType,
         params: Dict[str, str],
     ):
-        if not format in self.formats:
+        if format not in self.formats:
             raise Exception(f"Output Format {format} is not supported, pleased select one of {self.formats.keys()}")
 
-        if not output_type in self.exporters:
+        if output_type not in self.exporters:
             raise Exception(
                 f"Output Type {output_type} is not supported, pleased select one of {self.exporters.keys()}"
             )
@@ -142,7 +143,7 @@ class HuggingFaceDatasetFormatter(DatasetFormatter):
         return ds
 
 
-def _remove_all_columns_but(ds: Dataset, keep_columns) -> Dataset:
+def _remove_all_columns_but(ds: Dataset, keep_columns: List[str]) -> Dataset:
     """
     HF Dataset doesn't have a way to copy only specific columns of a Dataset so this help
     removes all columns but the ones specified.
@@ -171,9 +172,11 @@ class OpenAiCompletionDatasetFormatter(DatasetFormatter):
     https://platform.openai.com/docs/guides/fine-tuning/preparing-your-dataset
     """
 
-    def format(
-        self, ds: Dataset, prompt_column: str = "prompt", completion_column: str = "completion", stop: str = "<STOP>"
-    ) -> Dataset:
+    def format(self, ds: Dataset, params: Dict[str, str]) -> Dataset:
+        prompt_column = params.get("prompt_column", "prompt")
+        completion_column = params.get("completion_column", "completion")
+        stop = params.get("stop", "<STOP>")
+
         newds = ds.filter(
             lambda example: example["cot_answer"] and example["instruction"], desc="Filter out empty examples"
         )
@@ -186,14 +189,19 @@ class OpenAiCompletionDatasetFormatter(DatasetFormatter):
         return _remove_all_columns_but(newds, [prompt_column, completion_column])
 
 
-class OpenAiChatDatasetFormatter(OpenAiCompletionDatasetFormatter):
+class OpenAiChatDatasetFormatter(DatasetFormatter):
     """
     Returns the Dataset in the OpenAI Chat Fine-tuning file format with one field "messages".
     https://platform.openai.com/docs/guides/fine-tuning/preparing-your-dataset
     """
 
     def format(self, ds: Dataset, params: Dict[str, str]) -> Dataset:
-        newds = super().format(ds, **params)
+        # First format as completion dataset
+        completion_formatter = OpenAiCompletionDatasetFormatter()
+        newds = completion_formatter.format(ds, params)
+
+        prompt_column = params.get("prompt_column", "prompt")
+        completion_column = params.get("completion_column", "completion")
 
         def format_messages(row):
             messages = []
@@ -201,7 +209,10 @@ class OpenAiChatDatasetFormatter(OpenAiCompletionDatasetFormatter):
                 system_prompt = params["system_prompt"]
                 messages.append({"role": "system", "content": system_prompt})
             messages.extend(
-                [{"role": "user", "content": row["prompt"]}, {"role": "assistant", "content": row["completion"]}]
+                [
+                    {"role": "user", "content": row[prompt_column]},
+                    {"role": "assistant", "content": row[completion_column]},
+                ]
             )
             chat_row = {"messages": messages}
             return chat_row
@@ -210,7 +221,7 @@ class OpenAiChatDatasetFormatter(OpenAiCompletionDatasetFormatter):
         return _remove_all_columns_but(newds, ["messages"])
 
 
-def extract_final_answer(cot_answer: str) -> str:
+def extract_final_answer(cot_answer: str) -> Optional[str]:
     """
     Extracts the final answer from the cot_answer field
 
@@ -218,7 +229,7 @@ def extract_final_answer(cot_answer: str) -> str:
         cot_answer (str): The chain-of-thought answer string
 
     Returns:
-        str: The extracted final answer
+        Optional[str]: The extracted final answer or None if not found
     """
     if cot_answer:
         return cot_answer.split("<ANSWER>: ")[-1]
@@ -256,7 +267,10 @@ class EvalDatasetFormatter(DatasetFormatter):
         )
         keep_columns = ["question", "gold_final_answer", "context"]
         if "answer" in newds.column_names:
-            [keep_columns.append(col) for col in ["answer", "final_answer"]]
+            # Add columns to the list without using list comprehension
+            keep_columns.append("answer")
+            keep_columns.append("final_answer")
+
             newds = newds.map(
                 lambda examples: {"final_answer": [extract_final_answer(answer) for answer in examples["answer"]]},
                 batched=True,
@@ -334,6 +348,12 @@ def main():
         format_params["system_prompt"] = args.output_chat_system_prompt
 
     if args.output_format == "completion":
+        format_params["prompt_column"] = args.output_completion_prompt_column
+        format_params["completion_column"] = args.output_completion_completion_column
+        format_params["stop"] = args.output_completion_stop
+
+    # Also add these parameters for chat format
+    if args.output_format == "chat":
         format_params["prompt_column"] = args.output_completion_prompt_column
         format_params["completion_column"] = args.output_completion_completion_column
         format_params["stop"] = args.output_completion_stop

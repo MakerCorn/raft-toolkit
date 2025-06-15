@@ -6,85 +6,118 @@ import logging
 import secrets
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol, Type, TypeVar
 
+# Import tqdm for progress bars
 try:
     from tqdm import tqdm
 except ImportError:
 
-    def tqdm(iterable, *args, **kwargs):
+    def tqdm(iterable: Iterator, *args: Any, **kwargs: Any) -> Iterator:  # type: ignore[misc]
         return iterable
 
 
+# Import tenacity for retry logic
 try:
     from tenacity import retry, retry_if_exception_type, wait_exponential
 except ImportError:
+    T = TypeVar("T")
 
-    def retry(*args, **kwargs):
-        def decorator(func):
+    def retry(*args: Any, **kwargs: Any) -> Callable[[T], T]:  # type: ignore[misc]
+        def decorator(func: T) -> T:
             return func
 
         return decorator
 
-    # Create dummy classes for type safety
-    class wait_exponential:  # type: ignore
-        def __init__(self, *args, **kwargs):
+    class wait_exponential:  # type: ignore[misc]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    class retry_if_exception_type:  # type: ignore
-        def __init__(self, *args, **kwargs):
+    class retry_if_exception_type:  # type: ignore[misc]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
 
+# Import OpenAI's RateLimitError
 try:
     from openai import RateLimitError
 except ImportError:
 
-    class RateLimitError(Exception):
+    class RateLimitError(Exception):  # type: ignore[misc]
         pass
 
 
 from ..config import RaftConfig
-from ..models import DocType, DocumentChunk, ProcessingJob, ProcessingResult, QADataPoint, Question
+from ..models import DocumentChunk, ProcessingJob, ProcessingResult, QADataPoint, Question
 from ..utils.rate_limiter import create_rate_limiter_from_config, get_common_rate_limits
 from ..utils.template_loader import create_template_loader
 from .langwatch_service import create_langwatch_service
 
-try:
-    from ..clients import ChatCompleter, build_openai_client
-except ImportError:
-    # Mock implementation for demo purposes
-    class MockChatCompleter:
-        def __init__(self, client):
-            self.client = client
-            self.stats = None
 
-        def __call__(self, **kwargs):
+# Define protocol for chat completion
+class ChatCompleterStats:
+    """Statistics for chat completion."""
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    duration: float = 0.0
+
+
+class ChatCompleterBase(Protocol):
+    """Protocol for chat completion implementations."""
+
+    client: Any
+
+    def __call__(self, **kwargs) -> Any:
+        """Execute chat completion."""
+        ...
+
+    def get_stats_and_reset(self) -> ChatCompleterStats:
+        """Get usage statistics and reset counters."""
+        ...
+
+
+# Try to import real implementation
+try:
+    from ..clients import ChatCompleter as RealChatCompleter
+    from ..clients import build_openai_client as real_build_openai_client
+
+    ChatCompleter: Type = RealChatCompleter
+
+    def build_openai_client(env_prefix: str = "", **kwargs) -> Any:
+        return real_build_openai_client(env_prefix, **kwargs)
+
+except ImportError:
+    # Mock implementation for testing
+    class MockChatCompleter:
+        def __init__(self, client: Any) -> None:
+            self.client = client
+
+        def __call__(self, **kwargs) -> Any:
             class MockResponse:
-                def __init__(self):
+                def __init__(self) -> None:
                     self.choices = [MockChoice()]
 
             class MockChoice:
-                def __init__(self):
+                def __init__(self) -> None:
                     self.message = MockMessage()
 
             class MockMessage:
-                def __init__(self):
+                def __init__(self) -> None:
                     self.content = "This is a mock response for testing."
 
             return MockResponse()
 
-        def get_stats_and_reset(self):
-            class MockStats:
-                def __init__(self):
-                    self.prompt_tokens = 100
-                    self.completion_tokens = 50
-                    self.total_tokens = 150
-                    self.duration = 2.5
+        def get_stats_and_reset(self) -> ChatCompleterStats:
+            stats = ChatCompleterStats()
+            stats.prompt_tokens = 100
+            stats.completion_tokens = 50
+            stats.total_tokens = 150
+            stats.duration = 2.5
+            return stats
 
-            return MockStats()
-
-    def build_openai_client(**kwargs):
+    def build_openai_client(env_prefix: str = "", **kwargs) -> Any:
         class MockClient:
             pass
 
@@ -333,7 +366,7 @@ class LLMService:
 
     def _generate_questions(self, chunk: DocumentChunk) -> List[Question]:
         """Generate questions for a document chunk with rate limiting."""
-        return self._rate_limited_api_call(
+        return self._rate_limited_api_call(  # type: ignore[no-any-return]
             self._generate_questions_impl, chunk, estimated_tokens=self._estimate_tokens_for_questions(chunk)
         )
 
@@ -341,6 +374,7 @@ class LLMService:
         """Implementation of question generation without rate limiting."""
         start_time = time.time()
 
+        # Select appropriate question generation method based on document type
         if self.config.doctype == "api":
             questions = self._generate_api_questions(chunk)
         else:
@@ -356,13 +390,21 @@ class LLMService:
 
     def _estimate_tokens_for_questions(self, chunk: DocumentChunk) -> int:
         """Estimate tokens needed for question generation."""
-        # Rough estimation: chunk content + prompt + expected output
-        chunk_tokens = len(chunk.content.split()) * 1.3  # Words to tokens ratio
-        prompt_tokens = 100  # System prompt and instructions
-        output_tokens = self.config.questions * 15  # ~15 tokens per question
+        # Constants for token estimation
+        WORDS_TO_TOKENS_RATIO = 1.3
+        SYSTEM_PROMPT_TOKENS = 100
+        TOKENS_PER_QUESTION = 15
+
+        # Calculate components
+        chunk_tokens = len(chunk.content.split()) * WORDS_TO_TOKENS_RATIO
+        prompt_tokens = SYSTEM_PROMPT_TOKENS
+        output_tokens = self.config.questions * TOKENS_PER_QUESTION
+
         return int(chunk_tokens + prompt_tokens + output_tokens)
 
-    def _rate_limited_api_call(self, func, *args, estimated_tokens=None, **kwargs):
+    def _rate_limited_api_call(
+        self, func: Callable, *args: Any, estimated_tokens: Optional[int] = None, **kwargs: Any
+    ) -> Any:
         """
         Make a rate-limited API call with retry logic.
 
@@ -375,8 +417,10 @@ class LLMService:
         Returns:
             Result of the function call
         """
-        max_retries = self.rate_limiter.config.max_retries if self.rate_limiter.config.enabled else 1
-        base_delay = self.rate_limiter.config.base_retry_delay if self.rate_limiter.config.enabled else 1.0
+        # Get rate limiting configuration
+        rate_limiter_enabled = self.rate_limiter.config.enabled
+        max_retries = self.rate_limiter.config.max_retries if rate_limiter_enabled else 1
+        base_delay = self.rate_limiter.config.base_retry_delay if rate_limiter_enabled else 1.0
 
         for attempt in range(max_retries + 1):
             try:
@@ -392,49 +436,42 @@ class LLMService:
 
                 # Record successful response
                 self.rate_limiter.record_response(response_time, estimated_tokens)
-
                 return result
 
-            except RateLimitError as e:
+            except RateLimitError:
+                # Handle rate limit errors
                 self.rate_limiter.record_error("rate_limit")
 
                 if attempt >= max_retries:
                     logger.error(f"Rate limit exceeded after {max_retries} retries")
                     raise
 
-                # Calculate exponential backoff delay
-                if self.rate_limiter.config.exponential_backoff:
-                    delay = base_delay * (2**attempt)
-                    if self.rate_limiter.config.jitter:
-                        import random
+                # Calculate backoff delay
+                delay = self._calculate_backoff_delay(attempt, base_delay)
 
-                        delay *= 0.5 + random.random() * 0.5  # Add 0-50% jitter
-                    delay = min(delay, self.rate_limiter.config.max_retry_delay)
-                else:
-                    delay = base_delay
-
-                logger.warning(
-                    f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}), " f"retrying in {delay:.1f}s"
-                )
+                logger.warning(f"Rate limit hit (attempt {attempt + 1}/{max_retries + 1}), retrying in {delay:.1f}s")
                 time.sleep(delay)
 
             except Exception as e:
-                # Record other errors but don't retry unless configured
+                # Handle other errors
                 error_type = "server_error" if "server" in str(e).lower() else "other_error"
                 self.rate_limiter.record_error(error_type)
 
+                # Fast fail on authentication errors
                 if "auth" in str(e).lower() and self.rate_limiter.config.fail_fast_on_auth_error:
                     logger.error("Authentication error, failing fast")
                     raise
 
+                # Retry on server errors if configured
                 if (
                     error_type == "server_error"
                     and self.rate_limiter.config.retry_on_server_error
                     and attempt < max_retries
                 ):
+
                     delay = base_delay * (attempt + 1)
                     logger.warning(
-                        f"Server error (attempt {attempt + 1}/{max_retries + 1}), " f"retrying in {delay:.1f}s: {e}"
+                        f"Server error (attempt {attempt + 1}/{max_retries + 1}), retrying in {delay:.1f}s: {e}"
                     )
                     time.sleep(delay)
                     continue
@@ -444,12 +481,35 @@ class LLMService:
         # Should not reach here
         raise Exception(f"Failed after {max_retries} retries")
 
+    def _calculate_backoff_delay(self, attempt: int, base_delay: float) -> float:
+        """Calculate backoff delay with optional jitter."""
+        if not self.rate_limiter.config.exponential_backoff:
+            return float(base_delay)
+
+        # Calculate exponential backoff
+        delay = float(base_delay) * (2**attempt)
+
+        # Add jitter if configured
+        if self.rate_limiter.config.jitter:
+            import secrets
+
+            # Use cryptographically secure random for jitter
+            jitter_factor = 0.5 + (secrets.randbelow(500) / 1000.0)  # 0.5-1.0 range
+            delay *= jitter_factor
+
+        # Cap at maximum delay
+        max_delay = float(self.rate_limiter.config.max_retry_delay)
+        return min(delay, max_delay)
+
     def _generate_api_questions(self, chunk: DocumentChunk) -> List[Question]:
         """Generate questions for API documentation."""
+        # Ensure questions is an integer
+        questions_count = int(self.config.questions)
+
         messages = [
             {
                 "role": "system",
-                "content": f"You are a synthetic instruction-api pair generator. Given an API endpoint in the form of a JSON object, generate {self.config.questions} example queries of instructions a user could ask and would be answered by invoking the API call.",
+                "content": f"You are a synthetic instruction-api pair generator. Given an API endpoint in the form of a JSON object, generate {questions_count} example queries of instructions a user could ask and would be answered by invoking the API call.",
             },
             {
                 "role": "system",
@@ -460,20 +520,28 @@ class LLMService:
 
         response = self.chat_completer(model=self.config.completion_model, messages=messages)
 
-        content = response.choices[0].message.content
+        content = str(response.choices[0].message.content)
         question_texts = [q.strip() for q in content.split("\n") if q.strip() and any(c.isalpha() for c in q)]
 
-        return [Question.create(text, chunk.id) for text in question_texts]
+        # Create questions with explicit type annotation
+        questions_list: List[Question] = []
+        for text in question_texts:
+            questions_list.append(Question.create(text, chunk.id))
+
+        return questions_list
 
     def _generate_general_questions(self, chunk: DocumentChunk) -> List[Question]:
         """Generate questions for general documents."""
+        # Ensure questions is an integer
+        questions_count = int(self.config.questions)
+
         qa_template = self.prompt_templates.get(
             f"{self.config.system_prompt_key}_qa",
-            f"Generate {self.config.questions} questions based on the following context.",
+            f"Generate {questions_count} questions based on the following context.",
         )
 
         messages = [
-            {"role": "system", "content": qa_template % self.config.questions},
+            {"role": "system", "content": qa_template % questions_count},
             {
                 "role": "system",
                 "content": "The questions should be able to be answered in a few words or less. Include only the questions in your response.",
@@ -481,14 +549,22 @@ class LLMService:
             {"role": "user", "content": chunk.content},
         ]
 
+        # Ensure integer multiplication for max_tokens
+        max_tokens_value = min(25 * questions_count, 512)
+
         response = self.chat_completer(
-            model=self.config.completion_model, messages=messages, max_tokens=min(25 * self.config.questions, 512)
+            model=self.config.completion_model, messages=messages, max_tokens=max_tokens_value
         )
 
-        content = response.choices[0].message.content
+        content = str(response.choices[0].message.content)
         question_texts = [q.strip() for q in content.split("\n") if q.strip() and any(c.isalpha() for c in q)]
 
-        return [Question.create(text, chunk.id) for text in question_texts]
+        # Create questions with explicit type annotation
+        questions_list: List[Question] = []
+        for text in question_texts:
+            questions_list.append(Question.create(text, chunk.id))
+
+        return questions_list
 
     def _generate_qa_data_point(
         self,
@@ -525,7 +601,7 @@ class LLMService:
 
     def _generate_answer(self, question: str, context: str) -> str:
         """Generate an answer for a question given context with rate limiting."""
-        return self._rate_limited_api_call(
+        return self._rate_limited_api_call(  # type: ignore[no-any-return]
             self._generate_answer_impl,
             question,
             context,
@@ -536,6 +612,7 @@ class LLMService:
         """Implementation of answer generation without rate limiting."""
         start_time = time.time()
 
+        # Select appropriate answer generation method based on document type
         if self.config.doctype == "api":
             answer = self._generate_api_answer(question, context)
         else:
@@ -551,15 +628,41 @@ class LLMService:
 
     def _estimate_tokens_for_answer(self, question: str, context: str) -> int:
         """Estimate tokens needed for answer generation."""
-        question_tokens = len(question.split()) * 1.3
-        context_tokens = len(context.split()) * 1.3
-        prompt_tokens = 100  # System prompt and instructions
-        output_tokens = 150  # Expected answer length
-        return int(question_tokens + context_tokens + prompt_tokens + output_tokens)
+        # Constants for token estimation
+        WORDS_TO_TOKENS_RATIO = 1.3
+        SYSTEM_PROMPT_TOKENS = 100
+        EXPECTED_ANSWER_TOKENS = 150
+
+        # Calculate components
+        question_tokens = len(question.split()) * WORDS_TO_TOKENS_RATIO
+        context_tokens = len(context.split()) * WORDS_TO_TOKENS_RATIO
+
+        return int(question_tokens + context_tokens + SYSTEM_PROMPT_TOKENS + EXPECTED_ANSWER_TOKENS)
 
     def _generate_api_answer(self, question: str, context: str) -> str:
         """Generate answer for API question."""
-        prompt = f"{question}\nWrite a python program to call API in {context}.\n\nThe answer should follow the format: <<<domain>>> $DOMAIN \\n, <<<api_call>>>: $API_CALL \\n, <<<api_provider>>>: $API_PROVIDER \\n, <<<explanation>>>: $EXPLANATION \\n, <<<code>>>: $CODE{{}}. Here are the requirements:\\n \\n2. The $DOMAIN should be the domain of the API ('N/A' if unknown). The $API_CALL should have only 1 line of code that calls api.\\n3. The $API_PROVIDER should be the programming framework used.\\n4. $EXPLANATION should be a numbered, step-by-step explanation.\\n5. The $CODE is the python code.\\n6. Do not repeat the format in your answer."
+        # Build structured prompt for API answer generation
+        prompt_parts = [
+            question,
+            f"Write a python program to call API in {context}.",
+            "",
+            "The answer should follow the format:",
+            "<<<domain>>> $DOMAIN",
+            "<<<api_call>>>: $API_CALL",
+            "<<<api_provider>>>: $API_PROVIDER",
+            "<<<explanation>>>: $EXPLANATION",
+            "<<<code>>>: $CODE{}",
+            "",
+            "Here are the requirements:",
+            "1. The $DOMAIN should be the domain of the API ('N/A' if unknown).",
+            "2. The $API_CALL should have only 1 line of code that calls api.",
+            "3. The $API_PROVIDER should be the programming framework used.",
+            "4. $EXPLANATION should be a numbered, step-by-step explanation.",
+            "5. The $CODE is the python code.",
+            "6. Do not repeat the format in your answer.",
+        ]
+
+        prompt = "\n".join(prompt_parts)
 
         messages = [
             {"role": "system", "content": "You are a helpful API writer who can write APIs based on requirements."},
@@ -570,7 +673,8 @@ class LLMService:
             model=self.config.completion_model, messages=messages, temperature=0, max_tokens=512
         )
 
-        return response.choices[0].message.content
+        result: str = str(response.choices[0].message.content)
+        return result
 
     def _generate_general_answer(self, question: str, context: str) -> str:
         """Generate answer for general question."""
@@ -596,8 +700,10 @@ class LLMService:
             model=self.config.completion_model, messages=messages, temperature=0, max_tokens=512
         )
 
-        return response.choices[0].message.content
+        result: str = str(response.choices[0].message.content)
+        return result
 
     def get_rate_limit_statistics(self) -> Dict[str, Any]:
         """Get rate limiting statistics."""
-        return self.rate_limiter.get_statistics()
+        result: Dict[str, Any] = self.rate_limiter.get_statistics()
+        return result

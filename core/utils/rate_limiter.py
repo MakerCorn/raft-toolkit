@@ -9,9 +9,9 @@ import logging
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, Optional, Tuple
+from typing import Any, Deque, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -186,8 +186,9 @@ class RateLimiter:
             return self._token_bucket_delay(now, estimated_tokens)
         elif self.config.strategy == RateLimitStrategy.ADAPTIVE:
             return self._adaptive_delay(now, estimated_tokens)
-        else:
-            return 0.0
+
+        # This should never be reached due to enum exhaustiveness
+        raise ValueError(f"Unknown rate limit strategy: {self.config.strategy}")
 
     def _fixed_window_delay(self, now: float) -> float:
         """Calculate delay for fixed window strategy."""

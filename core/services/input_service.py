@@ -3,12 +3,10 @@ Input source service for handling multiple input types (local, S3, SharePoint).
 Integrates with existing document processing pipeline.
 """
 
-import asyncio
-import io
 import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from ..config import RaftConfig
 from ..models import DocumentChunk
@@ -73,7 +71,8 @@ class InputService:
     async def get_processing_preview(self) -> Dict[str, Any]:
         """Get a preview of what will be processed without actually processing."""
         try:
-            preview = await self.input_source.get_processing_preview()
+            preview_data = await self.input_source.get_processing_preview()
+            preview: Dict[str, Any] = dict(preview_data)  # Ensure it's a dict
 
             # Add estimated processing info
             supported_docs = preview["supported_documents"]

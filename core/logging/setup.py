@@ -16,7 +16,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, List, Optional, Union
 
 try:
     import structlog
@@ -123,25 +123,29 @@ class TraceableLoggerAdapter(ProgressLoggerAdapter):
         if not _logging_config.get("tracing_enabled", False):
             return
 
-        # Generate trace IDs if tracing libraries aren't available
+        # Generate trace IDs
         if not HAS_OPENTELEMETRY:
+            # Fallback to UUID-based tracing
             self.operation_id = operation_name
             self.trace_id = str(uuid.uuid4())[:8] if HAS_TRACING_SUPPORT else "no-trace"
             self.span_id = str(uuid.uuid4())[:8] if HAS_TRACING_SUPPORT else "no-span"
-        else:
+        elif _tracer:
             # Use OpenTelemetry if available
-            global _tracer
-            if _tracer:
-                span = _tracer.start_span(operation_name, attributes=attributes)
-                span_context = span.get_span_context()
-                self.trace_id = format(span_context.trace_id, "032x")[:8]
-                self.span_id = format(span_context.span_id, "016x")[:8]
-                self.operation_id = operation_name
+            span = _tracer.start_span(operation_name, attributes=attributes)
+            span_context = span.get_span_context()
+            self.trace_id = format(span_context.trace_id, "032x")[:8]
+            self.span_id = format(span_context.span_id, "016x")[:8]
+            self.operation_id = operation_name
 
-                # Store span in thread-local storage
-                if not hasattr(_trace_context, "spans"):
-                    _trace_context.spans = []
-                _trace_context.spans.append(span)
+            # Store span in thread-local storage
+            if not hasattr(_trace_context, "spans"):
+                _trace_context.spans = []
+            _trace_context.spans.append(span)
+        else:
+            # OpenTelemetry available but no tracer configured
+            self.operation_id = operation_name
+            self.trace_id = str(uuid.uuid4())[:8]
+            self.span_id = str(uuid.uuid4())[:8]
 
     def end_operation(self, status: str = "success", **attributes):
         """End the current traced operation."""
@@ -321,7 +325,7 @@ def setup_tracing(
     jaeger_endpoint: Optional[str] = None,
     sampling_rate: Optional[float] = None,
     console_export: bool = False,
-):
+) -> None:
     """
     Set up distributed tracing with OpenTelemetry.
 
@@ -338,21 +342,21 @@ def setup_tracing(
         return
 
     # Set up tracer provider
-    trace.set_tracer_provider(TracerProvider())
-    tracer_provider = trace.get_tracer_provider()
+    provider = TracerProvider()
+    trace.set_tracer_provider(provider)
 
     # Add console exporter if requested
     if console_export:
         console_exporter = ConsoleSpanExporter()
         span_processor = BatchSpanProcessor(console_exporter)
-        tracer_provider.add_span_processor(span_processor)
+        provider.add_span_processor(span_processor)
 
     # Add Jaeger exporter if endpoint provided
-    if jaeger_endpoint:
+    if jaeger_endpoint and isinstance(jaeger_endpoint, str):
         try:
             jaeger_exporter = JaegerExporter(endpoint=jaeger_endpoint)
             span_processor = BatchSpanProcessor(jaeger_exporter)
-            tracer_provider.add_span_processor(span_processor)
+            provider.add_span_processor(span_processor)
         except Exception as e:
             logging.warning(f"Failed to setup Jaeger exporter: {e}")
 
@@ -360,10 +364,15 @@ def setup_tracing(
     LoggingInstrumentor().instrument()
 
     # Get tracer
-    service_name = service_name or _logging_config.get("trace_service_name", "raft-toolkit")
-    _tracer = trace.get_tracer(__name__, service_name)
+    service_name_str = service_name or _logging_config.get("trace_service_name", "raft-toolkit")
+    if isinstance(service_name_str, str):
+        _tracer = trace.get_tracer(__name__, service_name_str)
+    else:
+        _tracer = trace.get_tracer(__name__, "raft-toolkit")
 
-    logging.info(f"Tracing initialized for service: {service_name}")
+    logging.info(
+        f"Tracing initialized for service: {service_name_str if isinstance(service_name_str, str) else 'raft-toolkit'}"
+    )
 
 
 def configure_logging(
@@ -371,14 +380,14 @@ def configure_logging(
     format_type: Optional[str] = None,
     output: Optional[str] = None,
     structured: Optional[bool] = None,
-    external_handler=None,
+    external_handler: Any = None,
     progress_tracking: Optional[bool] = None,
     tracing_enabled: Optional[bool] = None,
     trace_sampling_rate: Optional[float] = None,
     jaeger_endpoint: Optional[str] = None,
     trace_service_name: Optional[str] = None,
-    **context,
-):
+    **context: Any,
+) -> None:
     """
     Configure the logging system with flexible options.
 
@@ -418,13 +427,13 @@ def configure_logging(
         _logging_config["jaeger_endpoint"] = jaeger_endpoint
     if trace_service_name is not None:
         _logging_config["trace_service_name"] = trace_service_name
-    if context:
+    if context and isinstance(_logging_config["context"], dict):
         _logging_config["context"].update(context)
 
 
-def get_formatter(format_type: str = None) -> logging.Formatter:
+def get_formatter(format_type: Optional[str] = None) -> logging.Formatter:
     """Get a formatter based on the specified type."""
-    format_type = format_type or _logging_config["format"]
+    format_type = format_type or str(_logging_config["format"])
 
     if format_type == "json":
         return JSONFormatter()
@@ -440,11 +449,12 @@ def get_formatter(format_type: str = None) -> logging.Formatter:
         )
 
 
-def setup_handlers() -> list:
+def setup_handlers() -> List[logging.Handler]:
     """Set up logging handlers based on configuration."""
-    handlers = []
-    output = _logging_config["output"]
-    level = getattr(logging, _logging_config["level"])
+    handlers: List[logging.Handler] = []
+    output = str(_logging_config["output"])
+    level_name: str = str(_logging_config["level"])
+    level = getattr(logging, level_name)
 
     # Console handler
     if output in ("console", "both"):
@@ -474,7 +484,7 @@ def setup_handlers() -> list:
     return handlers
 
 
-def install_default_record_field(field: str, value: Any):
+def install_default_record_field(field: str, value: Any) -> None:
     """
     Install a default field in all log records.
 
@@ -493,7 +503,7 @@ def install_default_record_field(field: str, value: Any):
     logging.setLogRecordFactory(record_factory)
 
 
-def log_setup():
+def log_setup() -> None:
     """
     Set up the logging system based on environment and configuration.
 
@@ -537,7 +547,8 @@ def log_setup():
 
     # Set up basic logging
     root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, _logging_config["level"]))
+    level_name: str = str(_logging_config["level"])
+    root_logger.setLevel(getattr(logging, level_name))
 
     # Clear existing handlers
     for handler in root_logger.handlers[:]:
@@ -559,7 +570,7 @@ def log_setup():
     configure_third_party_loggers()
 
 
-def configure_third_party_loggers():
+def configure_third_party_loggers() -> None:
     """Configure logging levels for third-party libraries."""
     # Reduce noise from common libraries
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -570,7 +581,7 @@ def configure_third_party_loggers():
     logging.getLogger("langchain_community.utils.math").setLevel(logging.WARNING)
 
 
-def get_logger(name: str) -> Union[ProgressLoggerAdapter, TraceableLoggerAdapter]:
+def get_logger(name: str) -> Any:
     """
     Get a configured logger with progress tracking and optional tracing capabilities.
 
@@ -578,7 +589,8 @@ def get_logger(name: str) -> Union[ProgressLoggerAdapter, TraceableLoggerAdapter
         name: The name of the logger
 
     Returns:
-        A TraceableLoggerAdapter if tracing is enabled, otherwise ProgressLoggerAdapter
+        A TraceableLoggerAdapter if tracing is enabled, otherwise ProgressLoggerAdapter,
+        or a structlog logger if structured logging is enabled
     """
     base_logger = logging.getLogger(name)
 
@@ -587,15 +599,13 @@ def get_logger(name: str) -> Union[ProgressLoggerAdapter, TraceableLoggerAdapter
         return structlog.get_logger(name)
     elif _logging_config.get("tracing_enabled", False):
         # Return traceable adapter with progress tracking and tracing
-        adapter = TraceableLoggerAdapter(base_logger, _logging_config["context"])
-        return adapter
+        return TraceableLoggerAdapter(base_logger, _logging_config["context"])
     else:
         # Return enhanced adapter with progress tracking only
-        adapter = ProgressLoggerAdapter(base_logger, _logging_config["context"])
-        return adapter
+        return ProgressLoggerAdapter(base_logger, _logging_config["context"])
 
 
-def setup_external_logging(handler_func, format_type: str = "json"):
+def setup_external_logging(handler_func: Any, format_type: str = "json") -> None:
     """
     Set up integration with external logging services.
 
@@ -616,7 +626,7 @@ def setup_external_logging(handler_func, format_type: str = "json"):
     log_setup()
 
 
-def setup_logging_from_config(config_path: str):
+def setup_logging_from_config(config_path: Union[str, Path]) -> None:
     """
     Set up logging from a YAML or JSON configuration file.
 
@@ -643,7 +653,7 @@ def setup_logging_from_config(config_path: str):
 # Convenience functions for common external logging integrations
 
 
-def setup_sentry_logging(dsn: str, **kwargs):
+def setup_sentry_logging(dsn: str, **kwargs: Any) -> None:
     """
     Set up Sentry integration for error tracking.
 
@@ -672,7 +682,7 @@ def setup_sentry_logging(dsn: str, **kwargs):
         logging.warning("Sentry SDK not available. Install with: pip install sentry-sdk")
 
 
-def setup_datadog_logging(api_key: str, service_name: str = "raft-toolkit"):
+def setup_datadog_logging(api_key: str, service_name: str = "raft-toolkit") -> None:
     """
     Set up DataDog logging integration.
 

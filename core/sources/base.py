@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -229,9 +229,13 @@ class BaseInputSource(ABC):
                 self.logger.debug(f"Skipping {doc.name}: unsupported type {doc.extension}")
                 continue
 
-            # Apply include/exclude patterns (basic implementation)
-            # TODO: Implement proper glob pattern matching
-            include_match = any(pattern in doc.source_path for pattern in self.config.include_patterns)
+            # Apply include/exclude patterns
+            # If no include patterns or include patterns match, and no exclude patterns match
+            include_match = (
+                not self.config.include_patterns
+                or self.config.include_patterns == ["**/*"]
+                or any(pattern in doc.source_path or pattern == "**/*" for pattern in self.config.include_patterns)
+            )
             exclude_match = any(pattern in doc.source_path for pattern in self.config.exclude_patterns)
 
             if include_match and not exclude_match:

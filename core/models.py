@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Optional
 
 
 # Enum types
@@ -52,6 +52,7 @@ class DocumentChunk:
     source: str
     metadata: Dict[str, Any]
     created_at: datetime = field(default_factory=datetime.now)
+    embedding: Optional[List[float]] = None
 
     @classmethod
     def create(
@@ -68,6 +69,7 @@ class DocumentChunk:
             "source": self.source,
             "metadata": self.metadata,
             "created_at": self.created_at.isoformat(),
+            "embedding": self.embedding,
         }
 
     @classmethod
@@ -80,6 +82,7 @@ class DocumentChunk:
             source=data["source"],
             metadata=data["metadata"],
             created_at=created_at,
+            embedding=data.get("embedding"),
         )
 
 
@@ -115,16 +118,18 @@ class QADataPoint:
     ) -> "QADataPoint":
         """Create a new QA data point."""
         # Combine oracle and distractor contexts into single string
-        context = oracle_context
+        context_parts = [oracle_context]
         if distractor_contexts:
-            context += "\n\n" + "\n\n".join(distractor_contexts)
+            context_parts.extend(distractor_contexts)
+        context = "\n\n".join(context_parts)
 
-        # Build instruction format
-        instruction = ""
+        # Build instruction format with documents
+        instruction_parts = []
         docs = [oracle_context] + distractor_contexts
         for doc in docs:
-            instruction += f"<DOCUMENT>{doc}</DOCUMENT>\n"
-        instruction += question
+            instruction_parts.append(f"<DOCUMENT>{doc}</DOCUMENT>")
+        instruction_parts.append(question)
+        instruction = "\n".join(instruction_parts)
 
         return cls(
             id=str(uuid.uuid4()),
@@ -208,3 +213,15 @@ class ProcessingResult:
             "token_usage": self.token_usage,
             "error": self.error,
         }
+
+
+@dataclass
+class ProcessingStatistics:
+    """Statistics from processing operations."""
+
+    total_chunks: int = 0
+    total_qa_pairs: int = 0
+    processing_time: float = 0.0
+    total_tokens: int = 0
+    successful_chunks: int = 0
+    failed_chunks: int = 0

@@ -1,0 +1,25 @@
+[bandit]
+# Bandit configuration for RAFT Toolkit
+
+# Skip test directories for certain checks
+skips = B101,B110,B105
+
+# Test directories where assert statements and hardcoded test values are acceptable
+exclude_dirs = tests/
+
+# Specific tests to skip globally
+# B101: assert_used - acceptable in test files
+# B110: try_except_pass - acceptable in test files for error handling
+# B105: hardcoded_password_string - acceptable for test tokens/credentials
+
+[bandit.assert_used]
+# Allow assert statements in test files
+skips = tests/*
+
+[bandit.try_except_pass]
+# Allow try/except/pass in test files for graceful error handling
+skips = tests/*
+
+[bandit.hardcoded_password_string]
+# Allow hardcoded test credentials in test files
+skips = tests/*

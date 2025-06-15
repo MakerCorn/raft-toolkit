@@ -4,9 +4,7 @@ Amazon S3 input source implementation.
 
 import asyncio
 import re
-from datetime import datetime
-from typing import List, Optional, Tuple
-from urllib.parse import urlparse
+from typing import List, Tuple
 
 try:
     import boto3
@@ -101,7 +99,7 @@ class S3InputSource(BaseInputSource):
             if self.s3_client is None:
                 raise ValueError("S3 client is not initialized")
             s3_client = self.s3_client  # Create local reference for lambda
-            response = await asyncio.get_event_loop().run_in_executor(
+            await asyncio.get_event_loop().run_in_executor(
                 None, lambda: s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=self.prefix, MaxKeys=1)
             )
 
@@ -169,7 +167,7 @@ class S3InputSource(BaseInputSource):
 
                 # Safety check to prevent infinite loops
                 if len(documents) > 10000:  # Configurable limit
-                    self.logger.warning(f"Limiting to first 10000 objects from S3")
+                    self.logger.warning("Limiting to first 10000 objects from S3")
                     break
 
         except Exception as e:

@@ -2,7 +2,6 @@
 FastAPI web application for RAFT toolkit.
 """
 
-import asyncio
 import logging
 import os
 import tempfile
@@ -11,14 +10,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
-from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from core.config import RaftConfig, get_config
-from core.models import ChunkingStrategy, DocType, OutputFormat, OutputType
 from core.raft_engine import RaftEngine
 from core.security import SecurityConfig
 
@@ -30,8 +28,8 @@ class ProcessingRequest(BaseModel):
     """Request model for dataset processing."""
 
     # I/O Configuration
-    output_format: OutputFormat = "hf"
-    output_type: OutputType = "jsonl"
+    output_format: str = "hf"  # Will be converted to OutputFormat
+    output_type: str = "jsonl"  # Will be converted to OutputType
     output_chat_system_prompt: Optional[str] = None
     output_completion_prompt_column: str = "prompt"
     output_completion_completion_column: str = "completion"
@@ -41,8 +39,8 @@ class ProcessingRequest(BaseModel):
     p: float = Field(1.0, ge=0.0, le=1.0)
     questions: int = Field(5, ge=1, le=20)
     chunk_size: int = Field(512, ge=100, le=2048)
-    doctype: DocType = "pdf"
-    chunking_strategy: ChunkingStrategy = "semantic"
+    doctype: str = "pdf"  # Will be converted to DocType
+    chunking_strategy: str = "semantic"  # Will be converted to ChunkingStrategy
     chunking_params: Dict[str, Any] = Field(default_factory=dict)
 
     # AI Model Configuration
@@ -248,7 +246,7 @@ async def upload_file(file: UploadFile = File(...)):
 @app.post("/api/preview", response_model=PreviewResponse)
 async def get_preview(
     file_path: str,
-    doctype: DocType,
+    doctype: str,  # Will be converted to DocType
     chunk_size: int = 512,
     questions: int = 5,
     config: RaftConfig = Depends(get_raft_config),
@@ -256,7 +254,7 @@ async def get_preview(
     """Get a preview of what would be processed."""
     try:
         # Override config with request parameters
-        config.doctype = doctype
+        config.doctype = doctype  # String will be used directly
         config.chunk_size = chunk_size
         config.questions = questions
 
@@ -287,10 +285,10 @@ async def start_processing(
         # Create job ID
         job_id = str(uuid.uuid4())
 
-        # Override config with request parameters
-        config.doctype = request.doctype
-        config.output_format = request.output_format
-        config.output_type = request.output_type
+        # Override config with request parameters - using strings directly
+        config.doctype = request.doctype  # String used directly
+        config.output_format = request.output_format  # String used directly
+        config.output_type = request.output_type  # String used directly
         config.output_chat_system_prompt = request.output_chat_system_prompt
         config.output_completion_prompt_column = request.output_completion_prompt_column
         config.output_completion_completion_column = request.output_completion_completion_column
@@ -298,7 +296,7 @@ async def start_processing(
         config.p = request.p
         config.questions = request.questions
         config.chunk_size = request.chunk_size
-        config.chunking_strategy = request.chunking_strategy
+        config.chunking_strategy = request.chunking_strategy  # String used directly
         config.chunking_params = request.chunking_params
         config.completion_model = request.completion_model
         config.embedding_model = request.embedding_model

@@ -78,10 +78,10 @@ if __name__ == "__main__":
         response = completions_completer(model=model, prompt=prompt, temperature=0.02, max_tokens=8192, stop="<STOP>")
 
         try:
-            return response.choices[0].text
+            return str(response.choices[0].text)
         except Exception as e:
             print(e)
-            return response
+            return None
 
     def get_answer(input_json: Dict[str, Any]) -> Dict[str, Any]:
         """Processes the input JSON to generate an answer using the OpenAI API.
@@ -127,8 +127,9 @@ if __name__ == "__main__":
     logger.info(f"number of questions: {len(inputs)}")
     start_time = time.time()
     usage_stats = UsageStats()
-    tps = 0
-    retrying: Retrying = retry_complete.retry
+    tps: float = 0.0
+    # Access retry attribute safely
+    retrying = getattr(retry_complete, "retry", None)
     with tqdm(total=len(inputs), unit="answers") as pbar:
         if num_workers > 1:
             with ThreadPoolExecutor(num_workers) as executor:
@@ -140,12 +141,14 @@ if __name__ == "__main__":
                     stats = completions_completer.get_stats_and_reset()
                     if stats:
                         if stats.duration > 0:
-                            tps = stats.total_tokens / stats.duration
+                            tps = float(stats.total_tokens) / float(stats.duration)
                             usage_stats += stats
 
-                    retry_stats = retrying.statistics
-                    if len(retry_stats.keys()) > 0:
-                        logger.info(f"retrying stats: {retry_stats}")
+                    # Access statistics safely
+                    if retrying and hasattr(retrying, "statistics"):
+                        retry_stats = retrying.statistics
+                        if retry_stats and len(retry_stats.keys()) > 0:
+                            logger.info(f"retrying stats: {retry_stats}")
 
                     if usage_stats.duration > 0:
                         pbar.set_postfix(
@@ -162,12 +165,14 @@ if __name__ == "__main__":
                 stats = completions_completer.get_stats_and_reset()
                 if stats:
                     if stats.duration > 0:
-                        tps = stats.total_tokens / stats.duration
+                        tps = float(stats.total_tokens) / float(stats.duration)
                         usage_stats += stats
 
-                retry_stats = retrying.statistics
-                if len(retry_stats.keys()) > 0:
-                    logger.info(f"retrying stats: {retry_stats}")
+                # Access statistics safely
+                if retrying and hasattr(retrying, "statistics"):
+                    retry_stats = retrying.statistics
+                    if retry_stats and len(retry_stats.keys()) > 0:
+                        logger.info(f"retrying stats: {retry_stats}")
 
                 if usage_stats.duration > 0:
                     pbar.set_postfix({"last tok/s": tps, "avg tok/s": usage_stats.total_tokens / usage_stats.duration})

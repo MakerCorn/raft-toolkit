@@ -90,19 +90,27 @@ def main():
     args.temp_dir = temp_dir
     args.coverage_dir = str(coverage_dir)
 
-    # Try system Python first, then current python
-    python_candidates = ["/usr/bin/python3", shutil.which("python3"), shutil.which("python"), sys.executable]
+    # Try Python 3.11 first (project default), then other versions
+    python_candidates = [
+        shutil.which("python3.11"),  # Prefer Python 3.11 (project default)
+        "/usr/bin/python3.11",
+        shutil.which("python3"),
+        "/usr/bin/python3",
+        shutil.which("python"),
+        sys.executable,
+    ]
     python_cmd = None
 
     for candidate in python_candidates:
         if candidate and os.path.exists(candidate):
             # Test if pytest is available
             try:
+                # nosec B603: subprocess call is safe - testing pytest availability with known arguments
                 test_result = subprocess.run([candidate, "-m", "pytest", "--version"], capture_output=True, check=False)
                 if test_result.returncode == 0:
                     python_cmd = candidate
                     break
-            except:
+            except Exception:
                 continue
 
     if not python_cmd:

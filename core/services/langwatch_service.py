@@ -3,7 +3,6 @@ LangWatch observability service for tracking LLM interactions and performance.
 """
 
 import logging
-import time
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
 
@@ -25,8 +24,11 @@ class LangWatchService:
         if self.enabled:
             self._initialize_langwatch()
 
-    def _initialize_langwatch(self):
+    def _initialize_langwatch(self) -> None:
         """Initialize LangWatch with graceful fallback."""
+        if not self.enabled:
+            return
+
         try:
             import langwatch
 
@@ -38,12 +40,11 @@ class LangWatchService:
                 setup_kwargs["endpoint"] = self.config.langwatch_endpoint
 
             langwatch.setup(**setup_kwargs)
-
             self.langwatch = langwatch
-            logger.info("LangWatch observability initialized successfully")
 
+            logger.info("LangWatch observability initialized successfully")
             if self.config.langwatch_debug:
-                logger.info(f"LangWatch debug mode enabled")
+                logger.info("LangWatch debug mode enabled")
 
         except ImportError:
             logger.warning("LangWatch SDK not available. Install with: pip install langwatch")
@@ -66,8 +67,8 @@ class LangWatchService:
         if not self.enabled or not self.langwatch:
             yield None
         else:
+            # Create a new trace for the operation
             try:
-                # Create a new trace for the operation
                 trace = self.langwatch.trace(name=name, metadata=metadata or {})
                 self.current_trace = trace
 
@@ -107,6 +108,7 @@ class LangWatchService:
         if not self.enabled or not self.langwatch or not self.current_trace:
             yield None
         else:
+            # Create span
             try:
                 span = self.current_trace.span(name=name, type=span_type, input=input_data, metadata=metadata or {})
 
@@ -159,18 +161,20 @@ class LangWatchService:
         }
 
         with self.trace_operation("document_processing", operation_metadata) as trace:
-            if trace:
-                with self.span_operation(
-                    "chunk_documents",
-                    "workflow",
-                    input_data={
-                        "documents_count": len(set(chunk.source for chunk in chunks)),
-                        "total_chunks": len(chunks),
-                    },
-                    metadata=operation_metadata,
-                ) as span:
-                    if span:
-                        span.output = {"chunks_generated": len(chunks), "success": True}
+            if not trace:
+                return
+
+            with self.span_operation(
+                "chunk_documents",
+                "workflow",
+                input_data={
+                    "documents_count": len(set(chunk.source for chunk in chunks)),
+                    "total_chunks": len(chunks),
+                },
+                metadata=operation_metadata,
+            ) as span:
+                if span:
+                    span.output = {"chunks_generated": len(chunks), "success": True}
 
     def track_question_generation(
         self, chunk: DocumentChunk, questions: List[Question], processing_time: float, model_name: str
@@ -262,22 +266,24 @@ class LangWatchService:
         }
 
         with self.trace_operation("qa_dataset_generation", operation_metadata) as trace:
-            if trace:
-                with self.span_operation(
-                    "generate_qa_dataset",
-                    "workflow",
-                    input_data={"qa_pairs_requested": len(qa_data_points)},
-                    metadata=operation_metadata,
-                ) as span:
-                    if span:
-                        span.output = {
-                            "qa_pairs_generated": len(qa_data_points),
-                            "success": True,
-                            "dataset_size_bytes": sum(
-                                len(str(qa.question)) + len(str(qa.cot_answer)) + len(str(qa.oracle_context))
-                                for qa in qa_data_points
-                            ),
-                        }
+            if not trace:
+                return
+
+            with self.span_operation(
+                "generate_qa_dataset",
+                "workflow",
+                input_data={"qa_pairs_requested": len(qa_data_points)},
+                metadata=operation_metadata,
+            ) as span:
+                if span:
+                    span.output = {
+                        "qa_pairs_generated": len(qa_data_points),
+                        "success": True,
+                        "dataset_size_bytes": sum(
+                            len(str(qa.question)) + len(str(qa.cot_answer)) + len(str(qa.oracle_context))
+                            for qa in qa_data_points
+                        ),
+                    }
 
     def track_embedding_generation(self, chunks: List[DocumentChunk], processing_time: float, model_name: str):
         """

@@ -99,7 +99,7 @@ def set_test_env():
     """Set test environment variables."""
     test_env = {"OPENAI_API_KEY": "test-key", "COMPLETION_MODEL": "gpt-4", "EMBEDDING_MODEL": "text-embedding-ada-002"}
 
-    original_env = {}
+    original_env: dict[str, str | None] = {}
     for key, value in test_env.items():
         original_env[key] = os.environ.get(key)
         os.environ[key] = value
@@ -107,8 +107,8 @@ def set_test_env():
     yield
 
     # Restore original environment
-    for key, value in original_env.items():
-        if value is None:
+    for key, original_value in original_env.items():
+        if original_value is None:
             os.environ.pop(key, None)
         else:
-            os.environ[key] = value
+            os.environ[key] = original_value

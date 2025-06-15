@@ -9,19 +9,19 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from math import ceil
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 try:
     import pypdf
 except ImportError:
-    pypdf = None  # type: ignore
+    pypdf = None
 
 try:
     from pptx import Presentation
 except ImportError:
 
-    class Presentation:  # type: ignore
-        def __init__(self, *args, **kwargs):
+    class Presentation:  # type: ignore[misc]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
 
@@ -30,16 +30,16 @@ try:
     from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
 except ImportError:
 
-    class SemanticChunker:  # type: ignore
-        def __init__(self, *args, **kwargs):
+    class SemanticChunker:  # type: ignore[misc]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    class OpenAIEmbeddings:  # type: ignore
-        def __init__(self, *args, **kwargs):
+    class OpenAIEmbeddings:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    class AzureOpenAIEmbeddings:  # type: ignore
-        def __init__(self, *args, **kwargs):
+    class AzureOpenAIEmbeddings:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
 
@@ -47,12 +47,12 @@ try:
     from tqdm import tqdm
 except ImportError:
 
-    def tqdm(iterable, *args, **kwargs):
+    def tqdm(iterable: Any, *args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
         return iterable
 
 
 from ..config import RaftConfig
-from ..models import ChunkingStrategy, DocType, DocumentChunk
+from ..models import DocumentChunk
 from .embedding_service import create_embedding_service
 from .llm_service import LLMService
 
@@ -166,7 +166,8 @@ class DocumentService:
         if self.config.doctype == "json":
             with open(file_path, "r") as f:
                 data = json.load(f)
-            return data.get("text", str(data))
+            text_value = data.get("text", str(data))
+            return str(text_value)  # Ensure we return a string
 
         elif self.config.doctype == "pdf":
             text = ""
@@ -188,7 +189,9 @@ class DocumentService:
 
     def _extract_text_from_pptx(self, file_path: Path) -> str:
         """Extract text from PowerPoint file."""
-        prs = Presentation(file_path)
+        # Convert Path to string for compatibility with Presentation
+        file_path_str = str(file_path)
+        prs = Presentation(file_path_str)
         text_parts = []
 
         for slide in prs.slides:
@@ -217,11 +220,11 @@ class DocumentService:
         """Perform semantic chunking using embeddings."""
         params = self.config.chunking_params
         num_chunks = params.get("number_of_chunks") or ceil(len(text) / self.config.chunk_size)
-        overlap = params.get("overlap", 0)
         min_chunk_size = params.get("min_chunk_size", 0)
 
+        # Create semantic chunker with correct parameters
         text_splitter = SemanticChunker(
-            embeddings, number_of_chunks=num_chunks, chunk_overlap=overlap, min_chunk_size=min_chunk_size
+            embeddings=embeddings, number_of_chunks=num_chunks, min_chunk_size=min_chunk_size
         )
 
         chunks = text_splitter.create_documents([text])
@@ -267,10 +270,10 @@ class DocumentService:
         except ImportError:
             # Mock implementation for demo purposes
             class MockEmbeddings:
-                def embed_documents(self, texts):
+                def embed_documents(self, texts: List[str]) -> List[List[float]]:
                     return [[0.1, 0.2, 0.3] for _ in texts]
 
-                def embed_query(self, text):
+                def embed_query(self, text: str) -> List[float]:
                     return [0.1, 0.2, 0.3]
 
             return MockEmbeddings()

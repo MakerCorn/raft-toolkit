@@ -6,7 +6,6 @@ import os
 import secrets
 import string
 from pathlib import Path
-from typing import Optional, Set
 
 
 class SecurityConfig:
@@ -31,7 +30,9 @@ class SecurityConfig:
                     return False
 
             # Must be within allowed directories
-            temp_dir = Path("/tmp").resolve()
+            import tempfile
+
+            temp_dir = Path(tempfile.gettempdir()).resolve()  # Use system temp dir
             current_dir = Path.cwd().resolve()
 
             return str(path).startswith(str(temp_dir)) or str(path).startswith(str(current_dir))

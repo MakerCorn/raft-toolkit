@@ -95,7 +95,7 @@ def evaluate_aistudio(model_config, project_scope, project_scope_report, data_pa
         azure_ai_project=project_scope_report,
         evaluators={
             "similarity": SimilarityEvaluator(model_config),
-            "groundedness": GroundednessEvaluator(project_scope=project_scope),
+            "groundedness": GroundednessEvaluator(model_config=model_config, project_scope=project_scope),
         },
         evaluator_config={
             "defaults": {
@@ -131,7 +131,7 @@ def evaluate_local(model_config, project_scope, project_scope_report, data_path)
         #        RelevanceEvaluator(model_config),
         #        FluencyEvaluator(model_config),
         #        CoherenceEvaluator(model_config),
-        GroundednessEvaluator(model_config),
+        GroundednessEvaluator(model_config=model_config),
         SimilarityEvaluator(model_config),
     ]
 

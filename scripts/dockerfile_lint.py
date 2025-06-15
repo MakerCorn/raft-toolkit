@@ -88,7 +88,7 @@ class DockerfileLinter:
                 if "apt-get install" in line and "apt-get update" not in line:
                     # Check previous lines for apt-get update
                     context_lines = self.lines[max(0, i - 3) : i - 1]
-                    has_update = any("apt-get update" in l for l in context_lines)
+                    has_update = any("apt-get update" in line for line in context_lines)
                     if not has_update:
                         self.issues.append(
                             (i, "AptGetUpdate", "apt-get install should be preceded by apt-get update", line.strip())
@@ -98,7 +98,8 @@ class DockerfileLinter:
                 if "apt-get" in line and "rm -rf /var/lib/apt/lists/*" not in line:
                     # Check if it's in the same RUN block
                     if not any(
-                        "rm -rf /var/lib/apt/lists/*" in l for l in self.lines[i - 1 : min(len(self.lines), i + 5)]
+                        "rm -rf /var/lib/apt/lists/*" in line
+                        for line in self.lines[i - 1 : min(len(self.lines), i + 5)]
                     ):
                         self.issues.append(
                             (i, "AptCacheCleanup", "Consider cleaning apt cache after apt-get", line.strip())

@@ -3,24 +3,27 @@ SharePoint Online input source implementation.
 """
 
 import asyncio
-import json
-import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urljoin, urlparse
+from typing import Any, Dict, List, Tuple
+from urllib.parse import urlparse
+
+# Initialize availability flags
+REQUESTS_AVAILABLE = False
+MSAL_AVAILABLE = False
 
 try:
     import requests
-    from msal import ConfidentialClientApplication, PublicClientApplication
 
     REQUESTS_AVAILABLE = True
+except ImportError:
+    pass
+
+try:
+    from msal import ConfidentialClientApplication, PublicClientApplication
+
     MSAL_AVAILABLE = True
-except ImportError as e:
-    missing = str(e).split("'")[1]
-    if "requests" in missing:
-        REQUESTS_AVAILABLE = False
-    if "msal" in missing:
-        MSAL_AVAILABLE = False
+except ImportError:
+    pass
 
 from .base import BaseInputSource, SourceDocument, SourceValidationError
 

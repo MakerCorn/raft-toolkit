@@ -9,8 +9,6 @@ packages can be imported successfully.
 import importlib
 import subprocess
 import sys
-from pathlib import Path
-from typing import Dict, List, Tuple
 
 
 def check_pip_dependencies() -> bool:
@@ -18,6 +16,7 @@ def check_pip_dependencies() -> bool:
     print("🔍 Checking pip dependency conflicts...")
 
     try:
+        # nosec B603: subprocess call is safe - using controlled pip command with known arguments
         result = subprocess.run([sys.executable, "-m", "pip", "check"], capture_output=True, text=True, timeout=30)
 
         if result.returncode == 0:
@@ -129,6 +128,7 @@ def generate_dependency_report() -> None:
 
     try:
         # Get pip list
+        # nosec B603: subprocess call is safe - using controlled pip command with known arguments
         result = subprocess.run(
             [sys.executable, "-m", "pip", "list", "--format=json"], capture_output=True, text=True, timeout=30
         )

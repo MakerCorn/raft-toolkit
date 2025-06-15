@@ -3,8 +3,6 @@ CLI interface for RAFT toolkit using the shared core modules.
 """
 
 import argparse
-import logging
-import os
 import sys
 import time
 from pathlib import Path
@@ -17,20 +15,38 @@ try:
     from core.logging.setup import configure_logging, get_logger, log_setup, setup_sentry_logging
 except ImportError:
     # Fallback to basic logging if enhanced logging is not available
-    def log_setup():
+    from typing import Any, Optional
+
+    def log_setup() -> None:
         import logging
 
         logging.basicConfig(
             level=logging.INFO, format="%(asctime)s %(levelname)8s %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
 
-    def get_logger(name):
+    def get_logger(name: str) -> Any:
+        import logging
+
         return logging.getLogger(name)
 
-    def configure_logging(*args, **kwargs):
+    def configure_logging(
+        level: Optional[str] = None,
+        format_type: Optional[str] = None,
+        output: Optional[str] = None,
+        structured: Optional[bool] = None,
+        external_handler: Any = None,
+        progress_tracking: Optional[bool] = None,
+        tracing_enabled: Optional[bool] = None,
+        trace_sampling_rate: Optional[float] = None,
+        jaeger_endpoint: Optional[str] = None,
+        trace_service_name: Optional[str] = None,
+        **context: Any,
+    ) -> None:
         pass
 
-    def setup_sentry_logging(*args, **kwargs):
+    def setup_sentry_logging(dsn: str, **kwargs: Any) -> None:
+        import logging
+
         logging.warning("Enhanced logging not available. Sentry integration disabled.")
 
 
@@ -350,13 +366,13 @@ def show_preview(engine: RaftEngine, config: RaftConfig) -> None:
             print(f"Total Size: {preview['total_size_mb']} MB")
 
             if preview["document_types"]:
-                print(f"\nDocument Types:")
+                print("\nDocument Types:")
                 for doc_type, count in preview["document_types"].items():
                     print(f"  - {doc_type}: {count} files")
         else:
             # Legacy format for local files
             print(f"Input Path: {preview['input_path']}")
-            print(f"Document Type: {preview['doctype']}")
+            print("Document Type: {}".format(preview["doctype"]))
             print(f"Files to Process: {len(preview['files_to_process'])}")
 
             if "files_to_process" in preview and preview["files_to_process"]:
@@ -568,7 +584,7 @@ def main():
         # Display rate limiting statistics if enabled
         rate_stats = stats.get("rate_limiting", {})
         if rate_stats.get("enabled", False):
-            print(f"\nRate Limiting Statistics:")
+            print("Rate Limiting Statistics:")
             print(f"  Strategy: {rate_stats.get('strategy', 'N/A')}")
             print(f"  Total Wait Time: {rate_stats.get('total_wait_time', 0):.1f}s")
             print(f"  Rate Limit Hits: {rate_stats.get('rate_limit_hits', 0)}")
@@ -592,7 +608,7 @@ def main():
     except Exception as e:
         if logger:
             logger.set_progress("FAIL")
-            logger.error(f"Fatal error during processing", exc_info=True)
+            logger.error("Fatal error during processing", exc_info=True)
             if hasattr(logger, "end_operation"):
                 logger.end_operation("error", error_message=str(e))
         else:

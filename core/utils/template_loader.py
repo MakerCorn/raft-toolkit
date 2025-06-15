@@ -3,9 +3,8 @@ Template loading utilities for prompts used in embeddings and Q&A generation.
 """
 
 import logging
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from ..config import RaftConfig
 
@@ -20,14 +19,14 @@ class TemplateLoader:
 Default embedding prompt for document processing.
 
 Instructions for the embedding model:
-Generate a high-quality vector embedding for the following document content. 
-The embedding should capture the semantic meaning, key concepts, and contextual information 
+Generate a high-quality vector embedding for the following document content.
+The embedding should capture the semantic meaning, key concepts, and contextual information
 to enable effective similarity search and retrieval in a RAG (Retrieval-Augmented Generation) system.
 
 Document Type: {document_type}
 Content: {content}
 
-Focus on understanding the main themes, technical concepts, factual information, 
+Focus on understanding the main themes, technical concepts, factual information,
 and relationships described in the content to create meaningful embeddings.
 """.strip(),
         "gpt_qa": """You are a synthetic question-answer pair generator. Given a chunk of context about """
@@ -365,7 +364,6 @@ Answer:""",
             if template_type == "embedding":
                 # Check for embedding-specific variables
                 required_vars = ["{content}"]
-                optional_vars = ["{document_type}", "{metadata}"]
 
             elif template_type == "qa":
                 # Q&A templates should have %s for question count
