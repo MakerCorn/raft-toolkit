@@ -65,28 +65,27 @@ class LangWatchService:
         """
         if not self.enabled or not self.langwatch:
             yield None
-            return
+        else:
+            try:
+                # Create a new trace for the operation
+                trace = self.langwatch.trace(name=name, metadata=metadata or {})
+                self.current_trace = trace
 
-        try:
-            # Create a new trace for the operation
-            trace = self.langwatch.trace(name=name, metadata=metadata or {})
-            self.current_trace = trace
+                if self.config.langwatch_debug:
+                    logger.debug(f"Started LangWatch trace: {name}")
 
-            if self.config.langwatch_debug:
-                logger.debug(f"Started LangWatch trace: {name}")
+                yield trace
 
-            yield trace
-
-        except Exception as e:
-            logger.warning(f"LangWatch trace error: {e}")
-            yield None
-        finally:
-            if hasattr(self, "current_trace") and self.current_trace:
-                try:
-                    self.current_trace.deferred_send_spans()
-                except Exception as e:
-                    logger.warning(f"Error sending LangWatch spans: {e}")
-                self.current_trace = None
+            except Exception as e:
+                logger.warning(f"LangWatch trace error: {e}")
+                yield None
+            finally:
+                if hasattr(self, "current_trace") and self.current_trace:
+                    try:
+                        self.current_trace.deferred_send_spans()
+                    except Exception as e:
+                        logger.warning(f"Error sending LangWatch spans: {e}")
+                    self.current_trace = None
 
     @contextmanager
     def span_operation(
@@ -107,19 +106,18 @@ class LangWatchService:
         """
         if not self.enabled or not self.langwatch or not self.current_trace:
             yield None
-            return
+        else:
+            try:
+                span = self.current_trace.span(name=name, type=span_type, input=input_data, metadata=metadata or {})
 
-        try:
-            span = self.current_trace.span(name=name, type=span_type, input=input_data, metadata=metadata or {})
+                if self.config.langwatch_debug:
+                    logger.debug(f"Started LangWatch span: {name} (type: {span_type})")
 
-            if self.config.langwatch_debug:
-                logger.debug(f"Started LangWatch span: {name} (type: {span_type})")
+                yield span
 
-            yield span
-
-        except Exception as e:
-            logger.warning(f"LangWatch span error: {e}")
-            yield None
+            except Exception as e:
+                logger.warning(f"LangWatch span error: {e}")
+                yield None
 
     def setup_openai_tracking(self, client):
         """

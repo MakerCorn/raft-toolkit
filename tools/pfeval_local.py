@@ -222,7 +222,7 @@ if __name__ == "__main__":
         data_path=args.input,
         project_scope=project_scope,
         project_scope_report=project_scope_report,
-        score_model=args.score - model,
+        score_model=args.score_model,
         workers=args.workers,
     )
 

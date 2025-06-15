@@ -199,19 +199,19 @@ def override_config_from_args(config: RaftConfig, args: argparse.Namespace) -> R
         try:
             config.source_credentials = json.loads(args.source_credentials)
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in source-credentials: {e}")
+            print(f"Error: Invalid JSON in source-credentials: {e}")
             sys.exit(1)
     if args.source_include_patterns:
         try:
             config.source_include_patterns = json.loads(args.source_include_patterns)
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in source-include-patterns: {e}")
+            print(f"Error: Invalid JSON in source-include-patterns: {e}")
             sys.exit(1)
     if args.source_exclude_patterns:
         try:
             config.source_exclude_patterns = json.loads(args.source_exclude_patterns)
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in source-exclude-patterns: {e}")
+            print(f"Error: Invalid JSON in source-exclude-patterns: {e}")
             sys.exit(1)
     if args.source_max_file_size != 50 * 1024 * 1024:
         config.source_max_file_size = args.source_max_file_size

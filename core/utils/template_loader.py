@@ -5,7 +5,7 @@ Template loading utilities for prompts used in embeddings and Q&A generation.
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from ..config import RaftConfig
 
@@ -141,7 +141,7 @@ Answer:""",
         """Initialize template loader with configuration."""
         self.config = config
         self.templates_dir = Path(config.templates)
-        self._cache = {}
+        self._cache: Dict[str, str] = {}
 
     def load_template(self, template_name: str, template_type: str = "prompt") -> str:
         """
@@ -333,7 +333,7 @@ Answer:""",
         Returns:
             Dictionary with template types and available files
         """
-        available = {"embedding": [], "qa": [], "answer": []}
+        available: Dict[str, List[str]] = {"embedding": [], "qa": [], "answer": []}
 
         if not self.templates_dir.exists():
             return available

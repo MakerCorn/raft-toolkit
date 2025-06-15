@@ -16,8 +16,8 @@ class DockerfileLinter:
 
     def __init__(self, dockerfile_path: str):
         self.dockerfile_path = Path(dockerfile_path)
-        self.lines = []
-        self.issues = []
+        self.lines: List[str] = []
+        self.issues: List[Tuple[int, str, str, str]] = []
 
     def load_dockerfile(self) -> bool:
         """Load Dockerfile content."""
@@ -160,7 +160,7 @@ class DockerfileLinter:
         print()
 
         # Group issues by type
-        issues_by_type = {}
+        issues_by_type: Dict[str, List[Tuple[int, str, str]]] = {}
         for line_num, issue_type, message, context in self.issues:
             if issue_type not in issues_by_type:
                 issues_by_type[issue_type] = []
@@ -179,7 +179,7 @@ class DockerfileLinter:
 
     def get_summary(self) -> Dict[str, int]:
         """Get summary of issues."""
-        summary = {}
+        summary: Dict[str, int] = {}
         for _, issue_type, _, _ in self.issues:
             summary[issue_type] = summary.get(issue_type, 0) + 1
         return summary

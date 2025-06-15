@@ -13,7 +13,7 @@ class UsageStats:
         self.prompt_tokens = 0
         self.total_tokens = 0
         self.end: Optional[float] = None
-        self.duration = 0
+        self.duration: float = 0.0
         self.calls = 0
 
     def __add__(self, other: "UsageStats") -> "UsageStats":

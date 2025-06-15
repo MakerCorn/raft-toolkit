@@ -197,7 +197,7 @@ class BaseInputSource(ABC):
 
         # Calculate statistics
         total_size = sum(doc.size or 0 for doc in supported_docs)
-        type_counts = {}
+        type_counts: Dict[str, int] = {}
         for doc in supported_docs:
             ext = doc.extension.lstrip(".")
             type_counts[ext] = type_counts.get(ext, 0) + 1
