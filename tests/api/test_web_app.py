@@ -8,7 +8,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from fastapi.testclient import TestClient
+
+try:
+    from fastapi.testclient import TestClient
+except ImportError:
+    from starlette.testclient import TestClient
 
 from core.models import JobStatus
 from web.app import app, jobs
@@ -17,13 +21,7 @@ from web.app import app, jobs
 @pytest.fixture
 def client():
     """Create test client for FastAPI app."""
-    try:
-        return TestClient(app)
-    except TypeError:
-        # Handle different TestClient API versions
-        from fastapi.testclient import TestClient as FastAPITestClient
-
-        return FastAPITestClient(app=app)
+    return TestClient(app)
 
 
 @pytest.fixture
@@ -46,8 +44,7 @@ class TestHealthEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert "timestamp" in data
-        assert "version" in data
+        assert data["service"] == "raft-toolkit"
 
 
 @pytest.mark.api

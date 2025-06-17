@@ -135,6 +135,26 @@ async def health_check():
     return {"status": "healthy", "service": "raft-toolkit"}
 
 
+@app.get("/api/config")
+async def get_config_endpoint(config: RaftConfig = Depends(get_raft_config)):
+    """Get default configuration."""
+    return {
+        "output_format": config.output_format,
+        "output_type": config.output_type,
+        "doctype": config.doctype,
+        "chunking_strategy": config.chunking_strategy,
+        "chunk_size": config.chunk_size,
+        "questions": config.questions,
+        "distractors": config.distractors,
+        "workers": config.workers,
+        "embed_workers": config.embed_workers,
+        "completion_model": config.completion_model,
+        "embedding_model": config.embedding_model,
+        "system_prompt_key": config.system_prompt_key,
+        "p": config.p,
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_ui():
     """Serve the main UI."""

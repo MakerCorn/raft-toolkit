@@ -52,7 +52,7 @@ class TestRaftEngineIntegration:
         return RaftEngine(config)
 
     @patch("core.services.llm_service.build_openai_client")
-    @patch("core.services.embedding_service.build_openai_client")
+    @patch("core.clients.openai_client.build_langchain_embeddings")
     def test_end_to_end_processing(self, mock_embed_client, mock_llm_client, raft_engine, test_file):
         """Test end-to-end dataset generation."""
         # Mock LLM client
@@ -78,10 +78,10 @@ class TestRaftEngineIntegration:
             try:
                 stats = raft_engine.generate_dataset(test_file, output_dir)
 
-                # Verify statistics object is returned
-                assert isinstance(stats, ProcessingStatistics)
-                assert stats.total_chunks >= 0
-                assert stats.total_qa_pairs >= 0
+                # Verify statistics dictionary is returned
+                assert isinstance(stats, dict)
+                assert "total_qa_points" in stats
+                assert stats["total_qa_points"] >= 0
 
             except Exception as e:
                 # If processing fails, at least verify the engine is set up correctly
@@ -91,7 +91,7 @@ class TestRaftEngineIntegration:
                 assert hasattr(raft_engine, "llm_service")
 
     @patch("core.services.llm_service.build_openai_client")
-    @patch("core.services.embedding_service.build_openai_client")
+    @patch("core.clients.openai_client.build_langchain_embeddings")
     def test_processing_with_failures(self, mock_embed_client, mock_llm_client, raft_engine, test_file):
         """Test processing with simulated failures."""
         # Mock clients that fail
@@ -103,7 +103,7 @@ class TestRaftEngineIntegration:
             try:
                 stats = raft_engine.generate_dataset(test_file, output_dir)
                 # If it succeeds despite mocked failures, that's fine
-                assert isinstance(stats, ProcessingStatistics)
+                assert isinstance(stats, dict)
             except Exception:
                 # Expected to fail with mocked errors
                 pass
@@ -287,13 +287,8 @@ class TestRaftEngineIntegration:
         ]
 
         # Test that the engine can calculate statistics
-        if hasattr(raft_engine, "_calculate_statistics"):
-            stats = raft_engine._calculate_statistics(results)
-            assert isinstance(stats, ProcessingStatistics)
-        elif hasattr(raft_engine, "_calculate_stats"):
-            stats = raft_engine._calculate_stats(results)
-            assert isinstance(stats, ProcessingStatistics)
-        else:
-            # Just verify the engine has the necessary components
-            assert hasattr(raft_engine, "config")
-            assert len(results) == 3
+        processing_time = 3.5  # Total processing time
+        stats = raft_engine._calculate_stats(results, processing_time)
+        assert isinstance(stats, dict)
+        assert "total_qa_points" in stats
+        assert stats["total_qa_points"] == 2

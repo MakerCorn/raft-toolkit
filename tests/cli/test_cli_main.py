@@ -224,6 +224,9 @@ class TestShowPreview:
         mock_config = Mock()
         mock_config.questions = 5
         mock_config.distractors = 2
+        mock_config.source_type = "local"
+        mock_config.datapath = "/test/path"
+        mock_config.chunking_strategy = "semantic"
         mock_engine.config = mock_config
 
         mock_preview = {
@@ -235,7 +238,7 @@ class TestShowPreview:
         }
         mock_engine.get_processing_preview.return_value = mock_preview
 
-        show_preview(mock_engine, Path("/test/path"))
+        show_preview(mock_engine, mock_config)
 
         captured = capsys.readouterr()
         assert "RAFT PROCESSING PREVIEW" in captured.out
@@ -253,6 +256,9 @@ class TestShowPreview:
         mock_config = Mock()
         mock_config.questions = 3
         mock_config.distractors = 1
+        mock_config.source_type = "local"
+        mock_config.datapath = "/test/path"
+        mock_config.chunking_strategy = "semantic"
         mock_engine.config = mock_config
 
         # Create many files to test truncation
@@ -266,7 +272,7 @@ class TestShowPreview:
         }
         mock_engine.get_processing_preview.return_value = mock_preview
 
-        show_preview(mock_engine, Path("/test/path"))
+        show_preview(mock_engine, mock_config)
 
         captured = capsys.readouterr()
         assert "file0.pdf" in captured.out
@@ -278,10 +284,13 @@ class TestShowPreview:
     def test_show_preview_error(self, capsys):
         """Test preview with engine error."""
         mock_engine = Mock(spec=RaftEngine)
+        mock_config = Mock()
+        mock_config.source_type = "local"
+        mock_config.datapath = "/test/path"
         mock_engine.get_processing_preview.side_effect = Exception("Preview error")
 
         with pytest.raises(SystemExit):
-            show_preview(mock_engine, Path("/test/path"))
+            show_preview(mock_engine, mock_config)
 
 
 @pytest.mark.cli
@@ -293,6 +302,8 @@ class TestValidateOnly:
         """Test successful validation."""
         mock_engine = Mock(spec=RaftEngine)
         mock_config = Mock()
+        mock_config.source_type = "local"
+        mock_config.datapath = "/test/input"
         mock_config.output = "/test/output"
         mock_config.doctype = "pdf"
         mock_config.output_format = "hf"
@@ -300,7 +311,7 @@ class TestValidateOnly:
         mock_engine.config = mock_config
         mock_engine.validate_inputs.return_value = None  # No exception
 
-        validate_only(mock_engine, Path("/test/input"))
+        validate_only(mock_engine, mock_config)
 
         captured = capsys.readouterr()
         assert "Configuration and inputs are valid!" in captured.out
@@ -313,10 +324,13 @@ class TestValidateOnly:
     def test_validate_only_error(self, capsys):
         """Test validation with error."""
         mock_engine = Mock(spec=RaftEngine)
+        mock_config = Mock()
+        mock_config.source_type = "local"
+        mock_config.datapath = "/test/input"
         mock_engine.validate_inputs.side_effect = ValueError("Validation failed")
 
         with pytest.raises(SystemExit):
-            validate_only(mock_engine, Path("/test/input"))
+            validate_only(mock_engine, mock_config)
 
 
 @pytest.mark.cli
@@ -347,10 +361,11 @@ class TestMainFunction:
                         main()
 
                         mock_show_preview.assert_called_once()
-                        # Check that show_preview was called with the engine and some path
+                        # Check that show_preview was called with the engine and config
                         call_args = mock_show_preview.call_args[0]
-                        assert len(call_args) == 2  # engine and path
-                        assert call_args[1] == test_file or str(call_args[1]) == str(test_file)
+                        assert len(call_args) == 2  # engine and config
+                        assert call_args[0] == mock_engine  # First argument should be engine
+                        assert call_args[1] == mock_config  # Second argument should be config
 
     @pytest.mark.cli
     def test_main_validate_mode(self, temp_directory):
@@ -390,6 +405,7 @@ class TestMainFunction:
                 with patch("cli.main.RaftEngine") as mock_engine_class:
 
                     mock_config = Mock()
+                    mock_config.source_type = "local"
                     mock_config.datapath = test_file
                     mock_config.output = str(output_dir)
                     mock_config.doctype = "pdf"
@@ -399,22 +415,19 @@ class TestMainFunction:
 
                     mock_engine = Mock()
                     mock_engine.validate_inputs.return_value = None
+                    mock_engine.generate_dataset.return_value = {
+                        "total_qa_points": 10,
+                        "successful_chunks": 5,
+                        "failed_chunks": 0,
+                        "avg_time_per_chunk": 2.5,
+                        "token_usage": {"tokens_per_second": 50.0, "total_tokens": 1000},
+                    }
 
                     # Make async methods return coroutines
                     async def mock_validate_input_source():
                         return None
 
-                    async def mock_generate_dataset(input_path, output_path):
-                        return {
-                            "total_qa_points": 10,
-                            "successful_chunks": 5,
-                            "failed_chunks": 0,
-                            "avg_time_per_chunk": 2.5,
-                            "token_usage": {"tokens_per_second": 50.0, "total_tokens": 1000},
-                        }
-
                     mock_engine.validate_input_source = mock_validate_input_source
-                    mock_engine.generate_dataset = mock_generate_dataset
                     mock_engine_class.return_value = mock_engine
 
                     main()
