@@ -559,7 +559,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Testing Infrastructure
 - **🧪 Complete test suite** with multiple categories:
-  - Unit tests across Python versions (3.9, 3.10, 3.11)
+  - Unit tests across Python versions (3.11, 3.12)
   - Integration tests with service dependencies
   - API tests with web interface validation
   - CLI tests for command-line functionality
@@ -640,7 +640,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Updated Core Dependencies
 - **Docker**: Updated base images to latest security patches
-- **Python**: Support for Python 3.9, 3.10, and 3.11
+- **Python**: Support for Python 3.11, 3.12
 - **FastAPI**: Latest version with enhanced security features
 
 ### 🔍 Quality Assurance

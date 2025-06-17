@@ -15,12 +15,12 @@ The RAFT Toolkit has been successfully configured to use Python 3.11 as the defa
 
 #### pyproject.toml
 - **Updated minimum Python requirement**: `requires-python = ">=3.11"`
-- **Updated Python classifiers**: Now supports Python 3.11, 3.12, 3.13
-- **Updated Black target versions**: `target-version = ['py311', 'py312', 'py313']`
+- **Updated Python classifiers**: Now supports Python 3.11, 3.12
+- **Updated Black target versions**: `target-version = ['py311', 'py312']`
 - **Updated mypy Python version**: `python_version = "3.11"`
 
 #### GitHub Actions Workflows
-- **test.yml**: Updated matrix to test Python 3.11, 3.12, 3.13
+- **test.yml**: Updated matrix to test Python 3.11, 3.12
 - **build.yml**: Already using Python 3.11 ✅
 - **release.yml**: Already using Python 3.11 ✅
 - **security.yml**: Already using Python 3.11 ✅
@@ -85,7 +85,7 @@ raft-toolkit/
 ### 3. **Future-Proofing**
 - Python 3.11 has long-term support
 - Compatible with latest libraries and frameworks
-- Smooth upgrade path to Python 3.12/3.13
+- Smooth upgrade path to Python 3.12
 
 ### 4. **Testing Reliability**
 - Consistent test execution environment

@@ -325,7 +325,7 @@ python tools/eval.py --model ft:gpt-3.5-turbo:suffix --question-file eval.jsonl
 ### Prerequisites
 
 #### 🔧 Core Requirements
-- **Python 3.9+** (3.11 recommended for best performance)
+- **Python 3.11 or 3.12** (3.11 recommended for best performance)
 - **OpenAI API key** (or Azure OpenAI credentials, or Ollama for local models)
 - **4GB+ RAM** (8GB+ recommended for large documents)
 - **10GB+ disk space** (for datasets and temporary files)
@@ -409,7 +409,7 @@ docker compose up -d
 
 **Minimum System Requirements:**
 - **OS**: Linux, macOS, or Windows with WSL2
-- **Python**: 3.9+ (3.11+ recommended for optimal performance)  
+- **Python**: 3.11 or 3.12 (3.11+ recommended for optimal performance)  
 - **Memory**: 4GB RAM (8GB+ for large document processing)
 - **Storage**: 10GB available disk space
 - **Network**: Internet access for AI model APIs
@@ -1974,7 +1974,7 @@ The project includes comprehensive CI/CD pipelines:
 **Test Pipeline**:
 - 🧪 **Comprehensive Testing**: Unit, integration, API, CLI, Docker tests
 - 📊 **Coverage Reporting**: Codecov integration with detailed metrics
-- 🐍 **Multi-Python Support**: Testing on Python 3.9, 3.10, 3.11
+- 🐍 **Multi-Python Support**: Testing on Python 3.11, 3.12
 - ⚡ **Parallel Execution**: Optimized test execution with dependency management
 
 **Security Pipeline**:
@@ -2046,7 +2046,7 @@ The RAFT Toolkit now includes a robust, fully-automated testing and release infr
 - **43/43 unit tests passing**: All unit test failures have been resolved
 - **Fixed critical test issues**: Mock paths, environment isolation, token caching
 - **Cross-platform testing**: Linux, macOS, and Windows support
-- **Multi-Python version testing**: Python 3.9, 3.10, and 3.11
+- **Multi-Python version testing**: Python 3.11 and 3.12
 
 **🚀 Automated Release Pipeline**
 - **Tag-triggered releases**: Create releases by pushing version tags
@@ -2076,32 +2076,3 @@ git push origin v1.0.2
 ```
 
 See [Release Management Guide](docs/RELEASES.md) for the complete release management guide.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-**Development Setup:**
-```bash
-# Clone and setup
-git clone https://github.com/your-org/raft-toolkit.git
-cd raft-toolkit
-
-# Install development dependencies
-pip install -r requirements-test.txt
-
-# Run tests
-python run_tests.py --coverage
-
-# Run code quality checks
-flake8 .
-black --check .
-isort --check-only .
-
-# Pre-commit hooks (optional)
-pre-commit install
-```
-
-## 📄 License
-
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).

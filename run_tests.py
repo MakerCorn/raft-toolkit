@@ -90,10 +90,12 @@ def main():
     args.temp_dir = temp_dir
     args.coverage_dir = str(coverage_dir)
 
-    # Try Python 3.11 first (project default), then other versions
+    # Try Python 3.11 first (project default), then 3.12
     python_candidates = [
         shutil.which("python3.11"),  # Prefer Python 3.11 (project default)
         "/usr/bin/python3.11",
+        shutil.which("python3.12"),
+        "/usr/bin/python3.12",
         shutil.which("python3"),
         "/usr/bin/python3",
         shutil.which("python"),

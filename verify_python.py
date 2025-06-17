@@ -14,11 +14,11 @@ def main():
     print(f"  Architecture: {platform.architecture()}")
     print(f"  Executable: {sys.executable}")
 
-    # Check if we're running Python 3.11+
-    if sys.version_info >= (3, 11):
-        print("✅ Python 3.11+ detected - RAFT Toolkit requirements met")
+    # Check if we're running Python 3.11 or 3.12
+    if (sys.version_info >= (3, 11)) and (sys.version_info < (3, 13)):
+        print("✅ Python 3.11 or 3.12 detected - RAFT Toolkit requirements met")
     else:
-        print("❌ Python 3.11+ required for RAFT Toolkit")
+        print("❌ Python 3.11 or 3.12 required for RAFT Toolkit")
         return 1
 
     # Test basic imports
