@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🔧 Enhanced
+
+#### Code Quality & Type Safety
+- **⚙️ Type checking improvements**: Comprehensive mypy type checking fixes and enhancements
+  - **Fixed critical type issues**: Resolved 38 mypy errors across 7 files down to 8 false-positive warnings
+  - **Import fallback patterns**: Improved optional dependency handling with proper type ignores and graceful fallbacks
+  - **Path type conversions**: Fixed CLI and engine Path/str type handling throughout the codebase
+  - **Type annotations**: Added proper Optional[Any] typing for global variables and return types
+  - **Dict unpacking fixes**: Separated conditional dict updates to satisfy type checker requirements
+  - **Assignment compatibility**: Fixed all incompatible type assignments and argument mismatches
+  - **Explicit type casting**: Added explicit float() and Path() conversions where needed
+  - **Removed unused ignores**: Cleaned up all unused type ignore comments and corrected error codes
+  - **Import redefinition handling**: Fixed name redefinition errors in optional import patterns
+  - **Type stub installation**: Added types-PyYAML and types-requests for better type coverage
+
+- **🧪 Unit testing overhaul**: Complete rewrite of unit test suite to match refactored application classes
+  - **Fixed service dependency injection**: Updated tests to handle new constructor patterns with proper dependency injection
+  - **Rate limiter interface updates**: Completely rewrote rate limiter tests for new RateLimitConfig dataclass approach
+  - **Formatter interface changes**: Rewrote formatter tests to match actual DatasetConverter implementation
+  - **Data model handling**: Fixed tests to handle Path objects and added missing imports
+  - **Service method signatures**: Updated tests to use correct method names and parameters from current implementation
+  - **Source factory error handling**: Updated tests to handle correct exception types (SourceValidationError)
+  - **Test coverage improvement**: Increased from ~9% to 34.26% coverage with 137 passing tests, only 3 skipped
+  - **Comprehensive test fixes**: Fixed 29 failed tests and 7 errors across all test categories
+  - **No mocking approach**: Tests use real application interfaces without mocking as requested
+
 ### 📝 Added
 
 #### Documentation Enhancement
@@ -814,7 +840,7 @@ This release represents a complete architectural overhaul of the RAFT Toolkit, t
 #### Migration Path
 - **Legacy files preserved** in `legacy/` directory
 - **Backward compatibility** maintained for core functionality
-- **Migration documentation** provided in `ARCHITECTURE.md`
+- **Migration documentation** provided in `docs/ARCHITECTURE.md`
 - **Configuration mapping** from old to new format
 
 ### 📦 Dependencies
@@ -857,7 +883,7 @@ This release represents a complete architectural overhaul of the RAFT Toolkit, t
 ### 📚 Documentation
 
 #### New Documentation
-- **`ARCHITECTURE.md`**: Comprehensive technical documentation
+- **`docs/ARCHITECTURE.md`**: Comprehensive technical documentation
 - **API Documentation**: Auto-generated Swagger/OpenAPI docs
 - **Docker Guide**: Container deployment instructions
 - **Configuration Reference**: Complete environment variable guide

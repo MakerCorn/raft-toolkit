@@ -7,8 +7,8 @@ raft-toolkit/
 ├── 📋 Documentation
 │   ├── README.md              # Main project documentation
 │   ├── CHANGELOG.md           # Version history and changes
-│   ├── ARCHITECTURE.md        # Technical architecture details
-│   └── PROJECT_STRUCTURE.md   # This file
+│   ├── docs/ARCHITECTURE.md        # Technical architecture details
+│   └── docs/PROJECT_STRUCTURE.md   # This file
 │
 ├── 🚀 Application Entry Points
 │   ├── raft.py                # CLI application entry point
@@ -73,7 +73,7 @@ raft-toolkit/
 │   ├── run_tests.py       # Test runner script
 │   ├── pytest.ini        # Pytest configuration
 │   ├── requirements-test.txt # Test dependencies
-│   └── TESTING.md         # Testing documentation
+│   └── docs/TESTING.md         # Testing documentation
 │
 ├── 🔧 Tools & Legacy
 │   ├── tools/               # Standalone tools

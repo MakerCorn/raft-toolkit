@@ -1,0 +1,10 @@
+This is a sample text document for testing the RAFT toolkit.
+
+The document contains multiple paragraphs to test chunking functionality.
+Each paragraph should be processed separately to generate questions and answers.
+
+This paragraph discusses the importance of retrieval-augmented fine-tuning.
+RAFT combines the benefits of retrieval systems with fine-tuned language models.
+
+The final paragraph explains how RAFT works in practice.
+Documents are chunked, questions are generated, and models are trained on the resulting dataset.

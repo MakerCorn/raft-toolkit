@@ -20,7 +20,7 @@ logs/
 # Temporary files
 *.log
 *.tmp
-test_*
+test_*.jsonl
 test_part_*.jsonl
 *_test.pdf
 config_test.pdf

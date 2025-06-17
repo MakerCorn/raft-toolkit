@@ -612,4 +612,4 @@ For web interface specific issues:
 - [Main Documentation](../README.md)
 - [API Documentation](http://localhost:8000/docs) (when server running)
 - [Tools Documentation](../tools/README.md)
-- [Testing Guide](../TESTING.md)
+- [Testing Guide](TESTING.md)

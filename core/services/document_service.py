@@ -18,9 +18,12 @@ except ImportError:
 
 try:
     from pptx import Presentation
-except ImportError:
 
-    class Presentation:  # type: ignore[misc]
+    HAS_PPTX = True
+except ImportError:
+    HAS_PPTX = False
+
+    class Presentation:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
@@ -28,9 +31,12 @@ except ImportError:
 try:
     from langchain_experimental.text_splitter import SemanticChunker
     from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
-except ImportError:
 
-    class SemanticChunker:  # type: ignore[misc]
+    HAS_LANGCHAIN = True
+except ImportError:
+    HAS_LANGCHAIN = False
+
+    class SemanticChunker:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
@@ -45,9 +51,12 @@ except ImportError:
 
 try:
     from tqdm import tqdm
-except ImportError:
 
-    def tqdm(iterable: Any, *args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+
+    def tqdm(iterable: Any, *args: Any, **kwargs: Any) -> Any:
         return iterable
 
 

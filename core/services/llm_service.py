@@ -13,27 +13,30 @@ try:
     from tqdm import tqdm
 except ImportError:
 
-    def tqdm(iterable: Iterator, *args: Any, **kwargs: Any) -> Iterator:  # type: ignore[misc]
+    def tqdm(iterable: Iterator, *args: Any, **kwargs: Any) -> Iterator:
         return iterable
 
 
 # Import tenacity for retry logic
 try:
     from tenacity import retry, retry_if_exception_type, wait_exponential
+
+    HAS_TENACITY = True
 except ImportError:
+    HAS_TENACITY = False
     T = TypeVar("T")
 
-    def retry(*args: Any, **kwargs: Any) -> Callable[[T], T]:  # type: ignore[misc]
+    def retry(*args: Any, **kwargs: Any) -> Callable[[T], T]:  # type: ignore[no-redef]
         def decorator(func: T) -> T:
             return func
 
         return decorator
 
-    class wait_exponential:  # type: ignore[misc]
+    class wait_exponential:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    class retry_if_exception_type:  # type: ignore[misc]
+    class retry_if_exception_type:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
@@ -41,9 +44,12 @@ except ImportError:
 # Import OpenAI's RateLimitError
 try:
     from openai import RateLimitError
-except ImportError:
 
-    class RateLimitError(Exception):  # type: ignore[misc]
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
+    class RateLimitError(Exception):  # type: ignore[no-redef]
         pass
 
 
@@ -495,11 +501,11 @@ class LLMService:
 
             # Use cryptographically secure random for jitter
             jitter_factor = 0.5 + (secrets.randbelow(500) / 1000.0)  # 0.5-1.0 range
-            delay *= jitter_factor
+            delay = float(delay * jitter_factor)
 
         # Cap at maximum delay
         max_delay = float(self.rate_limiter.config.max_retry_delay)
-        return min(delay, max_delay)
+        return float(min(delay, max_delay))
 
     def _generate_api_questions(self, chunk: DocumentChunk) -> List[Question]:
         """Generate questions for API documentation."""

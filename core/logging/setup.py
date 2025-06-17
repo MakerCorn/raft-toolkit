@@ -50,13 +50,10 @@ try:
 except ImportError:
     HAS_OPENTELEMETRY = False
 
-try:
-    import threading
-    import uuid
+import threading
+import uuid
 
-    HAS_TRACING_SUPPORT = True
-except ImportError:
-    HAS_TRACING_SUPPORT = False
+HAS_TRACING_SUPPORT = True
 
 # Global configuration
 _logging_config = {
@@ -105,7 +102,9 @@ class ProgressLoggerAdapter(logging.LoggerAdapter):
             msg = f"[{self.progress:>4}] {msg}"
 
         extra = kwargs.setdefault("extra", {})
-        extra.update({"raft_progress": self.progress, "raft_context": self.context.copy(), **self.extra})
+        extra.update({"raft_progress": self.progress, "raft_context": self.context.copy()})
+        if self.extra:
+            extra.update(self.extra)
         return msg, kwargs
 
 
@@ -127,8 +126,8 @@ class TraceableLoggerAdapter(ProgressLoggerAdapter):
         if not HAS_OPENTELEMETRY:
             # Fallback to UUID-based tracing
             self.operation_id = operation_name
-            self.trace_id = str(uuid.uuid4())[:8] if HAS_TRACING_SUPPORT else "no-trace"
-            self.span_id = str(uuid.uuid4())[:8] if HAS_TRACING_SUPPORT else "no-span"
+            self.trace_id = str(uuid.uuid4())[:8]
+            self.span_id = str(uuid.uuid4())[:8]
         elif _tracer:
             # Use OpenTelemetry if available
             span = _tracer.start_span(operation_name, attributes=attributes)
@@ -191,9 +190,10 @@ class TraceableLoggerAdapter(ProgressLoggerAdapter):
                 "trace_id": self.trace_id,
                 "span_id": self.span_id,
                 "operation_id": self.operation_id,
-                **self.extra,
             }
         )
+        if self.extra:
+            extra.update(self.extra)
         return msg, kwargs
 
 

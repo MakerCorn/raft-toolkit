@@ -200,7 +200,10 @@ class RaftEngine:
 
         # Legacy local file handling
         if data_path is None:
-            data_path = self.config.datapath
+            config_datapath = self.config.datapath
+            if config_datapath is None:
+                raise ValueError("No data path specified")
+            data_path = Path(config_datapath) if isinstance(config_datapath, str) else config_datapath
 
         # Ensure data_path is a Path object
         if isinstance(data_path, str):

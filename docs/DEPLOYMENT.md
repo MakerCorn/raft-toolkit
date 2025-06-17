@@ -11,11 +11,22 @@ This guide covers deployment options from local development to production cloud 
 - [🏠 Local Development](#-local-development)
 - [🐳 Docker Deployment](#-docker-deployment)
 - [☸️ Kubernetes Deployment](#️-kubernetes-deployment)
+- [🚀 Advanced Deployment Patterns](#-advanced-deployment-patterns)
+  - [Multi-Target Docker Builds](#multi-target-docker-builds)
+  - [Production Environment Configuration](#production-environment-configuration)
+  - [Enhanced Monitoring & Observability](#enhanced-monitoring--observability)
+  - [Advanced Security Configuration](#advanced-security-configuration)
+  - [Multi-Cloud Kubernetes Quick Deploy](#multi-cloud-kubernetes-quick-deploy)
 - [☁️ Cloud Platforms](#️-cloud-platforms)
   - [AWS Deployment](#aws-deployment)
   - [Azure Deployment](#azure-deployment)
   - [Google Cloud Deployment](#google-cloud-deployment)
 - [🔒 Security Considerations](#-security-considerations)
+- [🔄 CI/CD Integration](#-cicd-integration)
+  - [GitHub Actions Workflows](#github-actions-workflows)
+  - [Environment Variables for CI/CD](#environment-variables-for-cicd)
+  - [Pipeline Configuration Examples](#pipeline-configuration-examples)
+  - [Testing & Release Infrastructure](#testing--release-infrastructure)
 - [📊 Monitoring & Logging](#-monitoring--logging)
 - [🔧 Troubleshooting](#-troubleshooting)
 
@@ -410,6 +421,176 @@ kubectl scale deployment raft-toolkit --replicas=5 -n raft-toolkit
 
 ---
 
+## 🚀 Advanced Deployment Patterns
+
+### Multi-Target Docker Builds
+
+RAFT Toolkit supports multiple build targets optimized for different use cases:
+
+```bash
+# Production deployment
+docker build --target production -t raft-toolkit:prod .
+
+# Development with debugging
+docker build --target development -t raft-toolkit:dev .
+
+# CLI-only lightweight image
+docker build --target cli -t raft-toolkit:cli .
+
+# Testing environment
+docker build --target testing -t raft-toolkit:test .
+```
+
+### Production Environment Configuration
+
+**Production `.env`:**
+```bash
+# Core Configuration
+OPENAI_API_KEY=your_production_api_key
+RAFT_ENV=production
+LOG_LEVEL=INFO
+
+# Web Server
+WEB_HOST=0.0.0.0
+WEB_PORT=8000
+WEB_WORKERS=4
+
+# Database
+REDIS_URL=redis://redis:6379
+
+# Security
+CORS_ORIGINS=https://your-domain.com
+ENABLE_AUTH=true
+JWT_SECRET=your_jwt_secret
+
+# Monitoring
+ENABLE_METRICS=true
+METRICS_PORT=9090
+
+# Storage
+UPLOAD_PATH=/app/uploads
+OUTPUT_PATH=/app/outputs
+MAX_FILE_SIZE=100MB
+```
+
+### Enhanced Monitoring & Observability
+
+**Health Checks:**
+```bash
+# Application health
+curl http://localhost:8000/health
+
+# Detailed metrics
+curl http://localhost:8000/metrics
+
+# System status
+docker compose exec raft-toolkit python -c "
+import sys
+from core.config import RaftConfig
+config = RaftConfig()
+print(f'Status: OK')
+print(f'Version: {config.version}')
+print(f'Environment: {config.env}')
+"
+```
+
+### Advanced Security Configuration
+
+**Container Security:**
+```bash
+# Run security scan
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $(pwd):/code aquasec/trivy fs /code
+
+# Check for vulnerabilities in image
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy image raft-toolkit:latest
+```
+
+**Network Security:**
+```yaml
+# docker-compose.security.yml
+version: '3.8'
+networks:
+  raft-network:
+    driver: bridge
+    internal: true
+  web-network:
+    driver: bridge
+
+services:
+  raft-toolkit:
+    networks:
+      - raft-network
+      - web-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+```
+
+### Production Deployment Patterns
+
+**Docker Compose Production Setup:**
+```bash
+# Production stack with Redis and monitoring
+docker compose -f docker-compose.yml up -d
+
+# Development with hot reload
+docker compose -f docker-compose.dev.yml up -d
+
+# Testing environment
+docker compose -f docker-compose.test.yml up
+```
+
+**Single Container Production:**
+```bash
+# Build production image
+docker build --target production -t raft-toolkit:latest .
+
+# Run with environment file
+docker run -d \
+  --name raft-toolkit \
+  --env-file .env \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/outputs:/app/outputs \
+  raft-toolkit:latest
+```
+
+### Multi-Cloud Kubernetes Quick Deploy
+
+For production deployments, RAFT Toolkit supports Kubernetes across major cloud providers:
+
+```bash
+# Azure Kubernetes Service (AKS)
+export OPENAI_API_KEY="your-openai-api-key"
+./k8s/scripts/deploy-aks.sh
+
+# Amazon Elastic Kubernetes Service (EKS)  
+export OPENAI_API_KEY="your-openai-api-key"
+./k8s/scripts/deploy-eks.sh
+
+# Google Kubernetes Engine (GKE)
+export OPENAI_API_KEY="your-openai-api-key"
+export PROJECT_ID="your-gcp-project-id"
+./k8s/scripts/deploy-gks.sh
+```
+
+**Kubernetes Features:**
+- **🔄 Auto-scaling**: Horizontal and vertical pod autoscaling
+- **🛡️ Security**: Non-root containers, network policies, RBAC
+- **📊 Monitoring**: Health checks, Prometheus metrics, logging
+- **💾 Storage**: Persistent volumes for input/output data
+- **🌐 Ingress**: Load balancing and SSL termination
+- **🔧 Configuration**: Environment-based config management
+
+See the complete [Kubernetes Deployment Guide](docs/KUBERNETES.md) for detailed instructions.
+
+---
+
 ## ☁️ Cloud Platforms
 
 ### AWS Deployment
@@ -749,6 +930,126 @@ OAUTH_CONFIG = {
     "token_url": "https://auth.company.com/oauth/token"
 }
 ```
+
+---
+
+## 🔄 CI/CD Integration
+
+### GitHub Actions Workflows
+
+The project includes comprehensive CI/CD pipelines:
+
+**Build Pipeline** (`Build → Test → Release`):
+- 🔍 **Code Quality**: Linting with flake8, black, isort
+- 🏗️ **Multi-Target Builds**: Production, development, CLI, testing images
+- 🔒 **Security Scanning**: Bandit, Safety, Trivy vulnerability scans
+- 📦 **Container Registry**: Automatic publishing to GitHub Container Registry
+
+**Test Pipeline**:
+- 🧪 **Comprehensive Testing**: Unit, integration, API, CLI, Docker tests
+- 📊 **Coverage Reporting**: Codecov integration with detailed metrics
+- 🐍 **Multi-Python Support**: Testing on Python 3.11, 3.12
+- ⚡ **Parallel Execution**: Optimized test execution with dependency management
+
+**Security Pipeline**:
+- 🛡️ **Dependency Scanning**: Daily automated vulnerability checks
+- 📋 **License Compliance**: Automated license compatibility verification
+- 🔄 **Auto-Updates**: Automated dependency update PRs
+
+### Environment Variables for CI/CD
+
+```bash
+# Test configuration
+TEST_OUTPUT_DIR=/workspace/test-results
+TEST_TEMP_DIR=/workspace/temp
+TEST_COVERAGE_DIR=/workspace/coverage
+
+# Docker configuration
+HOST_TEST_RESULTS_DIR=/tmp/ci-results
+HOST_COVERAGE_DIR=/tmp/ci-coverage
+HOST_TEMP_DIR=/tmp/ci-temp
+
+# Security scanning
+ENABLE_SECURITY_SCANS=true
+UPLOAD_SARIF=true
+```
+
+### Pipeline Configuration Examples
+
+**GitLab CI**:
+```yaml
+test:
+  script:
+    - pip install -r requirements-test.txt
+    - python run_tests.py --coverage --output-dir ./test-results
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: test-results/coverage.xml
+```
+
+**Jenkins**:
+```groovy
+pipeline {
+    agent any
+    environment {
+        TEST_OUTPUT_DIR = "${WORKSPACE}/test-results"
+        TEST_TEMP_DIR = "/tmp/jenkins-${BUILD_ID}"
+    }
+    stages {
+        stage('Test') {
+            steps {
+                sh 'python run_tests.py --coverage'
+                publishTestResults testResultsPattern: 'test-results/junit.xml'
+                publishCoverage adapters: [coberturaAdapter('test-results/coverage.xml')]
+            }
+        }
+    }
+}
+```
+
+### Testing & Release Infrastructure
+
+#### Recent Major Improvements (v1.0.1)
+
+The RAFT Toolkit now includes a robust, fully-automated testing and release infrastructure:
+
+**✅ Complete Test Suite Reliability**
+- **43/43 unit tests passing**: All unit test failures have been resolved
+- **Fixed critical test issues**: Mock paths, environment isolation, token caching
+- **Cross-platform testing**: Linux, macOS, and Windows support
+- **Multi-Python version testing**: Python 3.11 and 3.12
+
+**🚀 Automated Release Pipeline**
+- **Tag-triggered releases**: Create releases by pushing version tags
+- **Build system fixes**: Resolved package discovery and build configuration issues
+- **GitHub Actions integration**: Automated building, testing, and publishing
+- **Release tools**: Interactive release script for safe version management
+
+**🛠️ Enhanced Developer Experience**
+- **Release script**: `./scripts/create_release.sh` for guided release creation
+- **Build validation**: Local testing before CI/CD deployment
+- **Comprehensive documentation**: Step-by-step guides for releases and testing
+
+**📦 Improved Build System**
+- **Fixed package discovery**: Resolved "Multiple top-level packages" setuptools error
+- **Modern pyproject.toml**: Complete build configuration with proper dependencies
+- **Package optimization**: Smaller builds excluding unnecessary files (tests, docs, notebooks)
+- **Entry points**: Proper CLI script configuration for `raft` and `raft-web` commands
+
+#### Example: Creating a Release
+```bash
+# Interactive release creation (recommended)
+./scripts/create_release.sh
+
+# Manual tag creation (advanced)
+git tag -a v1.0.2 -m "Release v1.0.2"
+git push origin v1.0.2
+```
+
+See [Release Management Guide](docs/RELEASES.md) for the complete release management guide.
 
 ---
 

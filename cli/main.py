@@ -6,6 +6,7 @@ import argparse
 import sys
 import time
 from pathlib import Path
+from typing import Any, Optional
 
 from core.config import RaftConfig, get_config
 from core.raft_engine import RaftEngine
@@ -51,7 +52,7 @@ except ImportError:
 
 
 # Initialize logger (will be properly configured after log_setup())
-logger = None
+logger: Optional[Any] = None
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -340,13 +341,14 @@ def override_config_from_args(config: RaftConfig, args: argparse.Namespace) -> R
 
 def show_preview(engine: RaftEngine, config: RaftConfig) -> None:
     """Show processing preview."""
-    if logger:
+    if logger is not None:
         logger.set_progress("PREV")
         logger.info(f"Generating preview for {config.source_type} source")
 
     try:
         if config.source_type == "local":
-            preview = engine.get_processing_preview(config.datapath)
+            datapath = Path(config.datapath) if isinstance(config.datapath, str) else config.datapath
+            preview = engine.get_processing_preview(datapath)
         else:
             preview = engine.get_processing_preview()
 
@@ -393,7 +395,7 @@ def show_preview(engine: RaftEngine, config: RaftConfig) -> None:
         print("=" * 60)
 
     except Exception as e:
-        if logger:
+        if logger is not None:
             logger.error(f"Error generating preview: {e}", exc_info=True)
         else:
             print(f"Error generating preview: {e}")
@@ -402,14 +404,15 @@ def show_preview(engine: RaftEngine, config: RaftConfig) -> None:
 
 def validate_only(engine: RaftEngine, config: RaftConfig) -> None:
     """Validate configuration and inputs only."""
-    if logger:
+    if logger is not None:
         logger.set_progress("VALD")
         logger.info(f"Validating {config.source_type} input source")
 
     try:
         if config.source_type == "local":
-            engine.validate_inputs(config.datapath)
-            source_info = f"Ready to process: {config.datapath}"
+            datapath = Path(config.datapath) if isinstance(config.datapath, str) else config.datapath
+            engine.validate_inputs(datapath)
+            source_info = f"Ready to process: {datapath}"
         else:
             # For remote sources, use async validation
             import asyncio
@@ -425,7 +428,7 @@ def validate_only(engine: RaftEngine, config: RaftConfig) -> None:
         print(f"Output format: {engine.config.output_format} ({engine.config.output_type})")
 
     except Exception as e:
-        if logger:
+        if logger is not None:
             logger.error(f"Validation failed: {e}", exc_info=True)
         else:
             print(f"Validation failed: {e}")
@@ -524,7 +527,8 @@ def main():
             logger.add_trace_event("validation_start")
 
         if config.source_type == "local":
-            engine.validate_inputs(config.datapath)
+            datapath = Path(config.datapath) if isinstance(config.datapath, str) else config.datapath
+            engine.validate_inputs(datapath)
         else:
             import asyncio
 
@@ -540,7 +544,8 @@ def main():
             logger.add_trace_event("generation_start", chunk_size=config.chunk_size, questions=config.questions)
         # Generate dataset using new method that handles all source types
         if config.source_type == "local":
-            stats = engine.generate_dataset(config.datapath, config.output)
+            datapath = Path(config.datapath) if isinstance(config.datapath, str) else config.datapath
+            stats = engine.generate_dataset(datapath, config.output)
         else:
             stats = engine.generate_dataset(None, config.output)
         if hasattr(logger, "add_trace_event"):
