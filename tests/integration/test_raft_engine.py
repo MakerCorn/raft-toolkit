@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from core.config import RaftConfig
-from core.models import DocumentChunk, ProcessingResult, ProcessingStatistics
+from core.models import DocumentChunk, ProcessingResult, ProcessingStatistics, QADataPoint
 from core.raft_engine import RaftEngine
 
 

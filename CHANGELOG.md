@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Comprehensive test fixes**: Fixed 29 failed tests and 7 errors across all test categories
   - **No mocking approach**: Tests use real application interfaces without mocking as requested
 
+- **🧪 Integration testing overhaul**: Fixed integration test failures for refactored application classes
+  - **DocumentService constructor fixes**: Added required llm_service parameter to all DocumentService instantiations in tests
+  - **API call prevention**: Configured tests to use fixed/sentence chunking strategies to avoid OpenAI API calls during testing
+  - **Embedding service mocking**: Added proper mocking of embedding services to prevent real API calls
+  - **API document format fixes**: Fixed test fixtures to match expected API document structure (array of API objects)
+  - **Import fixes**: Added missing QADataPoint import to raft_engine integration tests
+  - **Path handling**: Updated all test methods to use Path objects consistently with current DocumentService interface
+  - **Test method alignment**: Updated test calls from deprecated `process_document` to current `process_documents` method
+
 ### 📝 Added
 
 #### Documentation Enhancement
