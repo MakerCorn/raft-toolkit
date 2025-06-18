@@ -20,6 +20,12 @@
   - Corrected f-string placeholder issues (F541) in evaluation tools
   - Reorganized module-level imports (E402) for proper code structure
   - Fixed multiple statements on one line (E704) in protocol definitions
+- Resolved security vulnerabilities identified by safety and bandit:
+  - Updated sentry-sdk to >=2.8.0 to address CVE-2024-40647 (environment variable exposure)
+  - Updated sentence-transformers to >=3.1.0 to fix PVE-2024-73169 (arbitrary code execution)
+  - Added py>=1.11.1 dependency to address CVE-2022-42969 (ReDoS vulnerability)
+  - Documented langchain-experimental CVE-2024-46946 as false positive (affects unused component)
+  - Fixed bandit security warnings with appropriate suppressions for legitimate use cases
 
 ### Changed
 - Updated requirements.txt and pyproject.toml with new dependencies
