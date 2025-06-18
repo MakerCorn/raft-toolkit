@@ -407,44 +407,58 @@ class TestMainFunction:
         with patch("sys.argv", test_args):
             with patch("cli.main.get_config") as mock_get_config:
                 with patch("cli.main.RaftEngine") as mock_engine_class:
+                    with patch("cli.main.get_logger") as mock_get_logger:
+                        with patch("cli.main.log_setup"):
 
-                    mock_config = Mock()
-                    mock_config.source_type = "local"
-                    mock_config.datapath = test_file
-                    mock_config.output = str(output_dir)
-                    mock_config.doctype = "pdf"
-                    mock_config.chunking_strategy = "semantic"
-                    mock_config.completion_model = "gpt-4"
-                    mock_get_config.return_value = mock_config
+                            mock_config = Mock()
+                            mock_config.source_type = "local"
+                            mock_config.datapath = test_file
+                            mock_config.output = str(output_dir)
+                            mock_config.doctype = "pdf"
+                            mock_config.chunking_strategy = "semantic"
+                            mock_config.completion_model = "gpt-4"
+                            mock_config.sentry_dsn = None
+                            mock_get_config.return_value = mock_config
 
-                    mock_engine = Mock()
-                    mock_engine.validate_inputs.return_value = None
-                    mock_engine.generate_dataset.return_value = {
-                        "total_qa_points": 10,
-                        "successful_chunks": 5,
-                        "failed_chunks": 0,
-                        "avg_time_per_chunk": 2.5,
-                        "token_usage": {"tokens_per_second": 50.0, "total_tokens": 1000},
-                    }
+                            # Mock logger with all required methods
+                            mock_logger = Mock()
+                            mock_logger.set_context = Mock()
+                            mock_logger.set_progress = Mock()
+                            mock_logger.info = Mock()
+                            mock_logger.start_operation = Mock()
+                            mock_logger.add_trace_event = Mock()
+                            mock_logger.end_operation = Mock()
+                            mock_logger.error = Mock()
+                            mock_get_logger.return_value = mock_logger
 
-                    # Make async methods return coroutines
-                    async def mock_validate_input_source():
-                        return None
+                            mock_engine = Mock()
+                            mock_engine.validate_inputs.return_value = None
+                            mock_engine.generate_dataset.return_value = {
+                                "total_qa_points": 10,
+                                "successful_chunks": 5,
+                                "failed_chunks": 0,
+                                "avg_time_per_chunk": 2.5,
+                                "token_usage": {"tokens_per_second": 50.0, "total_tokens": 1000},
+                            }
 
-                    mock_engine.validate_input_source = mock_validate_input_source
-                    mock_engine_class.return_value = mock_engine
+                            # Make async methods return coroutines
+                            async def mock_validate_input_source():
+                                return None
 
-                    main()
+                            mock_engine.validate_input_source = mock_validate_input_source
+                            mock_engine_class.return_value = mock_engine
 
-                    # Verify processing was called
-                    mock_engine.validate_inputs.assert_called_once_with(test_file)
-                    mock_engine.generate_dataset.assert_called_once_with(test_file, str(output_dir))
+                            main()
 
-                    # Verify output
-                    captured = capsys.readouterr()
-                    assert "RAFT GENERATION COMPLETED" in captured.out
-                    assert "Total QA Points Generated: 10" in captured.out
-                    assert "Successful Chunks: 5" in captured.out
+                            # Verify processing was called
+                            mock_engine.validate_inputs.assert_called_once_with(test_file)
+                            mock_engine.generate_dataset.assert_called_once_with(test_file, str(output_dir))
+
+                            # Verify output
+                            captured = capsys.readouterr()
+                            assert "RAFT GENERATION COMPLETED" in captured.out
+                            assert "Total QA Points Generated: 10" in captured.out
+                            assert "Successful Chunks: 5" in captured.out
 
     @pytest.mark.cli
     def test_main_keyboard_interrupt(self, temp_directory, capsys):
