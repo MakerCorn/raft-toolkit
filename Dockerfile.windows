@@ -58,6 +58,8 @@ RUN python -c "import pypdf; print('PyPDF OK')" && \
     python -c "import transformers; print('Transformers OK')" && \
     python -c "import pandas; print('Pandas OK')" && \
     python -c "import pydantic; print('Pydantic OK')" && \
+    python -c "import langchain_core; print('LangChain Core OK')" && \
+    python -c "import langchain_community; print('LangChain Community OK')" && \
     pip check && \
     echo "All dependency verification completed successfully"
 

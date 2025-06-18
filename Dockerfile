@@ -64,6 +64,8 @@ RUN pip install --upgrade pip setuptools wheel && \
     python -c "import transformers; print('Transformers OK')" && \
     python -c "import pandas; print('Pandas OK')" && \
     python -c "import pydantic; print('Pydantic OK')" && \
+    python -c "import langchain_core; print('LangChain Core OK')" && \
+    python -c "import langchain_community; print('LangChain Community OK')" && \
     # Run dependency conflict check
     echo "Checking for dependency conflicts..." && \
     pip check && \
