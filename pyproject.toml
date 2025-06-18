@@ -113,7 +113,7 @@ dev = [
     "pytest-asyncio>=0.21.0,<1.0.0",
     "pytest-cov>=4.0.0,<5.0.0",
     "pytest-mock>=3.10.0,<4.0.0",
-    "py>=1.11.1",  # Fixed version to address CVE-2022-42969
+    # Note: py package (CVE-2022-42969) not needed - pytest>=7.0 has built-in functionality
     # HTTP testing
     "httpx<0.28,>=0.24.0",  # Version constraint for TestClient compatibility
     "respx>=0.20.0,<1.0.0",

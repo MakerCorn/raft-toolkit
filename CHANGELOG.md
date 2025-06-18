@@ -23,12 +23,13 @@
 - Resolved security vulnerabilities identified by safety and bandit:
   - Updated sentry-sdk to >=2.8.0 to address CVE-2024-40647 (environment variable exposure)
   - Updated sentence-transformers to >=3.1.0 to fix PVE-2024-73169 (arbitrary code execution)
-  - Added py>=1.11.1 dependency to address CVE-2022-42969 (ReDoS vulnerability)
+  - Eliminated py package dependency to address CVE-2022-42969 (pytest>=7.0 has built-in functionality)
   - Documented langchain-experimental CVE-2024-46946 as false positive (affects unused component)
   - Fixed bandit security warnings with appropriate suppressions for legitimate use cases
 
 ### Changed
 - Updated requirements.txt and pyproject.toml with new dependencies
+- Updated all requirements files (requirements*.txt) with security fixes and version alignments
 - Refactored embedding service to use Protocol for better type checking
 - Improved mock embeddings implementation for testing
 - Reorganized import statements across modules for better code organization
