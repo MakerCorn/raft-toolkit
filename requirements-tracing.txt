@@ -5,15 +5,15 @@
 
 # Enhanced logging
 structlog>=23.2.0,<24.0.0
-sentry-sdk>=1.40.0,<2.0.0
+sentry-sdk>=1.44.0,<2.0.0
 
 # OpenTelemetry tracing
 opentelemetry-api>=1.22.0,<2.0.0
 opentelemetry-sdk>=1.22.0,<2.0.0
 opentelemetry-exporter-otlp>=1.22.0,<2.0.0
 opentelemetry-exporter-jaeger>=1.7.0,<2.0.0
-opentelemetry-instrumentation>=0.40b0,<1.0.0
-opentelemetry-instrumentation-logging>=0.43b0,<1.0.0
+opentelemetry-instrumentation>=0.44b0,<1.0.0
+opentelemetry-instrumentation-logging>=0.44b0,<1.0.0
 
 # LangWatch observability
 langwatch>=0.2.0,<1.0.0

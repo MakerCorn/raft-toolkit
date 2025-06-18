@@ -106,8 +106,9 @@ jobs:
         # Create wiki directory
         mkdir -p wiki
         
-        # Generate Home page
-        cat > wiki/Home.md << 'EOF'
+        # Generate Home page with current timestamp
+        CURRENT_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S UTC")
+        cat > wiki/Home.md << EOF
         # RAFT Toolkit Wiki
         
         Welcome to the RAFT (Retrieval Augmented Fine-Tuning) Toolkit documentation!
@@ -134,7 +135,7 @@ jobs:
         
         ---
         
-        📝 Last updated: $(date +"%Y-%m-%d %H:%M:%S UTC")
+        📝 Last updated: ${CURRENT_TIMESTAMP}
         🤖 Auto-generated from repository documentation
         EOF
         

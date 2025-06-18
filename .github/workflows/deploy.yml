@@ -162,7 +162,8 @@ jobs:
             ;;
         esac
 
-    - name: Setup Kubernetes tools
+    - name: Setup Kubernetes tools (Linux/macOS)
+      if: runner.os != 'Windows'
       run: |
         # Install kubectl
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -176,7 +177,23 @@ jobs:
         # Install Helm
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-    - name: Configure cloud authentication
+    - name: Setup Kubernetes tools (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        # Install kubectl
+        $kubectlVersion = (Invoke-RestMethod -Uri "https://dl.k8s.io/release/stable.txt").Trim()
+        Invoke-WebRequest -Uri "https://dl.k8s.io/release/$kubectlVersion/bin/windows/amd64/kubectl.exe" -OutFile "kubectl.exe"
+        $env:PATH += ";$PWD"
+        
+        # Install kustomize
+        choco install kustomize
+        
+        # Install Helm
+        choco install kubernetes-helm
+
+    - name: Configure cloud authentication (Unix)
+      if: runner.os != 'Windows'
       run: |
         case "${{ steps.params.outputs.cloud-provider }}" in
           gke)
@@ -226,6 +243,59 @@ jobs:
             fi
             ;;
         esac
+
+    - name: Configure cloud authentication (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        switch ("${{ steps.params.outputs.cloud-provider }}") {
+          "gke" {
+            Write-Host "Configuring GKE authentication..."
+            # Set environment variables for GKE
+            Add-Content $env:GITHUB_ENV "GKE_CLUSTER_NAME=${{ vars.GKE_CLUSTER_NAME || 'raft-toolkit-cluster' }}"
+            Add-Content $env:GITHUB_ENV "GKE_ZONE=${{ vars.GKE_ZONE || 'us-central1-a' }}"
+            Add-Content $env:GITHUB_ENV "GCP_PROJECT_ID=${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}"
+            
+            # Configure GKE authentication (requires GCP service account key)
+            if ("${{ secrets.GCP_SA_KEY }}" -ne "") {
+              [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${{ secrets.GCP_SA_KEY }}")) | Out-File -FilePath gcp-key.json -Encoding utf8
+              gcloud auth activate-service-account --key-file gcp-key.json
+              gcloud container clusters get-credentials "$env:GKE_CLUSTER_NAME" --zone "$env:GKE_ZONE" --project "$env:GCP_PROJECT_ID"
+            } else {
+              Write-Host "⚠️  GCP_SA_KEY secret not configured - skipping GKE authentication"
+            }
+          }
+          "eks" {
+            Write-Host "Configuring EKS authentication..."
+            # Set environment variables for EKS
+            Add-Content $env:GITHUB_ENV "EKS_CLUSTER_NAME=${{ vars.EKS_CLUSTER_NAME || 'raft-toolkit-cluster' }}"
+            Add-Content $env:GITHUB_ENV "AWS_REGION=${{ vars.AWS_REGION || 'us-east-1' }}"
+            
+            # Configure AWS credentials and EKS access
+            if ("${{ secrets.AWS_ACCESS_KEY_ID }}" -ne "" -and "${{ secrets.AWS_SECRET_ACCESS_KEY }}" -ne "") {
+              aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
+              aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+              aws configure set region "$env:AWS_REGION"
+              aws eks update-kubeconfig --region "$env:AWS_REGION" --name "$env:EKS_CLUSTER_NAME"
+            } else {
+              Write-Host "⚠️  AWS credentials not configured - skipping EKS authentication"
+            }
+          }
+          "aks" {
+            Write-Host "Configuring AKS authentication..."
+            # Set environment variables for AKS
+            Add-Content $env:GITHUB_ENV "AKS_CLUSTER_NAME=${{ vars.AKS_CLUSTER_NAME || 'raft-toolkit-cluster' }}"
+            Add-Content $env:GITHUB_ENV "AKS_RESOURCE_GROUP=${{ vars.AKS_RESOURCE_GROUP || 'raft-toolkit-rg' }}"
+            
+            # Configure Azure authentication
+            if ("${{ secrets.AZURE_CLIENT_ID }}" -ne "" -and "${{ secrets.AZURE_CLIENT_SECRET }}" -ne "" -and "${{ secrets.AZURE_TENANT_ID }}" -ne "") {
+              az login --service-principal -u "${{ secrets.AZURE_CLIENT_ID }}" -p "${{ secrets.AZURE_CLIENT_SECRET }}" --tenant "${{ secrets.AZURE_TENANT_ID }}"
+              az aks get-credentials --resource-group "$env:AKS_RESOURCE_GROUP" --name "$env:AKS_CLUSTER_NAME"
+            } else {
+              Write-Host "⚠️  Azure credentials not configured - skipping AKS authentication"
+            }
+          }
+        }
 
     - name: Deploy to Kubernetes
       run: |

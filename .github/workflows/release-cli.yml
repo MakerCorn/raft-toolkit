@@ -258,7 +258,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push Docker image (CLI release)
+    - name: Build and push Docker image (CLI release Linux)
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -287,6 +287,29 @@ jobs:
           type=gha,mode=max
           type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-cli-release,mode=max
 
+    - name: Build and push Docker image (CLI release Windows)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.windows
+        target: cli
+        platforms: windows/amd64
+        push: true
+        tags: |
+          ghcr.io/${{ steps.repo.outputs.name }}:cli-v${{ needs.version-bump.outputs.new_version }}-windows
+          ghcr.io/${{ steps.repo.outputs.name }}:cli-latest-windows
+        labels: |
+          org.opencontainers.image.title=RAFT Toolkit CLI (Windows)
+          org.opencontainers.image.description=RAFT CLI - Lightweight command-line interface for Windows
+          org.opencontainers.image.version=cli-v${{ needs.version-bump.outputs.new_version }}
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILD_DATE=${{ github.event.head_commit.timestamp }}
+          VERSION=cli-v${{ needs.version-bump.outputs.new_version }}
+          VCS_REF=${{ github.sha }}
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -308,11 +331,17 @@ jobs:
           
           **Docker Container (CLI-only):**
           ```bash
-          # Lightweight CLI container
+          # Lightweight CLI container (Linux/macOS)
           docker pull ghcr.io/${{ steps.repo.outputs.name }}:cli-v${{ needs.version-bump.outputs.new_version }}
           
-          # Run CLI commands
+          # Lightweight CLI container (Windows)
+          docker pull ghcr.io/${{ steps.repo.outputs.name }}:cli-v${{ needs.version-bump.outputs.new_version }}-windows
+          
+          # Run CLI commands (Linux/macOS)
           docker run --rm -v $(pwd):/data ghcr.io/${{ steps.repo.outputs.name }}:cli-v${{ needs.version-bump.outputs.new_version }} raft --help
+          
+          # Run CLI commands (Windows)
+          docker run --rm -v ${PWD}:C:\data ghcr.io/${{ steps.repo.outputs.name }}:cli-v${{ needs.version-bump.outputs.new_version }}-windows raft --help
           ```
           
           ### 🚀 Quick Start

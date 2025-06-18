@@ -2,6 +2,15 @@
 
 This directory contains deployment configurations for various platforms and environments.
 
+## Platform Support
+
+RAFT Toolkit supports deployment across multiple platforms:
+
+- **Operating Systems**: Linux, macOS, Windows
+- **Container Platforms**: Docker (Linux/Windows containers), Kubernetes
+- **Cloud Providers**: AWS (EKS), Google Cloud (GKE), Azure (AKS)
+- **Architectures**: amd64, arm64 (Linux only)
+
 ## Quick Start
 
 ### Docker Compose (Recommended for Development)
@@ -148,10 +157,11 @@ deploy/
 - Rate limiting configured in Nginx
 
 ### Container Security
-- Non-root containers for all services
+- Non-root containers for all services (Linux containers)
 - Read-only root filesystems where possible
-- Minimal base images (Alpine Linux)
-- Security contexts with dropped capabilities
+- Minimal base images (Alpine Linux for Linux, Windows Server Core for Windows)
+- Security contexts with dropped capabilities (Linux containers)
+- Windows containers use Windows authentication and isolation
 
 ### Secrets Management
 - API keys stored in Kubernetes secrets or Docker secrets

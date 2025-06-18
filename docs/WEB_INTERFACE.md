@@ -126,6 +126,13 @@ The web interface supports multiple file formats with easy upload:
 - **Fixed**: Equal token-sized chunks
 - **Sentence**: Sentence boundary-based chunks
 
+**Rate Limiting**
+- Enable/disable API rate limiting
+- Multiple strategies: fixed window, sliding window, token bucket, adaptive
+- Preset configurations for popular AI services
+- Custom request and token limits
+- Burst handling and retry configuration
+
 #### Output Settings
 
 **Output Format**
@@ -150,10 +157,23 @@ Click "Advanced Configuration" to access:
 - **Completion Model**: Model for question/answer generation
 - **Embedding Model**: Model for semantic chunking
 - **Custom Endpoints**: Support for custom OpenAI-compatible APIs
+- **Azure OpenAI**: Configure Azure OpenAI settings and managed identity
+
+**Template Settings**
+- **Embedding Template**: Custom template for embedding generation
+- **QA Template**: Custom template for question generation
+- **Answer Template**: Custom template for answer generation
+- **Template Variables**: Configure domain-specific template variables
 
 **Chat-Specific Options**
 - **System Prompt**: Custom system prompt for chat format
 - **Message Structure**: Define conversation flow
+
+**Observability Settings**
+- **LangWatch Integration**: Enable/disable LangWatch tracing
+- **Project Name**: Set project name for organizing traces
+- **Debug Mode**: Enable detailed logging for troubleshooting
+- **Custom Endpoint**: Configure custom LangWatch endpoint
 
 ### Live Preview
 
@@ -178,6 +198,8 @@ The Analysis Tools tab provides six powerful evaluation utilities:
 - **Model**: Choose evaluation model (GPT-4, GPT-3.5, etc.)
 - **Workers**: Parallel processing threads
 - **Input Key**: Column name for input text
+- **Rate Limiting**: Configure API rate limiting settings
+- **Observability**: Enable LangWatch tracing (optional)
 
 **Output**: Comprehensive evaluation metrics and performance statistics
 
@@ -190,6 +212,9 @@ The Analysis Tools tab provides six powerful evaluation utilities:
 - **Model**: Answer generation model
 - **Workers**: Parallel processing threads
 - **Output Name**: Custom filename for results
+- **Template**: Custom answer generation template (optional)
+- **Rate Limiting**: Configure API rate limiting settings
+- **Observability**: Enable LangWatch tracing (optional)
 
 **Output**: Complete dataset with generated answers
 
@@ -344,6 +369,24 @@ DEFAULT_WORKERS=4                   # Default worker threads
 MAX_WORKERS=16                      # Maximum concurrent workers
 JOB_TIMEOUT=3600                    # Job timeout (1 hour)
 CLEANUP_INTERVAL=3600               # Cleanup old jobs (1 hour)
+
+# Rate Limiting Configuration
+RAFT_RATE_LIMIT_ENABLED=false       # Enable rate limiting
+RAFT_RATE_LIMIT_STRATEGY=fixed_window # Rate limiting strategy
+RAFT_RATE_LIMIT_PRESET=gpt-4        # Preset configuration
+RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60 # Request limit
+RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=90000 # Token limit
+
+# Template Configuration
+RAFT_EMBEDDING_PROMPT_TEMPLATE=     # Custom embedding template path
+RAFT_QA_PROMPT_TEMPLATE=            # Custom QA template path
+RAFT_ANSWER_PROMPT_TEMPLATE=        # Custom answer template path
+
+# LangWatch Configuration
+LANGWATCH_ENABLED=false             # Enable LangWatch integration
+LANGWATCH_API_KEY=                  # LangWatch API key
+LANGWATCH_PROJECT=raft-toolkit      # Project name
+LANGWATCH_DEBUG=false               # Debug mode
 
 # Security Configuration
 CORS_ORIGINS=["http://localhost:3000"] # CORS origins

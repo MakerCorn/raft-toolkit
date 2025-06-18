@@ -263,6 +263,13 @@ export RAFT_SOURCE_BATCH_SIZE=100
 # Filtering
 export RAFT_SOURCE_INCLUDE_PATTERNS='["**/*.pdf"]'
 export RAFT_SOURCE_EXCLUDE_PATTERNS='["**/temp/**"]'
+
+# Rate Limiting (for cloud sources)
+export RAFT_RATE_LIMIT_ENABLED=false
+export RAFT_RATE_LIMIT_STRATEGY=fixed_window
+export RAFT_RATE_LIMIT_PRESET=gpt-4
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+export RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=90000
 ```
 
 ### S3 Specific
@@ -312,6 +319,12 @@ python raft.py --source-type s3 --source-uri s3://bucket/path/ --preview
 
 # SharePoint
 python raft.py --source-type sharepoint --source-uri "https://company.sharepoint.com/sites/site/Documents" --source-credentials '...' --preview
+
+# With rate limiting
+python raft.py --source-type s3 --source-uri s3://bucket/path/ --rate-limit --rate-limit-preset gpt-4 --preview
+
+# With custom templates
+python raft.py --datapath ./docs --embedding-prompt-template ./templates/custom_embedding.txt --preview
 ```
 
 ### Validation Mode
@@ -337,6 +350,21 @@ python raft.py \
   --source-type sharepoint \
   --source-uri "https://company.sharepoint.com/sites/test/Shared Documents" \
   --source-credentials '{"auth_method":"device_code","client_id":"app_id","tenant_id":"tenant_id"}' \
+  --validate
+
+# Test with rate limiting
+python raft.py \
+  --source-type s3 \
+  --source-uri s3://test-bucket/ \
+  --rate-limit \
+  --rate-limit-strategy adaptive \
+  --validate
+
+# Test with LangWatch integration
+python raft.py \
+  --datapath ./test_docs \
+  --langwatch-enabled \
+  --langwatch-project test-project \
   --validate
 ```
 
@@ -368,7 +396,23 @@ aws sts get-caller-identity --profile your-profile
 ### Debug Mode
 Enable verbose logging for troubleshooting:
 ```bash
+# Basic debug logging
 export RAFT_LOG_LEVEL=DEBUG
+python raft.py [options]
+
+# With structured logging
+export ENABLE_STRUCTURED_LOGGING=true
+export LOG_FORMAT=json
+python raft.py [options]
+
+# With LangWatch tracing
+export LANGWATCH_ENABLED=true
+export LANGWATCH_DEBUG=true
+python raft.py [options]
+
+# With distributed tracing
+export ENABLE_TRACING=true
+export JAEGER_ENDPOINT=http://localhost:14268/api/traces
 python raft.py [options]
 ```
 

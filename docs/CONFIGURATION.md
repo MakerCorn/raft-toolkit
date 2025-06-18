@@ -9,14 +9,17 @@ This guide provides comprehensive information about configuring the RAFT Toolkit
 ## 📋 Table of Contents
 
 - [🔧 Environment Variables](#-environment-variables)
+- [📝 Template Configuration](#-template-configuration)
 - [📄 Configuration Files](#-configuration-files)
 - [📂 Input Sources Configuration](#-input-sources-configuration)
 - [🌐 API Configuration](#-api-configuration)
 - [🖥️ CLI Configuration](#️-cli-configuration)
 - [🌍 Web Interface Configuration](#-web-interface-configuration)
 - [🛠️ Tools Configuration](#️-tools-configuration)
+- [🚦 Rate Limiting Configuration](#-rate-limiting-configuration)
 - [🚀 Performance Tuning](#-performance-tuning)
 - [🔒 Security Configuration](#-security-configuration)
+- [🔍 LangWatch Observability](#-langwatch-observability)
 - [📊 Logging Configuration](#-logging-configuration)
 
 ---
@@ -37,11 +40,19 @@ AZURE_OPENAI_ENDPOINT=https://...        # Azure OpenAI endpoint
 AZURE_OPENAI_KEY=...                     # Azure OpenAI API key
 AZURE_OPENAI_API_VERSION=2024-02-01     # API version
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4      # Deployment name
+AZURE_OPENAI_USE_IDENTITY=false         # Use Azure managed identity
 
 # Default Models
 DEFAULT_COMPLETION_MODEL=gpt-4           # Default completion model
 DEFAULT_EMBEDDING_MODEL=text-embedding-ada-002  # Default embedding model
 DEFAULT_CHAT_MODEL=gpt-4                 # Default chat model
+
+# LangWatch Observability
+LANGWATCH_ENABLED=false                 # Enable LangWatch integration
+LANGWATCH_API_KEY=...                   # LangWatch API key
+LANGWATCH_ENDPOINT=https://api.langwatch.ai  # LangWatch endpoint
+LANGWATCH_PROJECT=raft-toolkit          # Project name for organizing traces
+LANGWATCH_DEBUG=false                   # Enable debug logging
 ```
 
 ### Web Interface Configuration
@@ -85,6 +96,20 @@ MAX_CHUNK_SIZE=2048                     # Maximum chunk size (tokens)
 MIN_CHUNK_SIZE=100                      # Minimum chunk size (tokens)
 MAX_QUESTIONS_PER_CHUNK=20              # Maximum questions per chunk
 MAX_DISTRACTORS=10                      # Maximum distractor documents
+
+# Rate Limiting
+RAFT_RATE_LIMIT_ENABLED=false           # Enable rate limiting
+RAFT_RATE_LIMIT_STRATEGY=fixed_window   # Rate limiting strategy (fixed_window, sliding_window, token_bucket, adaptive)
+RAFT_RATE_LIMIT_PRESET=gpt-4            # Preset configuration (gpt-4, gpt-3.5-turbo, azure-openai, anthropic-claude)
+RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60  # Custom requests per minute limit
+RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=90000 # Custom tokens per minute limit
+RAFT_RATE_LIMIT_MAX_BURST=10            # Maximum burst requests allowed
+RAFT_RATE_LIMIT_MAX_RETRIES=5           # Maximum retry attempts
+RAFT_RATE_LIMIT_BASE_DELAY=1.0          # Base delay between retries (seconds)
+RAFT_RATE_LIMIT_MAX_DELAY=60.0          # Maximum delay between retries (seconds)
+RAFT_RATE_LIMIT_BURST_WINDOW=60         # Burst window in seconds
+RAFT_RATE_LIMIT_EXPONENTIAL_BACKOFF=true # Use exponential backoff for retries
+RAFT_RATE_LIMIT_JITTER=true             # Add jitter to retry delays
 ```
 
 ### Storage Configuration
@@ -278,6 +303,131 @@ python raft.py --doctype pdf --output ./sharepoint-dataset
 For detailed setup instructions, see [INPUT_SOURCES.md](INPUT_SOURCES.md).
 
 ---
+
+## 📝 Template Configuration
+
+The RAFT Toolkit supports custom prompt templates for embeddings and Q&A generation, allowing you to optimize for specific domains or use cases.
+
+### Template Types
+
+#### Embedding Templates
+
+Embedding templates control how documents are embedded for semantic chunking and retrieval:
+
+```bash
+# Environment variable
+RAFT_EMBEDDING_PROMPT_TEMPLATE=./templates/custom_embedding.txt
+
+# CLI argument
+--embedding-prompt-template ./templates/custom_embedding.txt
+```
+
+**Example embedding template:**
+```
+Generate an embedding for the following content:
+
+Document Type: {document_type}
+Content: {content}
+
+Focus on key concepts, entities, and relationships in the content.
+```
+
+#### QA Generation Templates
+
+QA templates control how questions are generated from document chunks:
+
+```bash
+# Environment variable
+RAFT_QA_PROMPT_TEMPLATE=./templates/custom_qa.txt
+
+# CLI argument
+--qa-prompt-template ./templates/custom_qa.txt
+```
+
+**Example QA template:**
+```
+Generate {num_questions} questions based on the following context.
+The questions should be specific to the content and require understanding of the text.
+
+Context: {context}
+
+Questions:
+```
+
+#### Answer Generation Templates
+
+Answer templates control how answers are generated for questions:
+
+```bash
+# Environment variable
+RAFT_ANSWER_PROMPT_TEMPLATE=./templates/custom_answer.txt
+
+# CLI argument
+--answer-prompt-template ./templates/custom_answer.txt
+```
+
+**Example answer template:**
+```
+Question: {question}
+Context: {context}
+
+Provide a concise and accurate answer based only on the information in the context.
+Answer:
+```
+
+### Domain-Specific Templates
+
+#### Medical Domain
+
+```bash
+# Medical embedding template
+export RAFT_EMBEDDING_PROMPT_TEMPLATE=./templates/medical_embedding.txt
+
+# Medical QA template
+export RAFT_QA_PROMPT_TEMPLATE=./templates/medical_qa.txt
+```
+
+#### Legal Domain
+
+```bash
+# Legal embedding template
+export RAFT_EMBEDDING_PROMPT_TEMPLATE=./templates/legal_embedding.txt
+
+# Legal QA template
+export RAFT_QA_PROMPT_TEMPLATE=./templates/legal_qa.txt
+```
+
+#### Technical Documentation
+
+```bash
+# Technical embedding template
+export RAFT_EMBEDDING_PROMPT_TEMPLATE=./templates/technical_embedding.txt
+
+# Technical QA template
+export RAFT_QA_PROMPT_TEMPLATE=./templates/technical_qa.txt
+```
+
+### Template Variables
+
+The following variables are available in templates:
+
+**Embedding Templates:**
+- `{content}` - The document content
+- `{document_type}` - The type of document (pdf, txt, json, etc.)
+- `{metadata}` - Additional metadata about the document
+- `{chunk_index}` - Index of the chunk within the document
+- `{chunking_strategy}` - Strategy used for chunking
+
+**QA Templates:**
+- `{context}` - The document chunk content
+- `{num_questions}` - Number of questions to generate
+- `{document_type}` - The type of document
+- `{metadata}` - Additional metadata
+
+**Answer Templates:**
+- `{question}` - The question to answer
+- `{context}` - The context for answering
+- `{document_type}` - The type of document
 
 ## 📄 Configuration Files
 
@@ -521,6 +671,37 @@ export OPENAI_API_KEY="sk-ant-..."
 --p                  # Oracle probability
 --pace              # Enable pacing
 
+# Input source options
+--source-type        # Input source type (local, s3, sharepoint)
+--source-uri         # Source URI (paths, S3 URLs, SharePoint URLs)
+--source-credentials # JSON credentials for cloud authentication
+--source-include-patterns # Include file patterns (JSON array)
+--source-exclude-patterns # Exclude file patterns (JSON array)
+--source-max-file-size    # Maximum file size in bytes
+--source-batch-size       # Batch size for processing
+
+# Rate limiting options
+--rate-limit        # Enable/disable rate limiting
+--rate-limit-strategy # Rate limiting strategy
+--rate-limit-preset   # Use preset configurations
+--rate-limit-requests-per-minute # Custom rate limits
+--rate-limit-tokens-per-minute   # Token-based rate limits
+--rate-limit-max-burst # Burst configuration
+--rate-limit-max-retries # Retry configuration
+
+# Template options
+--embedding-prompt-template # Custom embedding template
+--qa-prompt-template        # Custom Q&A generation template
+--answer-prompt-template    # Custom answer generation template
+--templates                 # Custom templates directory
+
+# LangWatch options
+--langwatch-enabled  # Enable LangWatch observability
+--langwatch-api-key  # Set LangWatch API key
+--langwatch-endpoint # Set custom LangWatch endpoint
+--langwatch-project  # Set project name
+--langwatch-debug    # Enable debug mode
+
 # Utility options
 --preview           # Preview mode (no processing)
 --validate          # Validate configuration only
@@ -564,6 +745,80 @@ WORKERS=8 CHUNK_SIZE=1024 python raft.py \
   --output ./output
 ```
 
+**With cloud input source**:
+```bash
+python raft.py \
+  --source-type s3 \
+  --source-uri s3://my-bucket/documents/ \
+  --source-include-patterns '["**/*.pdf", "**/*.txt"]' \
+  --output ./output
+```
+
+**With rate limiting**:
+```bash
+python raft.py \
+  --datapath document.pdf \
+  --output ./output \
+  --rate-limit \
+  --rate-limit-preset gpt-4 \
+  --workers 8
+```
+
+**With custom templates**:
+```bash
+python raft.py \
+  --datapath document.pdf \
+  --output ./output \
+  --embedding-prompt-template ./templates/custom_embedding.txt \
+  --qa-prompt-template ./templates/custom_qa.txt
+```
+
+**With LangWatch integration**:
+```bash
+python raft.py \
+  --datapath document.pdf \
+  --output ./output \
+  --langwatch-enabled \
+  --langwatch-project my-project
+```
+
+**With cloud input source**:
+```bash
+python raft.py \
+  --source-type s3 \
+  --source-uri s3://my-bucket/documents/ \
+  --source-include-patterns '["**/*.pdf", "**/*.txt"]' \
+  --output ./output
+```
+
+**With rate limiting**:
+```bash
+python raft.py \
+  --datapath document.pdf \
+  --output ./output \
+  --rate-limit \
+  --rate-limit-preset gpt-4 \
+  --workers 8
+```
+
+**With custom templates**:
+```bash
+python raft.py \
+  --datapath document.pdf \
+  --output ./output \
+  --embedding-prompt-template ./templates/custom_embedding.txt \
+  --qa-prompt-template ./templates/custom_qa.txt
+```
+
+**With LangWatch integration**:
+```bash
+python raft.py \
+  --datapath document.pdf \
+  --output ./output \
+  --langwatch-enabled \
+  --langwatch-project my-project
+```
+
 ---
 
 ## 🌍 Web Interface Configuration
@@ -578,7 +833,8 @@ app_config = {
     "version": "1.0.0",
     "docs_url": "/docs",
     "redoc_url": "/redoc",
-    "openapi_url": "/openapi.json"
+    "openapi_url": "/openapi.json",
+    "lifespan": lifespan_context
 }
 
 # Uvicorn configuration
@@ -620,6 +876,20 @@ app.add_middleware(
     RequestSizeLimitMiddleware,
     max_request_size=int(os.getenv("MAX_REQUEST_SIZE", "52428800"))
 )
+
+# Security headers middleware
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    content_security_policy={
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data:",
+    },
+    x_frame_options="DENY",
+    x_content_type_options="nosniff",
+    referrer_policy="strict-origin-when-cross-origin"
+)
 ```
 
 ### Static File Configuration
@@ -634,6 +904,66 @@ UPLOAD_CONFIG = {
     "allowed_extensions": os.getenv("ALLOWED_EXTENSIONS", "pdf,txt,json,pptx").split(","),
     "upload_dir": os.getenv("UPLOAD_DIR", "/tmp/uploads"),
     "timeout": int(os.getenv("UPLOAD_TIMEOUT", "300"))
+}
+```
+
+### Service Configuration
+
+```python
+# Template service configuration
+TEMPLATE_CONFIG = {
+    "templates_dir": os.getenv("TEMPLATES_DIR", "templates"),
+    "embedding_template": os.getenv("RAFT_EMBEDDING_PROMPT_TEMPLATE"),
+    "qa_template": os.getenv("RAFT_QA_PROMPT_TEMPLATE"),
+    "answer_template": os.getenv("RAFT_ANSWER_PROMPT_TEMPLATE"),
+}
+
+# Rate limiting configuration
+RATE_LIMIT_CONFIG = {
+    "enabled": os.getenv("RAFT_RATE_LIMIT_ENABLED", "false").lower() == "true",
+    "strategy": os.getenv("RAFT_RATE_LIMIT_STRATEGY", "fixed_window"),
+    "preset": os.getenv("RAFT_RATE_LIMIT_PRESET"),
+    "requests_per_minute": int(os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE", "60")),
+    "tokens_per_minute": int(os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_MINUTE", "90000")),
+}
+
+# LangWatch configuration
+LANGWATCH_CONFIG = {
+    "enabled": os.getenv("LANGWATCH_ENABLED", "false").lower() == "true",
+    "api_key": os.getenv("LANGWATCH_API_KEY"),
+    "endpoint": os.getenv("LANGWATCH_ENDPOINT", "https://api.langwatch.ai"),
+    "project": os.getenv("LANGWATCH_PROJECT", "raft-toolkit"),
+    "debug": os.getenv("LANGWATCH_DEBUG", "false").lower() == "true",
+}
+```
+
+### Service Configuration
+
+```python
+# Template service configuration
+TEMPLATE_CONFIG = {
+    "templates_dir": os.getenv("TEMPLATES_DIR", "templates"),
+    "embedding_template": os.getenv("RAFT_EMBEDDING_PROMPT_TEMPLATE"),
+    "qa_template": os.getenv("RAFT_QA_PROMPT_TEMPLATE"),
+    "answer_template": os.getenv("RAFT_ANSWER_PROMPT_TEMPLATE"),
+}
+
+# Rate limiting configuration
+RATE_LIMIT_CONFIG = {
+    "enabled": os.getenv("RAFT_RATE_LIMIT_ENABLED", "false").lower() == "true",
+    "strategy": os.getenv("RAFT_RATE_LIMIT_STRATEGY", "fixed_window"),
+    "preset": os.getenv("RAFT_RATE_LIMIT_PRESET"),
+    "requests_per_minute": int(os.getenv("RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE", "60")),
+    "tokens_per_minute": int(os.getenv("RAFT_RATE_LIMIT_TOKENS_PER_MINUTE", "90000")),
+}
+
+# LangWatch configuration
+LANGWATCH_CONFIG = {
+    "enabled": os.getenv("LANGWATCH_ENABLED", "false").lower() == "true",
+    "api_key": os.getenv("LANGWATCH_API_KEY"),
+    "endpoint": os.getenv("LANGWATCH_ENDPOINT", "https://api.langwatch.ai"),
+    "project": os.getenv("LANGWATCH_PROJECT", "raft-toolkit"),
+    "debug": os.getenv("LANGWATCH_DEBUG", "false").lower() == "true",
 }
 ```
 
@@ -654,6 +984,19 @@ EVAL_MAX_RETRIES=3                      # Maximum retries
 EVAL_RETRY_DELAY=2                      # Delay between retries
 EVAL_INPUT_KEY=instruction              # Input column name
 EVAL_OUTPUT_KEY=answer                  # Output column name
+
+# Rate limiting configuration
+EVAL_RATE_LIMIT_ENABLED=true            # Enable rate limiting
+EVAL_RATE_LIMIT_STRATEGY=adaptive       # Rate limiting strategy
+EVAL_RATE_LIMIT_PRESET=gpt-4            # Preset configuration
+EVAL_RATE_LIMIT_REQUESTS_PER_MINUTE=60  # Custom requests per minute
+
+# Template configuration
+EVAL_TEMPLATE_PATH=./templates/eval_template.txt  # Custom evaluation template
+
+# LangWatch configuration
+EVAL_LANGWATCH_ENABLED=false            # Enable LangWatch integration
+EVAL_LANGWATCH_PROJECT=raft-eval        # Project name for organizing traces
 ```
 
 **answer.py configuration**:
@@ -664,6 +1007,19 @@ ANSWER_WORKERS=4                        # Number of workers
 ANSWER_TEMPERATURE=0.02                 # Generation temperature
 ANSWER_MAX_TOKENS=8192                  # Maximum tokens per response
 ANSWER_TIMEOUT=300                      # Request timeout
+
+# Rate limiting configuration
+ANSWER_RATE_LIMIT_ENABLED=true          # Enable rate limiting
+ANSWER_RATE_LIMIT_STRATEGY=adaptive     # Rate limiting strategy
+ANSWER_RATE_LIMIT_PRESET=gpt-4          # Preset configuration
+ANSWER_RATE_LIMIT_REQUESTS_PER_MINUTE=60 # Custom requests per minute
+
+# Template configuration
+ANSWER_TEMPLATE_PATH=./templates/answer_template.txt  # Custom answer template
+
+# LangWatch configuration
+ANSWER_LANGWATCH_ENABLED=false          # Enable LangWatch integration
+ANSWER_LANGWATCH_PROJECT=raft-answer    # Project name for organizing traces
 ```
 
 ### PromptFlow Configuration
@@ -688,6 +1044,15 @@ REPORT_PROJECT_NAME=project-name
 PF_EVAL_MODE=local                      # local or remote
 PF_WORKERS=2                            # Number of workers
 PF_TIMEOUT=600                          # Evaluation timeout
+
+# Rate limiting for evaluation
+PF_RATE_LIMIT_ENABLED=true
+PF_RATE_LIMIT_STRATEGY=adaptive
+PF_RATE_LIMIT_PRESET=gpt-4
+
+# LangWatch integration
+PF_LANGWATCH_ENABLED=false
+PF_LANGWATCH_PROJECT=promptflow-eval
 ```
 
 ### Tool-specific Configuration Files
@@ -717,9 +1082,228 @@ promptflow:
     - fluency
     - coherence
     - similarity
+
+templates:
+  embedding_template: templates/embedding_prompt_template.txt
+  qa_template: templates/qa_prompt_template.txt
+  answer_template: templates/answer_prompt_template.txt
+  
+rate_limiting:
+  enabled: true
+  strategy: adaptive
+  preset: gpt-4
+  requests_per_minute: 60
+  tokens_per_minute: 90000
+  
+langwatch:
+  enabled: false
+  project: raft-toolkit
+  debug: false
 ```
 
 ---
+
+## 🚦 Rate Limiting Configuration
+
+The RAFT Toolkit includes a comprehensive rate limiting system to manage API usage and prevent rate limit errors when working with cloud-based AI services.
+
+### Rate Limiting Strategies
+
+```bash
+# Fixed Window Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=fixed_window
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+
+# Sliding Window Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=sliding_window
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+export RAFT_RATE_LIMIT_BURST_WINDOW=60
+
+# Token Bucket Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=token_bucket
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+export RAFT_RATE_LIMIT_MAX_BURST=10
+
+# Adaptive Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=adaptive
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+export RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=90000
+```
+
+### Preset Configurations
+
+```bash
+# GPT-4 Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=gpt-4
+# Sets appropriate limits for GPT-4 API
+
+# GPT-3.5 Turbo Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=gpt-3.5-turbo
+# Sets appropriate limits for GPT-3.5 Turbo API
+
+# Azure OpenAI Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=azure-openai
+# Sets appropriate limits for Azure OpenAI service
+
+# Anthropic Claude Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=anthropic-claude
+# Sets appropriate limits for Anthropic Claude API
+```
+
+### Retry Configuration
+
+```bash
+# Basic retry configuration
+export RAFT_RATE_LIMIT_MAX_RETRIES=5
+export RAFT_RATE_LIMIT_BASE_DELAY=1.0
+
+# Advanced retry configuration
+export RAFT_RATE_LIMIT_EXPONENTIAL_BACKOFF=true
+export RAFT_RATE_LIMIT_JITTER=true
+export RAFT_RATE_LIMIT_MAX_DELAY=60.0
+```
+
+### CLI Configuration
+
+```bash
+# Enable rate limiting with strategy
+python raft.py \
+  --rate-limit \
+  --rate-limit-strategy adaptive \
+  [other options]
+
+# Use preset configuration
+python raft.py \
+  --rate-limit \
+  --rate-limit-preset gpt-4 \
+  [other options]
+
+# Custom rate limits
+python raft.py \
+  --rate-limit \
+  --rate-limit-requests-per-minute 60 \
+  --rate-limit-tokens-per-minute 90000 \
+  [other options]
+```
+
+### Rate Limiting Statistics
+
+The RAFT Toolkit provides real-time statistics on rate limiting performance:
+
+- **Request counts**: Total requests processed
+- **Wait times**: Time spent waiting due to rate limits
+- **Rate limit hits**: Number of rate limit errors encountered
+- **Current effective rate**: Actual requests per minute being processed
+- **Adaptive adjustments**: Rate adjustments for adaptive strategy
+
+## 🚦 Rate Limiting Configuration
+
+The RAFT Toolkit includes a comprehensive rate limiting system to manage API usage and prevent rate limit errors when working with cloud-based AI services.
+
+### Rate Limiting Strategies
+
+```bash
+# Fixed Window Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=fixed_window
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+
+# Sliding Window Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=sliding_window
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+export RAFT_RATE_LIMIT_BURST_WINDOW=60
+
+# Token Bucket Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=token_bucket
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+export RAFT_RATE_LIMIT_MAX_BURST=10
+
+# Adaptive Strategy
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_STRATEGY=adaptive
+export RAFT_RATE_LIMIT_REQUESTS_PER_MINUTE=60
+export RAFT_RATE_LIMIT_TOKENS_PER_MINUTE=90000
+```
+
+### Preset Configurations
+
+```bash
+# GPT-4 Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=gpt-4
+# Sets appropriate limits for GPT-4 API
+
+# GPT-3.5 Turbo Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=gpt-3.5-turbo
+# Sets appropriate limits for GPT-3.5 Turbo API
+
+# Azure OpenAI Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=azure-openai
+# Sets appropriate limits for Azure OpenAI service
+
+# Anthropic Claude Preset
+export RAFT_RATE_LIMIT_ENABLED=true
+export RAFT_RATE_LIMIT_PRESET=anthropic-claude
+# Sets appropriate limits for Anthropic Claude API
+```
+
+### Retry Configuration
+
+```bash
+# Basic retry configuration
+export RAFT_RATE_LIMIT_MAX_RETRIES=5
+export RAFT_RATE_LIMIT_BASE_DELAY=1.0
+
+# Advanced retry configuration
+export RAFT_RATE_LIMIT_EXPONENTIAL_BACKOFF=true
+export RAFT_RATE_LIMIT_JITTER=true
+export RAFT_RATE_LIMIT_MAX_DELAY=60.0
+```
+
+### CLI Configuration
+
+```bash
+# Enable rate limiting with strategy
+python raft.py \
+  --rate-limit \
+  --rate-limit-strategy adaptive \
+  [other options]
+
+# Use preset configuration
+python raft.py \
+  --rate-limit \
+  --rate-limit-preset gpt-4 \
+  [other options]
+
+# Custom rate limits
+python raft.py \
+  --rate-limit \
+  --rate-limit-requests-per-minute 60 \
+  --rate-limit-tokens-per-minute 90000 \
+  [other options]
+```
+
+### Rate Limiting Statistics
+
+The RAFT Toolkit provides real-time statistics on rate limiting performance:
+
+- **Request counts**: Total requests processed
+- **Wait times**: Time spent waiting due to rate limits
+- **Rate limit hits**: Number of rate limit errors encountered
+- **Current effective rate**: Actual requests per minute being processed
+- **Adaptive adjustments**: Rate adjustments for adaptive strategy
 
 ## 🚀 Performance Tuning
 
@@ -862,6 +1446,67 @@ server {
 ```
 
 ---
+
+## 🔍 LangWatch Observability
+
+The RAFT Toolkit integrates with LangWatch for comprehensive LLM call tracking and performance monitoring.
+
+### Basic Configuration
+
+```bash
+# Enable LangWatch integration
+LANGWATCH_ENABLED=true
+
+# Set your LangWatch API key
+LANGWATCH_API_KEY=your-api-key
+
+# Set project name for organizing traces
+LANGWATCH_PROJECT=raft-toolkit
+
+# Enable debug mode for detailed logging
+LANGWATCH_DEBUG=false
+
+# Set custom endpoint for self-hosted instances
+LANGWATCH_ENDPOINT=https://api.langwatch.ai
+```
+
+### CLI Configuration
+
+```bash
+# Enable LangWatch via CLI
+python raft.py \
+  --langwatch-enabled \
+  --langwatch-api-key your-api-key \
+  --langwatch-project my-project \
+  [other options]
+```
+
+### Tracked Operations
+
+LangWatch integration tracks the following operations:
+
+1. **Question Generation**: Tracks prompt, response, and performance metrics
+2. **Answer Generation**: Tracks context, question, answer, and timing
+3. **Embedding Generation**: Tracks model and timing information
+4. **QA Dataset Generation**: Tracks comprehensive statistics
+
+### Web Interface Integration
+
+The web interface includes LangWatch configuration options:
+
+1. **Enable/Disable**: Toggle LangWatch integration
+2. **Project Name**: Set project for trace organization
+3. **Debug Mode**: Enable detailed logging
+4. **Custom Endpoint**: Configure for self-hosted instances
+
+### Viewing Traces
+
+Access your traces through the LangWatch dashboard:
+
+1. Go to [LangWatch Dashboard](https://app.langwatch.ai)
+2. Select your project
+3. View traces, metrics, and performance data
+4. Analyze prompt effectiveness and response quality
 
 ## 📊 Logging Configuration
 

@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false  # Continue with other combinations if one fails
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ['3.11', '3.12']
 
     steps:
@@ -42,11 +42,23 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install system dependencies (Linux only)
+    - name: Install system dependencies (Linux)
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake
+        sudo apt-get install -y cmake gcc g++ build-essential
+
+    - name: Install system dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install cmake
+
+    - name: Install system dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+        # Install Visual Studio Build Tools for Python extensions
+        choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools"
 
     - name: Install dependencies
       run: |
@@ -64,12 +76,24 @@ jobs:
       run: |
         mypy core/ cli/ web/ --ignore-missing-imports || echo "MyPy not available, skipping type check"
 
-    - name: Run security checks
+    - name: Run security checks (Unix)
+      if: runner.os != 'Windows'
       run: |
         pip install bandit safety
         bandit -r core/ cli/ web/ -f json -o bandit-report.json || true
         bandit -r core/ cli/ web/
         safety check
+
+    - name: Run security checks (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        pip install bandit safety
+        bandit -r core/ cli/ web/ -f json -o bandit-report.json
+        if ($LASTEXITCODE -ne 0) { Write-Host "Bandit found issues but continuing..." }
+        bandit -r core/ cli/ web/
+        safety check
+
 
     - name: Run unit tests
       env:
@@ -225,7 +249,7 @@ jobs:
           org.opencontainers.image.description=Retrieval Augmented Fine-Tuning Toolkit
           org.opencontainers.image.vendor=${{ github.repository_owner }}
 
-    - name: Build and push Docker image (CLI)
+    - name: Build and push Docker image (CLI Linux)
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -246,7 +270,23 @@ jobs:
           BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
           VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
-    - name: Build and push Docker image (Web)
+    - name: Build and push Docker image (CLI Windows)
+      if: github.ref == 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.windows
+        target: cli
+        platforms: windows/amd64
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: ${{ steps.meta.outputs.tags }}-cli-windows
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+    - name: Build and push Docker image (Web Linux)
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -262,6 +302,22 @@ jobs:
         cache-to: |
           type=gha,mode=max
           type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-web,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+    - name: Build and push Docker image (Web Windows)
+      if: github.ref == 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.windows
+        target: production
+        platforms: windows/amd64
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: ${{ steps.meta.outputs.tags }}-web-windows
+        labels: ${{ steps.meta.outputs.labels }}
         build-args: |
           BUILDKIT_INLINE_CACHE=1
           BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}

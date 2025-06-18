@@ -1,0 +1,159 @@
+# Multi-stage Dockerfile for RAFT Toolkit (Windows)
+# Follows Docker best practices and security guidelines for Windows containers
+
+# Build arguments for dynamic configuration
+ARG PYTHON_VERSION=3.11
+ARG BUILD_DATE
+ARG VERSION=0.2.0
+ARG VCS_REF
+
+# Stage 1: Base dependencies (Windows)
+FROM python:${PYTHON_VERSION:-3.11}-windowsservercore-1809 AS base
+
+# Add metadata labels
+LABEL maintainer="RAFT Toolkit Team" \
+      description="Retrieval Augmented Fine-Tuning Toolkit for generating synthetic Q&A datasets" \
+      version="${VERSION:-0.2.0}" \
+      org.opencontainers.image.title="RAFT Toolkit" \
+      org.opencontainers.image.description="Retrieval Augmented Fine-Tuning Toolkit" \
+      org.opencontainers.image.version="${VERSION:-0.2.0}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://github.com/microsoft/raft-toolkit" \
+      org.opencontainers.image.licenses="MIT"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=C:\\app
+
+# Install system dependencies (Windows)
+# Note: Windows containers often include these tools by default
+RUN powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; \
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; \
+    iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+
+# Install required tools
+RUN choco install git -y --no-progress
+
+# Set working directory
+WORKDIR C:\\app
+
+# Stage 2: Dependencies (Windows)
+FROM base AS dependencies
+
+# Copy project configuration
+COPY pyproject.toml .
+
+# Install Python dependencies with enhanced error handling
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e . && \
+    echo "Core dependencies installed successfully"
+
+# Verify critical imports work
+RUN python -c "import pypdf; print('PyPDF OK')" && \
+    python -c "import openai; print('OpenAI OK')" && \
+    python -c "import transformers; print('Transformers OK')" && \
+    python -c "import pandas; print('Pandas OK')" && \
+    python -c "import pydantic; print('Pydantic OK')" && \
+    pip check && \
+    echo "All dependency verification completed successfully"
+
+# Stage 3: Development (Windows)
+FROM dependencies AS development
+
+# Install development and testing dependencies
+RUN pip install --no-cache-dir -e .[dev,all]
+
+# Copy source code
+COPY . .
+
+# Create necessary directories
+RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs C:\\app\\uploads C:\\app\\test-results
+
+# Expose ports (app and debugger)
+EXPOSE 8000 5678
+
+# Set development environment variables
+ENV RAFT_ENVIRONMENT=development \
+    RAFT_LOG_LEVEL=DEBUG
+
+# Development command
+CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# Stage 4: Testing (Windows)
+FROM development AS testing
+
+# Set test environment variables
+ENV RAFT_TESTING=true \
+    RAFT_LOG_LEVEL=DEBUG \
+    PYTHONPATH=C:\\app
+
+# Run tests by default
+CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=core", "--cov=cli", "--cov=web", "--cov-report=xml", "--cov-report=term-missing"]
+
+# Stage 5: Production Web Application (Windows)
+FROM dependencies AS production
+
+# Install web dependencies
+RUN pip install --no-cache-dir -e .[web]
+
+# Copy source code
+COPY . .
+
+# Remove unnecessary files for production
+RUN powershell -Command "Remove-Item -Recurse -Force tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
+
+# Create necessary directories
+RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs C:\\app\\uploads
+
+# Set production environment variables
+ENV RAFT_ENVIRONMENT=production \
+    RAFT_LOG_LEVEL=INFO \
+    RAFT_LOG_FORMAT=json \
+    RAFT_LOG_OUTPUT=stdout \
+    PYTHONUNBUFFERED=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD powershell -Command "try { Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing; exit 0 } catch { exit 1 }"
+
+# Expose port
+EXPOSE 8000
+
+# Production command using the web entry point
+CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Stage 6: CLI-only (lightweight Windows)
+FROM base AS cli
+
+# Copy project configuration and install minimal dependencies
+COPY pyproject.toml .
+
+# Install only core dependencies (no web, no dev)
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e . && \
+    echo "CLI dependencies installed successfully"
+
+# Copy source files
+COPY . .
+
+# Remove unnecessary files for CLI-only image
+RUN powershell -Command "Remove-Item -Recurse -Force web, tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
+
+# Create necessary directories
+RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs
+
+# Set CLI environment variables
+ENV RAFT_ENVIRONMENT=cli \
+    RAFT_LOG_LEVEL=INFO \
+    PYTHONUNBUFFERED=1
+
+# Set working directory for data processing
+WORKDIR C:\\app
+
+# CLI entry point using the CLI module
+ENTRYPOINT ["python", "-m", "cli.main"]
+CMD ["--help"]

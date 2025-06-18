@@ -32,13 +32,9 @@ try:
     from langchain_experimental.text_splitter import SemanticChunker
     from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
 
-    HAS_LANGCHAIN = True
+    HAS_LANGCHAIN_OPENAI = True
 except ImportError:
-    HAS_LANGCHAIN = False
-
-    class SemanticChunker:  # type: ignore[no-redef]
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
+    HAS_LANGCHAIN_OPENAI = False
 
     class OpenAIEmbeddings:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -47,6 +43,34 @@ except ImportError:
     class AzureOpenAIEmbeddings:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
+
+
+try:
+    from langchain_community.embeddings import NomicEmbeddings
+
+    HAS_NOMIC_EMBEDDINGS = True
+except ImportError:
+    HAS_NOMIC_EMBEDDINGS = False
+
+    class NomicEmbeddings:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+
+try:
+    from langchain_experimental.text_splitter import SemanticChunker
+
+    HAS_SEMANTIC_CHUNKER = True
+except ImportError:
+    HAS_SEMANTIC_CHUNKER = False
+
+    class SemanticChunker:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+
+# Overall LangChain availability
+HAS_LANGCHAIN = HAS_LANGCHAIN_OPENAI or HAS_NOMIC_EMBEDDINGS
 
 
 try:
@@ -227,17 +251,35 @@ class DocumentService:
 
     def _semantic_chunking(self, embeddings: Any, text: str) -> List[str]:
         """Perform semantic chunking using embeddings."""
-        params = self.config.chunking_params
-        num_chunks = params.get("number_of_chunks") or ceil(len(text) / self.config.chunk_size)
-        min_chunk_size = params.get("min_chunk_size", 0)
+        if not HAS_SEMANTIC_CHUNKER:
+            logger.warning("SemanticChunker not available, falling back to fixed chunking")
+            return self._fixed_chunking(text)
 
-        # Create semantic chunker with correct parameters
-        text_splitter = SemanticChunker(
-            embeddings=embeddings, number_of_chunks=num_chunks, min_chunk_size=min_chunk_size
-        )
+        try:
+            params = self.config.chunking_params
+            num_chunks = params.get("number_of_chunks") or ceil(len(text) / self.config.chunk_size)
+            min_chunk_size = params.get("min_chunk_size", 0)
 
-        chunks = text_splitter.create_documents([text])
-        return [chunk.page_content for chunk in chunks]
+            # Ensure we have a reasonable number of chunks
+            if num_chunks <= 0:
+                num_chunks = 1
+
+            # Create semantic chunker with correct parameters
+            text_splitter = SemanticChunker(
+                embeddings=embeddings, number_of_chunks=num_chunks, min_chunk_size=min_chunk_size
+            )
+
+            chunks = text_splitter.create_documents([text])
+
+            # Validate chunks
+            if not chunks:
+                logger.warning("Semantic chunking produced no chunks, falling back to fixed chunking")
+                return self._fixed_chunking(text)
+
+            return [chunk.page_content for chunk in chunks]
+        except Exception as e:
+            logger.error(f"Error during semantic chunking: {e}, falling back to fixed chunking")
+            return self._fixed_chunking(text)
 
     def _fixed_chunking(self, text: str) -> List[str]:
         """Split text into fixed-size chunks."""
@@ -266,23 +308,81 @@ class DocumentService:
     def _build_embeddings(self) -> Any:
         """Build embeddings model for semantic chunking."""
         try:
-            if self.config.use_azure_identity:
-                from ..utils import get_azure_openai_token
+            # First try to use the client builder function
+            try:
+                from ..clients.openai_client import build_langchain_embeddings
 
-                api_key = get_azure_openai_token()
-            else:
-                api_key = self.config.openai_key
+                if self.config.use_azure_identity:
+                    from ..utils import get_azure_openai_token
 
-            from ..clients.openai_client import build_langchain_embeddings
+                    api_key = get_azure_openai_token()
+                else:
+                    api_key = self.config.openai_key
 
-            return build_langchain_embeddings(api_key=api_key, model=self.config.embedding_model)
-        except ImportError:
-            # Mock implementation for demo purposes
-            class MockEmbeddings:
-                def embed_documents(self, texts: List[str]) -> List[List[float]]:
-                    return [[0.1, 0.2, 0.3] for _ in texts]
+                return build_langchain_embeddings(api_key=api_key, model=self.config.embedding_model)
+            except ImportError:
+                # If client builder is not available, try direct initialization
 
-                def embed_query(self, text: str) -> List[float]:
-                    return [0.1, 0.2, 0.3]
+                # Check if we should use Nomic embeddings
+                if self.config.embedding_model.startswith("nomic-"):
+                    if HAS_NOMIC_EMBEDDINGS:
+                        logger.info(f"Using Nomic embeddings model: {self.config.embedding_model}")
+                        return NomicEmbeddings(model=self.config.embedding_model)
+                    else:
+                        logger.warning("Nomic embeddings requested but not available")
 
-            return MockEmbeddings()
+                # Fall back to OpenAI embeddings
+                if self.config.azure_openai_enabled:
+                    if not HAS_LANGCHAIN_OPENAI:
+                        return self._create_mock_embeddings()
+
+                    # Parameters for Azure OpenAI
+                    kwargs = {
+                        "deployment": self.config.embedding_model,
+                        "api_version": "2023-05-15",
+                    }
+
+                    if hasattr(self.config, "azure_endpoint"):
+                        kwargs["endpoint"] = self.config.azure_endpoint
+
+                    if self.config.use_azure_identity:
+                        from ..utils import get_azure_openai_token
+
+                        api_key = get_azure_openai_token()
+                    else:
+                        api_key = self.config.openai_key
+
+                    if api_key:
+                        kwargs["api_key"] = api_key
+
+                    return AzureOpenAIEmbeddings(**kwargs)
+                else:
+                    if not HAS_LANGCHAIN_OPENAI:
+                        return self._create_mock_embeddings()
+
+                    # Parameters for OpenAI
+                    kwargs = {}
+
+                    if self.config.embedding_model:
+                        kwargs["model"] = self.config.embedding_model
+
+                    if self.config.openai_key:
+                        kwargs["api_key"] = self.config.openai_key
+
+                    return OpenAIEmbeddings(**kwargs)
+        except Exception as e:
+            logger.error(f"Error building embeddings model: {e}")
+            return self._create_mock_embeddings()
+
+    def _create_mock_embeddings(self) -> Any:
+        """Create a mock embeddings model for testing or when real implementation is unavailable."""
+
+        class MockEmbeddings:
+            def embed_documents(self, texts: List[str]) -> List[List[float]]:
+                return [[0.1, 0.2, 0.3] for _ in texts]
+
+            def embed_query(self, text: str) -> List[float]:
+                return [0.1, 0.2, 0.3]
+
+        logger.warning("Using mock embeddings implementation")
+        return MockEmbeddings()

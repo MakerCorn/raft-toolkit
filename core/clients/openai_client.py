@@ -4,7 +4,7 @@ OpenAI and Azure OpenAI client management.
 
 import logging
 from os import environ
-from typing import Any
+from typing import Any, Union
 
 try:
     from openai import AzureOpenAI, OpenAI
@@ -40,7 +40,7 @@ def is_azure() -> bool:
     return azure
 
 
-def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> OpenAI:
+def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> Union[OpenAI, AzureOpenAI]:
     """Build OpenAI or AzureOpenAI client based on environment variables.
 
     Args:
@@ -48,7 +48,7 @@ def build_openai_client(env_prefix: str = "COMPLETION", **kwargs: Any) -> OpenAI
         **kwargs (Any): Additional keyword arguments for the OpenAI or AzureOpenAI client.
 
     Returns:
-        OpenAI: The configured OpenAI or AzureOpenAI client instance.
+        Union[OpenAI, AzureOpenAI]: The configured OpenAI or AzureOpenAI client instance.
     """
     env = read_env_config(env_prefix)
     with set_env(**env):
@@ -68,11 +68,21 @@ def build_langchain_embeddings(**kwargs):
         Embeddings instance for LangChain.
     """
     try:
+        from langchain_core.embeddings import Embeddings
         from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 
         if is_azure():
             return AzureOpenAIEmbeddings(**kwargs)
         else:
+            # Check if we should use nomic embeddings
+            if kwargs.get("model", "").startswith("nomic-"):
+                try:
+                    from langchain_community.embeddings import NomicEmbeddings
+
+                    return NomicEmbeddings(model=kwargs.get("model"))
+                except ImportError:
+                    logger.warning("NomicEmbeddings not available, falling back to OpenAIEmbeddings")
+                    return OpenAIEmbeddings(**kwargs)
             return OpenAIEmbeddings(**kwargs)
     except ImportError:
         # Mock implementation for demo purposes

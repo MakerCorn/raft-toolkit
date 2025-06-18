@@ -4,7 +4,14 @@ Embedding service for generating embeddings with custom prompt templates.
 
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol, Union
+
+
+# Define protocol for embeddings
+class EmbeddingsProtocol(Protocol):
+    def embed_documents(self, texts: List[str]) -> List[List[float]]: ...
+
+    def embed_query(self, text: str) -> List[float]: ...
 
 
 # Define classes for type checking
@@ -24,6 +31,14 @@ class AzureOpenAIEmbeddings:
         pass
 
 
+class NomicEmbeddings:
+    def embed_documents(self, texts):
+        pass
+
+    def embed_query(self, text):
+        pass
+
+
 # Try to import real implementations
 try:
     from langchain_openai.embeddings import AzureOpenAIEmbeddings as RealAzureOpenAIEmbeddings
@@ -32,10 +47,20 @@ try:
     # Replace stub classes with real implementations
     OpenAIEmbeddings = RealOpenAIEmbeddings  # type: ignore
     AzureOpenAIEmbeddings = RealAzureOpenAIEmbeddings  # type: ignore
-    HAS_EMBEDDINGS = True
+    HAS_OPENAI_EMBEDDINGS = True
 except ImportError:
     # Keep the stub classes
-    HAS_EMBEDDINGS = False
+    HAS_OPENAI_EMBEDDINGS = False
+
+# Try to import Nomic embeddings
+try:
+    from langchain_community.embeddings import NomicEmbeddings as RealNomicEmbeddings
+
+    NomicEmbeddings = RealNomicEmbeddings  # type: ignore
+    HAS_NOMIC_EMBEDDINGS = True
+except ImportError:
+    # Keep the stub class
+    HAS_NOMIC_EMBEDDINGS = False
 
 from ..config import RaftConfig
 from ..models import DocumentChunk
@@ -68,7 +93,7 @@ class EmbeddingService:
         logger.warning("Langchain embeddings not available, using mock implementation")
         return MockEmbeddings()
 
-    def _build_embeddings_model(self) -> Any:
+    def _build_embeddings_model(self) -> EmbeddingsProtocol:
         """Build the underlying embeddings model."""
         try:
             if self.config.use_azure_identity:
@@ -84,10 +109,21 @@ class EmbeddingService:
 
                 return build_langchain_embeddings(api_key=api_key, model=self.config.embedding_model)
             except ImportError:
+                # Check if we should use Nomic embeddings
+                if self.config.embedding_model.startswith("nomic-"):
+                    if HAS_NOMIC_EMBEDDINGS:
+                        logger.info(f"Using Nomic embeddings model: {self.config.embedding_model}")
+                        return NomicEmbeddings(model=self.config.embedding_model)
+                    else:
+                        logger.warning(
+                            "Nomic embeddings requested but not available, falling back to mock implementation"
+                        )
+                        return self._create_mock_embeddings()
+
                 # Fall back to direct langchain integration
                 if self.config.azure_openai_enabled:
                     # Create a mock embeddings model if real implementation not available
-                    if not HAS_EMBEDDINGS:
+                    if not HAS_OPENAI_EMBEDDINGS:
                         return self._create_mock_embeddings()
 
                     # Parameters may vary based on the version - use **kwargs for flexibility
@@ -106,7 +142,7 @@ class EmbeddingService:
                     return AzureOpenAIEmbeddings(**kwargs)
                 else:
                     # Create a mock embeddings model if real implementation not available
-                    if not HAS_EMBEDDINGS:
+                    if not HAS_OPENAI_EMBEDDINGS:
                         return self._create_mock_embeddings()
 
                     # Use the real implementation with appropriate parameters
@@ -121,16 +157,7 @@ class EmbeddingService:
 
                     return OpenAIEmbeddings(**kwargs)
         except ImportError:
-            # Mock implementation for demo purposes
-            class MockEmbeddings:
-                def embed_documents(self, texts):
-                    return [[0.1, 0.2, 0.3] for _ in texts]
-
-                def embed_query(self, text):
-                    return [0.1, 0.2, 0.3]
-
-            logger.warning("Langchain embeddings not available, using mock implementation")
-            return MockEmbeddings()
+            return self._create_mock_embeddings()
 
     def _load_embedding_template(self) -> str:
         """Load the embedding prompt template with robust fallback."""

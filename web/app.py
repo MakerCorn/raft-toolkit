@@ -203,6 +203,7 @@ async def serve_ui():
 
 class UploadResponse(BaseModel):
     """Response model for file upload."""
+
     file_id: str
     filename: str
     file_path: str
@@ -262,12 +263,7 @@ async def upload_file(file: UploadFile = File(...)):
         # Set restrictive file permissions
         file_path.chmod(0o600)
 
-        return UploadResponse(
-            file_id=file_id,
-            filename=safe_filename,
-            file_path=str(file_path),
-            size=len(content)
-        )
+        return UploadResponse(file_id=file_id, filename=safe_filename, file_path=str(file_path), size=len(content))
 
     except HTTPException:
         raise
@@ -278,6 +274,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 class PreviewRequest(BaseModel):
     """Request model for processing preview."""
+
     doctype: str
     chunking_strategy: str = "semantic"
     chunk_size: int = 512

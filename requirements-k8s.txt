@@ -6,7 +6,7 @@
 
 # Kubernetes core
 kubernetes>=29.0.0,<30.0.0
-jinja2>=3.1.0,<4.0.0
+jinja2>=3.1.3,<4.0.0
 
 # Cloud provider specific Kubernetes management
 azure-mgmt-containerservice>=30.0.0,<31.0.0
