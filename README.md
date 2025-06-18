@@ -196,6 +196,10 @@ python raft.py --datapath sample_data/sample.pdf --output ./output --preview
 - [Complete Installation Guide](docs/INSTALLATION_GUIDE.md) - Detailed setup instructions
 - [Requirements Management](docs/REQUIREMENTS.md) - Dependency structure and installation patterns
 
+**📚 CLI Documentation:**
+- [CLI Reference Guide](docs/CLI-Reference.md) - Comprehensive CLI parameter documentation
+- [CLI Quick Reference](docs/CLI-Quick-Reference.md) - Quick reference card for CLI parameters
+
 ## 🌐 Usage
 
 ### Web Interface
@@ -230,6 +234,10 @@ python run_web.py --host 0.0.0.0 --port 8080 --debug
 - **Batch Processing**: Automated workflows for multiple datasets
 
 ### Command Line Interface
+
+> 📚 **Complete CLI Documentation:**
+> - [CLI Reference Guide](docs/CLI-Reference.md) - Comprehensive documentation of all CLI parameters and options
+> - [CLI Quick Reference](docs/CLI-Quick-Reference.md) - Quick reference card for common commands and use cases
 
 The `tools/` directory contains powerful standalone evaluation utilities:
 
