@@ -83,7 +83,7 @@ class TestRaftEngineIntegration:
                 assert "total_qa_points" in stats
                 assert stats["total_qa_points"] >= 0
 
-            except Exception as e:
+            except Exception:
                 # If processing fails, at least verify the engine is set up correctly
                 assert hasattr(raft_engine, "config")
                 assert hasattr(raft_engine, "input_service")

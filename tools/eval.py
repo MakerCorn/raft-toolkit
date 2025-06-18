@@ -107,7 +107,6 @@ if __name__ == "__main__":
             result (Dict[str, Any]): The result to write to the file.
             write_file_name (str): The name of the file to write to.
         """
-        global file_write_lock
         with file_write_lock:
             with open(write_file_name, "a") as outfile:
                 json.dump(result, outfile)

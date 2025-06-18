@@ -68,7 +68,6 @@ def build_langchain_embeddings(**kwargs):
         Embeddings instance for LangChain.
     """
     try:
-        from langchain_core.embeddings import Embeddings
         from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 
         if is_azure():

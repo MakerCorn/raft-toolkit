@@ -77,7 +77,6 @@ def _get_token(token_key: str, resource: str) -> Optional[str]:
         return None
 
     now = int(time.time())
-    global tokens
     # Get token from cache
     cached_token = tokens.get(token_key)
 

@@ -271,7 +271,7 @@ if __name__ == "__main__":
     }
 
     start = time.time()
-    logger.info(f"Starting evaluate...")
+    logger.info("Starting evaluate...")
 
     modes = {"local": evaluate_local, "remote": evaluate_aistudio}
     evaluate_func = modes[args.mode]

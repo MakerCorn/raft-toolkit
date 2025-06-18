@@ -11,6 +11,11 @@ from math import ceil
 from pathlib import Path
 from typing import Any, List
 
+from ..config import RaftConfig
+from ..models import DocumentChunk
+from .embedding_service import create_embedding_service
+from .llm_service import LLMService
+
 try:
     import pypdf
 except ImportError:
@@ -29,7 +34,6 @@ except ImportError:
 
 
 try:
-    from langchain_experimental.text_splitter import SemanticChunker
     from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
 
     HAS_LANGCHAIN_OPENAI = True
@@ -83,11 +87,6 @@ except ImportError:
     def tqdm(iterable: Any, *args: Any, **kwargs: Any) -> Any:
         return iterable
 
-
-from ..config import RaftConfig
-from ..models import DocumentChunk
-from .embedding_service import create_embedding_service
-from .llm_service import LLMService
 
 logger = logging.getLogger(__name__)
 

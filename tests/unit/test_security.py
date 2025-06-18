@@ -67,7 +67,6 @@ class TestSecurityConfig:
         """Test file extension validation."""
         # Test allowed extensions
         for ext in SecurityConfig.ALLOWED_EXTENSIONS:
-            filename = f"test{ext}"
             # Should be allowed (if method exists)
             assert ext in SecurityConfig.ALLOWED_EXTENSIONS
 

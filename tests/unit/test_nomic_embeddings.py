@@ -28,7 +28,7 @@ def test_nomic_embeddings_creation(mock_nomic, config):
 
     # Create embedding service
     with patch("core.services.embedding_service.HAS_NOMIC_EMBEDDINGS", True):
-        service = EmbeddingService(config)
+        EmbeddingService(config)
 
     # Verify Nomic embeddings were created
     mock_nomic.assert_called_once_with(model="nomic-embed-text")
@@ -43,7 +43,7 @@ def test_nomic_embeddings_via_client_builder(mock_nomic, config):
 
     # Create embedding service with patched client builder
     with patch("core.services.embedding_service.build_langchain_embeddings") as mock_builder:
-        service = EmbeddingService(config)
+        EmbeddingService(config)
 
     # Verify client builder was called
     mock_builder.assert_called_once()
@@ -56,7 +56,7 @@ def test_fallback_when_nomic_not_available(config):
         with patch("core.services.embedding_service.HAS_LANGCHAIN_OPENAI", False):
             with patch("core.services.embedding_service._create_mock_embeddings") as mock_create:
                 mock_create.return_value = MagicMock()
-                service = EmbeddingService(config)
+                EmbeddingService(config)
 
             # Verify mock embeddings were created
             mock_create.assert_called_once()

@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Tuple
 from urllib.parse import urlparse
 
+from .base import BaseInputSource, SourceDocument, SourceValidationError
+
 # Initialize availability flags
 REQUESTS_AVAILABLE = False
 MSAL_AVAILABLE = False
@@ -25,7 +27,15 @@ try:
 except ImportError:
     pass
 
-from .base import BaseInputSource, SourceDocument, SourceValidationError
+try:
+    from Office365_REST_Python_Client.runtime.auth.authentication_context import AuthenticationContext
+    from Office365_REST_Python_Client.sharepoint.client_context import ClientContext
+
+    HAS_SHAREPOINT = True
+except ImportError:
+    HAS_SHAREPOINT = False
+    AuthenticationContext = None
+    ClientContext = None
 
 
 class SharePointInputSource(BaseInputSource):

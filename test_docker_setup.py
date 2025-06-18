@@ -6,7 +6,6 @@ This script performs a basic validation of the Docker testing environment
 without requiring the full Docker environment to be running.
 """
 
-import os
 import sys
 from pathlib import Path
 

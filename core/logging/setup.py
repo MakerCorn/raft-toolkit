@@ -14,6 +14,8 @@ import logging
 import logging.config
 import os
 import sys
+import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, List, Optional, Union
@@ -32,12 +34,7 @@ try:
 except ImportError:
     HAS_YAML = False
 
-try:
-    import coloredlogs
-
-    HAS_COLOREDLOGS = True
-except ImportError:
-    HAS_COLOREDLOGS = False
+HAS_COLOREDLOGS = False
 
 try:
     from opentelemetry import trace
@@ -49,9 +46,6 @@ try:
     HAS_OPENTELEMETRY = True
 except ImportError:
     HAS_OPENTELEMETRY = False
-
-import threading
-import uuid
 
 HAS_TRACING_SUPPORT = True
 
@@ -404,7 +398,6 @@ def configure_logging(
         trace_service_name: Service name for tracing
         **context: Additional context to include in all logs
     """
-    global _logging_config
 
     # Update configuration
     if level is not None:

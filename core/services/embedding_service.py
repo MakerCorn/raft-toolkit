@@ -4,7 +4,12 @@ Embedding service for generating embeddings with custom prompt templates.
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Protocol, Union
+from typing import Any, Dict, List, Optional, Protocol
+
+from ..config import RaftConfig
+from ..models import DocumentChunk
+from ..utils.template_loader import create_template_loader
+from .langwatch_service import create_langwatch_service
 
 
 # Define protocol for embeddings
@@ -14,58 +19,44 @@ class EmbeddingsProtocol(Protocol):
     def embed_query(self, text: str) -> List[float]: ...
 
 
-# Define classes for type checking
-class OpenAIEmbeddings:
-    def embed_documents(self, texts):
-        pass
-
-    def embed_query(self, text):
-        pass
-
-
-class AzureOpenAIEmbeddings:
-    def embed_documents(self, texts):
-        pass
-
-    def embed_query(self, text):
-        pass
-
-
-class NomicEmbeddings:
-    def embed_documents(self, texts):
-        pass
-
-    def embed_query(self, text):
-        pass
-
-
 # Try to import real implementations
 try:
-    from langchain_openai.embeddings import AzureOpenAIEmbeddings as RealAzureOpenAIEmbeddings
-    from langchain_openai.embeddings import OpenAIEmbeddings as RealOpenAIEmbeddings
+    from langchain_openai.embeddings import AzureOpenAIEmbeddings, OpenAIEmbeddings
 
-    # Replace stub classes with real implementations
-    OpenAIEmbeddings = RealOpenAIEmbeddings  # type: ignore
-    AzureOpenAIEmbeddings = RealAzureOpenAIEmbeddings  # type: ignore
     HAS_OPENAI_EMBEDDINGS = True
 except ImportError:
-    # Keep the stub classes
     HAS_OPENAI_EMBEDDINGS = False
+
+    class OpenAIEmbeddings:
+        def embed_documents(self, texts):
+            pass
+
+        def embed_query(self, text):
+            pass
+
+    class AzureOpenAIEmbeddings:
+        def embed_documents(self, texts):
+            pass
+
+        def embed_query(self, text):
+            pass
+
 
 # Try to import Nomic embeddings
 try:
-    from langchain_community.embeddings import NomicEmbeddings as RealNomicEmbeddings
+    from langchain_community.embeddings import NomicEmbeddings
 
-    NomicEmbeddings = RealNomicEmbeddings  # type: ignore
     HAS_NOMIC_EMBEDDINGS = True
 except ImportError:
-    # Keep the stub class
     HAS_NOMIC_EMBEDDINGS = False
 
-from ..config import RaftConfig
-from ..models import DocumentChunk
-from ..utils.template_loader import create_template_loader
-from .langwatch_service import create_langwatch_service
+    class NomicEmbeddings:
+        def embed_documents(self, texts):
+            pass
+
+        def embed_query(self, text):
+            pass
+
 
 logger = logging.getLogger(__name__)
 

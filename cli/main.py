@@ -16,7 +16,6 @@ try:
     from core.logging.setup import configure_logging, get_logger, log_setup, setup_sentry_logging
 except ImportError:
     # Fallback to basic logging if enhanced logging is not available
-    from typing import Any, Optional
 
     def log_setup() -> None:
         import logging

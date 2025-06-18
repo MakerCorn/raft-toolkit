@@ -215,14 +215,14 @@ class TestLLMServiceIntegration:
     def test_context_building_with_probability(self, llm_service):
         """Test context building with oracle probability."""
         # Create test chunks
-        oracle_chunk = DocumentChunk(
+        DocumentChunk(
             id="oracle-chunk",
             content="Oracle content",
             source="oracle.txt",
             metadata={"chunk_id": 1},
             embedding=None,
         )
-        distractor_chunks = [
+        [
             DocumentChunk(
                 id="distractor-chunk",
                 content="Distractor content",

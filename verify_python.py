@@ -23,10 +23,6 @@ def main():
 
     # Test basic imports
     try:
-        import asyncio
-        import json
-        import pathlib
-
         print("✅ Core Python modules available")
     except ImportError as e:
         print(f"❌ Core module import failed: {e}")

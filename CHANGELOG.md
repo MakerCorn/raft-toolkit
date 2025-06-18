@@ -13,11 +13,20 @@
 - Improved error handling in semantic chunking with fallback to fixed chunking
 - Fixed type hints in OpenAI client implementation
 - Added proper error handling for embedding model initialization
+- Resolved all flake8 linting errors across the codebase:
+  - Fixed import redefinition errors (F811) in CLI and service modules
+  - Removed unused imports (F401) throughout test files and core modules
+  - Fixed unused variables (F841) in test files
+  - Corrected f-string placeholder issues (F541) in evaluation tools
+  - Reorganized module-level imports (E402) for proper code structure
+  - Fixed multiple statements on one line (E704) in protocol definitions
 
 ### Changed
 - Updated requirements.txt and pyproject.toml with new dependencies
 - Refactored embedding service to use Protocol for better type checking
 - Improved mock embeddings implementation for testing
+- Reorganized import statements across modules for better code organization
+- Cleaned up unused imports and variables for improved code quality
 
 ## [0.2.0] - 2023-06-15
 

@@ -198,7 +198,7 @@ class TestDockerComposeIntegration:
         with tempfile.NamedTemporaryFile() as tmp:
             tmp_path = Path(tmp.name)
             expected_temp_dir = Path(os.getenv("TEST_TEMP_DIR", "/tmp"))
-            assert tmp_path.is_relative_to(expected_temp_dir.parent), f"Temp files should use configured temp directory"
+            assert tmp_path.is_relative_to(expected_temp_dir.parent), "Temp files should use configured temp directory"
 
 
 if __name__ == "__main__":

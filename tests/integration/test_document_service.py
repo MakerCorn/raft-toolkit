@@ -212,9 +212,8 @@ class TestDocumentServiceIntegration:
                 chunks = document_service.process_documents(Path(invalid_file))
                 # Should either succeed with empty chunks or handle gracefully
                 assert isinstance(chunks, list)
-            except KeyError as e:
+            except KeyError:
                 # The error is now a KeyError, so we need to check the string representation
-                error_str = str(e)
                 # Don't check for specific text in the error message since it's a KeyError
                 assert True  # Just make sure we caught the exception
         finally:
