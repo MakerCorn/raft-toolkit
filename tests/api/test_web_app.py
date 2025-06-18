@@ -14,7 +14,6 @@ try:
 except ImportError:
     from starlette.testclient import TestClient
 
-from core.models import JobStatus
 from web.app import app, jobs
 
 
@@ -87,9 +86,10 @@ class TestUploadEndpoint:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["success"] is True
+        assert "file_id" in data
         assert "file_path" in data
         assert data["filename"] == "test.txt"
+        assert data["size"] == 43  # Length of test content
         assert Path(data["file_path"]).exists()
 
     @pytest.mark.api
@@ -97,10 +97,9 @@ class TestUploadEndpoint:
         """Test upload endpoint with no file."""
         response = client.post("/api/upload")
 
-        assert response.status_code == 400
+        assert response.status_code == 422  # FastAPI validation error
         data = response.json()
-        assert data["success"] is False
-        assert "No file provided" in data["error"]
+        assert "detail" in data
 
     @pytest.mark.api
     def test_upload_file_empty_filename(self, client):
@@ -109,8 +108,8 @@ class TestUploadEndpoint:
 
         assert response.status_code == 400
         data = response.json()
-        assert data["success"] is False
-        assert "No file selected" in data["error"]
+        assert "detail" in data
+        assert "Filename is required" in data["detail"]
 
 
 @pytest.mark.api
@@ -137,16 +136,14 @@ class TestProcessEndpoint:
             "workers": 1,
         }
 
-        with patch("web.app.start_background_processing") as mock_start:
-            response = client.post(f"/api/process?file_path={file_path}", json=process_request)
+        response = client.post(f"/api/process?file_path={file_path}", json=process_request)
 
         assert response.status_code == 200
         data = response.json()
 
-        assert data["success"] is True
         assert "job_id" in data
         assert data["status"] == "pending"
-        assert mock_start.called
+        assert data["message"] == "Processing started"
 
     @pytest.mark.api
     def test_start_processing_missing_file(self, client):
@@ -157,8 +154,7 @@ class TestProcessEndpoint:
 
         assert response.status_code == 400
         data = response.json()
-        assert data["success"] is False
-        assert "File not found" in data["error"]
+        assert "detail" in data
 
     @pytest.mark.api
     def test_start_processing_invalid_config(self, client, temp_upload_file):
@@ -174,9 +170,9 @@ class TestProcessEndpoint:
 
         response = client.post(f"/api/process?file_path={file_path}", json=process_request)
 
-        assert response.status_code == 400
+        assert response.status_code == 422  # Pydantic validation error
         data = response.json()
-        assert data["success"] is False
+        assert "detail" in data
 
 
 @pytest.mark.api
@@ -189,30 +185,27 @@ class TestJobStatusEndpoint:
         # Create a mock job
         job_id = "test-job-123"
         jobs[job_id] = {
-            "id": job_id,
-            "status": JobStatus.PROCESSING,
-            "progress": 50,
-            "total_chunks": 10,
-            "processed_chunks": 5,
-            "created_at": "2024-01-01T00:00:00",
-            "config": {"doctype": "txt", "questions": 3},
+            "status": "processing",
+            "progress": 0.5,
+            "message": "Processing in progress",
+            "stats": None,
+            "error": None,
         }
 
-        response = client.get(f"/api/jobs/{job_id}")
+        response = client.get(f"/api/jobs/{job_id}/status")
 
         assert response.status_code == 200
         data = response.json()
 
-        assert data["id"] == job_id
+        assert data["job_id"] == job_id
         assert data["status"] == "processing"
-        assert data["progress"] == 50
-        assert data["total_chunks"] == 10
-        assert data["processed_chunks"] == 5
+        assert data["progress"] == 0.5
+        assert data["message"] == "Processing in progress"
 
     @pytest.mark.api
     def test_get_job_status_not_found(self, client):
         """Test getting status for non-existent job."""
-        response = client.get("/api/jobs/nonexistent-job")
+        response = client.get("/api/jobs/nonexistent-job/status")
 
         assert response.status_code == 404
         data = response.json()
@@ -225,8 +218,8 @@ class TestJobStatusEndpoint:
         jobs.clear()
 
         # Add test jobs
-        jobs["job1"] = {"id": "job1", "status": JobStatus.COMPLETED, "created_at": "2024-01-01T00:00:00"}
-        jobs["job2"] = {"id": "job2", "status": JobStatus.PROCESSING, "created_at": "2024-01-01T01:00:00"}
+        jobs["job1"] = {"status": "completed", "progress": 1.0, "message": "Completed", "stats": None, "error": None}
+        jobs["job2"] = {"status": "processing", "progress": 0.5, "message": "Processing", "stats": None, "error": None}
 
         response = client.get("/api/jobs")
 
@@ -234,20 +227,27 @@ class TestJobStatusEndpoint:
         data = response.json()
 
         assert len(data) == 2
-        job_ids = {job["id"] for job in data}
+        job_ids = {job["job_id"] for job in data}
         assert job_ids == {"job1", "job2"}
 
     @pytest.mark.api
     def test_delete_job_success(self, client):
         """Test deleting a job successfully."""
         job_id = "delete-test-job"
-        jobs[job_id] = {"id": job_id, "status": JobStatus.COMPLETED, "created_at": "2024-01-01T00:00:00"}
+        jobs[job_id] = {
+            "status": "completed",
+            "progress": 1.0,
+            "message": "Completed",
+            "stats": None,
+            "error": None,
+            "config": Mock(),
+        }
 
         response = client.delete(f"/api/jobs/{job_id}")
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
+        assert data["message"] == "Job deleted"
         assert job_id not in jobs
 
     @pytest.mark.api
@@ -274,27 +274,34 @@ class TestDownloadEndpoint:
         output_dir.mkdir()
 
         # Create test files
-        (output_dir / "dataset.jsonl").write_text('{"test": "data"}\n')
-        (output_dir / "metadata.json").write_text('{"info": "test"}')
+        result_file = output_dir / "dataset.jsonl"
+        result_file.write_text('{"test": "data"}\n')
+
+        # Create mock config
+        mock_config = Mock()
+        mock_config.output = str(output_dir / "dataset")
+        mock_config.output_type = "jsonl"
 
         jobs[job_id] = {
-            "id": job_id,
-            "status": JobStatus.COMPLETED,
-            "output_path": str(output_dir),
-            "created_at": "2024-01-01T00:00:00",
+            "status": "completed",
+            "progress": 1.0,
+            "message": "Completed",
+            "config": mock_config,
+            "stats": None,
+            "error": None,
         }
 
         response = client.get(f"/api/jobs/{job_id}/download")
 
         assert response.status_code == 200
-        assert response.headers["content-type"] == "application/zip"
+        assert response.headers["content-type"] == "application/octet-stream"
         assert "attachment" in response.headers["content-disposition"]
 
     @pytest.mark.api
     def test_download_job_not_completed(self, client):
         """Test downloading from non-completed job."""
         job_id = "processing-job"
-        jobs[job_id] = {"id": job_id, "status": JobStatus.PROCESSING, "created_at": "2024-01-01T00:00:00"}
+        jobs[job_id] = {"status": "processing", "progress": 0.5, "message": "Processing", "stats": None, "error": None}
 
         response = client.get(f"/api/jobs/{job_id}/download")
 
@@ -343,10 +350,10 @@ class TestPreviewEndpoint:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["success"] is True
-        assert "preview" in data
-        assert data["preview"]["estimated_chunks"] == 2
-        assert data["preview"]["estimated_qa_points"] == 6
+        assert "files_to_process" in data
+        assert data["estimated_chunks"] == 2
+        assert data["estimated_qa_points"] == 6
+        assert data["doctype"] == "txt"
 
     @pytest.mark.api
     def test_get_preview_missing_file(self, client):
@@ -357,8 +364,7 @@ class TestPreviewEndpoint:
 
         assert response.status_code == 400
         data = response.json()
-        assert data["success"] is False
-        assert "File not found" in data["error"]
+        assert "detail" in data
 
 
 @pytest.mark.api

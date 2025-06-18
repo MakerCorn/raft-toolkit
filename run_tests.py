@@ -8,6 +8,7 @@ Usage:
     python run_tests.py --integration      # Run only integration tests
     python run_tests.py --api              # Run only API tests
     python run_tests.py --cli              # Run only CLI tests
+    python run_tests.py --docker           # Run only Docker environment tests
     python run_tests.py --coverage         # Run with coverage report
     python run_tests.py --fast             # Skip slow tests
 
@@ -48,6 +49,7 @@ def main():
     parser.add_argument("--integration", action="store_true", help="Run integration tests only")
     parser.add_argument("--api", action="store_true", help="Run API tests only")
     parser.add_argument("--cli", action="store_true", help="Run CLI tests only")
+    parser.add_argument("--docker", action="store_true", help="Run Docker environment tests only")
 
     # Test options
     parser.add_argument("--coverage", action="store_true", help="Generate coverage report")
@@ -131,6 +133,8 @@ def main():
         test_paths.append("tests/api/")
     if args.cli:
         test_paths.append("tests/cli/")
+    if args.docker:
+        test_paths.append("tests/docker/")
 
     if test_paths:
         # Use direct paths instead of markers to avoid marker issues

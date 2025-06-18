@@ -351,8 +351,10 @@ class TestMainFunction:
                     with patch("cli.main.show_preview") as mock_show_preview:
 
                         mock_config = Mock()
+                        mock_config.source_type = "local"
                         mock_config.datapath = test_file
                         mock_config.source_uri = str(test_file)
+                        mock_config.sentry_dsn = None
                         mock_get_config.return_value = mock_config
 
                         mock_engine = Mock()
@@ -381,7 +383,9 @@ class TestMainFunction:
                     with patch("cli.main.validate_only") as mock_validate:
 
                         mock_config = Mock()
+                        mock_config.source_type = "local"
                         mock_config.datapath = test_file
+                        mock_config.sentry_dsn = None
                         mock_get_config.return_value = mock_config
 
                         mock_engine = Mock()
@@ -502,6 +506,9 @@ class TestMainFunction:
                     with patch("cli.main.show_preview"):
 
                         mock_config = Mock()
+                        mock_config.source_type = "local"
+                        mock_config.datapath = test_file
+                        mock_config.sentry_dsn = None
                         mock_get_config.return_value = mock_config
                         mock_engine_class.return_value = Mock()
 
