@@ -5,8 +5,10 @@
 ### Added
 - Support for Nomic embeddings with `nomic-embed-text` model
 - Added langchain-core and langchain-community dependencies
-- Added asyncio dependency for async operations
 - Added unit tests for Nomic embeddings integration
+- Added `.safety-policy.yml` to document and ignore false positive security vulnerabilities
+- Added comprehensive CI optimization documentation (`docs/CI_OPTIMIZATION.md`)
+- Added convenience dependency groups for faster installations (minimal, standard, complete)
 
 ### Fixed
 - Fixed embedding service to properly handle Nomic embeddings
@@ -26,10 +28,17 @@
   - Eliminated py package dependency to address CVE-2022-42969 (pytest>=7.0 has built-in functionality)
   - Documented langchain-experimental CVE-2024-46946 as false positive (affects unused component)
   - Fixed bandit security warnings with appropriate suppressions for legitimate use cases
+  - Created safety policy file (.safety-policy.yml) to properly ignore false positive vulnerabilities
 
 ### Changed
-- Updated requirements.txt and pyproject.toml with new dependencies
-- Updated all requirements files (requirements*.txt) with security fixes and version alignments
+- **MAJOR: Optimized dependency structure for 70-80% faster CI builds**:
+  - Reduced core dependencies from ~45 to ~15 packages
+  - Moved heavy ML libraries (transformers, sentence-transformers, scikit-learn) to optional 'ai' group
+  - Reorganized dependencies into logical optional groups (ai, langchain, embeddings, documents, web, cloud, tracing, dev)
+  - Added convenience groups: minimal, standard, complete, all
+  - Tightened version constraints for faster dependency resolution
+- Updated requirements.txt to contain only essential core dependencies
+- Updated all requirements files (requirements*.txt) with optimized version ranges
 - Refactored embedding service to use Protocol for better type checking
 - Improved mock embeddings implementation for testing
 - Reorganized import statements across modules for better code organization

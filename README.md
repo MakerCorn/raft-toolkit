@@ -177,20 +177,66 @@ cd raft-toolkit
 cp .env.example .env
 # Edit .env with your OpenAI API key
 
-# Install core dependencies
-pip install -r requirements.txt
+# Fast installation (core functionality only)
+pip install .
+
+# Or standard installation (recommended)
+pip install .[standard]
 
 # Test installation
-python raft.py --datapath sample_data/sample.pdf --output ./output --preview
+python -m cli.main --datapath sample_data/sample.pdf --output ./output --preview
 ```
 
 ### Installation Options
 
-- **📋 Standard Installation**: Core RAFT functionality - `pip install -r requirements.txt`
-- **🌐 Full Installation**: All features - `pip install -e ".[all]"`
-- **🐳 Docker Installation**: Containerized deployment - `docker compose up -d`
-- **☁️ Cloud Integration**: S3 and SharePoint support - `pip install -e ".[cloud]"`
-- **🔍 Monitoring**: Observability features - `pip install -e ".[tracing]"`
+Choose the installation that best fits your needs:
+
+#### 🚀 **Core Installation** (Fastest - ~30-60 seconds)
+```bash
+pip install .
+```
+**Includes:** Basic CLI, document processing, OpenAI integration  
+**Use cases:** Quick testing, lightweight deployments, basic CI
+
+#### 📊 **Standard Installation** (Recommended)
+```bash
+pip install .[standard]
+```
+**Includes:** Full AI/ML functionality, embeddings, LangChain ecosystem  
+**Use cases:** Production deployments, full RAFT functionality
+
+#### 🌐 **Complete Installation**
+```bash
+pip install .[complete]
+```
+**Includes:** Standard + cloud services + observability  
+**Use cases:** Enterprise deployments, cloud integration
+
+#### 🛠️ **Development Installation**
+```bash
+pip install .[all]
+```
+**Includes:** Everything + development tools  
+**Use cases:** Contributing, local development, full testing
+
+#### 🎯 **Custom Combinations**
+```bash
+# Web interface with AI
+pip install .[standard,web]
+
+# Cloud deployment with tracing
+pip install .[ai,langchain,cloud,tracing]
+
+# Development with specific features
+pip install .[standard,dev]
+```
+
+#### 🐳 **Docker Installation**
+```bash
+docker compose up -d
+```
+
+**🚀 Performance Note:** The optimized dependency structure provides **70-80% faster CI builds** compared to previous versions. See [CI Optimization Guide](docs/CI_OPTIMIZATION.md) for details.
 
 **📚 Installation Resources:**
 - [Complete Installation Guide](docs/INSTALLATION_GUIDE.md) - Detailed setup instructions

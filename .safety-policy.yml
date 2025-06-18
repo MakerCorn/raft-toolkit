@@ -1,0 +1,25 @@
+# Safety policy file for ignoring false positive vulnerabilities
+# This file configures the safety tool to ignore specific vulnerabilities
+# that have been manually reviewed and determined to be false positives
+
+security:
+  ignore-vulnerabilities:
+    # CVE-2022-42969 (py package)
+    # DISPUTED vulnerability in py package <= 1.11.0
+    # This is a transitive dependency from older pytest versions
+    # We use pytest>=7.0 which doesn't require the py package
+    # The vulnerability is marked as DISPUTED and affects ReDoS
+    # Risk assessment: Low impact, disputed CVE, legacy dependency
+    51457:
+      reason: "DISPUTED CVE affecting legacy py package. Using pytest>=7.0 which has built-in functionality. Legacy dependency from older pytest versions."
+      expires: "2025-12-31"
+    
+    # CVE-2024-46946 (langchain-experimental)
+    # Affects LLMSymbolicMathChain component which we don't use
+    # We only use SemanticChunker from langchain-experimental
+    # Risk assessment: No impact on our usage
+    73280:
+      reason: "Affects LLMSymbolicMathChain component which is not used in this project. We only use SemanticChunker from langchain-experimental."
+      expires: "2025-12-31"
+
+  continue-on-vulnerability-error: false

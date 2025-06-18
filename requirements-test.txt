@@ -1,32 +1,33 @@
 # Testing and development dependencies  
-# Install with: pip install -r requirements.txt -r requirements-test.txt
+# For fastest CI builds, use: pip install raft-toolkit[dev]
+# For development with specific features: pip install raft-toolkit[standard,dev]
 
 -r requirements.txt
 
 # Testing framework
-pytest>=7.0.0,<8.0.0
-pytest-asyncio>=0.21.0,<1.0.0
-pytest-cov>=4.0.0,<5.0.0
-pytest-mock>=3.10.0,<4.0.0
+pytest>=7.0.0,<7.5.0
+pytest-asyncio>=0.21.0,<0.25.0
+pytest-cov>=4.0.0,<5.1.0
+pytest-mock>=3.10.0,<3.15.0
 # Note: py package (CVE-2022-42969) not needed - pytest>=7.0 has built-in functionality
 
 # HTTP testing
-httpx<0.28,>=0.24.0  # Version constraint for TestClient compatibility
-respx>=0.20.0,<1.0.0
+httpx>=0.24.0,<0.28.0  # Version constraint for TestClient compatibility
+respx>=0.20.0,<0.22.0
 
 # Code quality and linting tools
-flake8>=6.0.0,<7.0.0
-black>=24.3.0,<25.0.0
-isort>=5.13.2,<6.0.0
-mypy>=1.0.0,<2.0.0
+flake8>=6.0.0,<6.2.0
+black>=23.0.0,<25.0.0
+isort>=5.12.0,<5.14.0
+mypy>=1.0.0,<1.15.0
 
 # Security and code analysis
-bandit>=1.7.0,<2.0.0
-safety>=3.0.0,<4.0.0
+bandit>=1.7.0,<1.8.0
+safety>=3.0.0,<3.3.0  # See .safety-policy.yml for vulnerability exceptions
 
 # Configuration linting
-yamllint>=1.33.0,<2.0.0
+yamllint>=1.33.0,<1.36.0
 
 # Documentation
-sphinx>=7.0.0,<8.0.0
-sphinx-rtd-theme>=1.3.0,<2.0.0
+sphinx>=7.0.0,<8.5.0
+sphinx-rtd-theme>=1.3.0,<2.1.0
