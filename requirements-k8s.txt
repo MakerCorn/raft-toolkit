@@ -1,15 +1,16 @@
 # Kubernetes deployment and management dependencies
-# Install with: pip install -r requirements.txt -r requirements-k8s.txt
+# For fastest CI builds, use: pip install raft-toolkit[kubernetes]
+# For development with k8s: pip install raft-toolkit[standard,kubernetes,dev]
 
 -r requirements.txt
 -r requirements-cloud.txt
 
 # Kubernetes core
-kubernetes>=29.0.0,<30.0.0
-jinja2>=3.1.3,<4.0.0
+kubernetes>=29.0.0,<31.0.0
+jinja2>=3.1.0,<4.0.0
 
 # Cloud provider specific Kubernetes management
-azure-mgmt-containerservice>=30.0.0,<31.0.0
+azure-mgmt-containerservice>=30.0.0,<32.0.0
 google-cloud-container>=2.40.0,<3.0.0
 
 # Monitoring and observability

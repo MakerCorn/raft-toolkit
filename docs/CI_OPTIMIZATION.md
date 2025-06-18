@@ -143,15 +143,25 @@ pip install raft-toolkit[all]
 
 ## Version Constraint Strategy
 
-All dependencies use **tighter version ranges** for faster resolution:
+Dependencies use **optimized version ranges** that balance fast resolution with compatibility:
 
 ```toml
-# Before (slow resolution)
+# Core dependencies - Reasonable ranges for stability
 "pandas>=2.0.0,<3.0.0"
+"requests>=2.31.0,<3.0.0"
 
-# After (fast resolution)  
-"pandas>=2.0.0,<2.3.0"
+# Optional dependencies - Wider ranges to avoid conflicts
+"transformers>=4.44.0,<5.0.0"
+"langwatch>=0.2.0,<0.5.0"
+
+# Tracing dependencies - Updated for LangWatch compatibility
+"opentelemetry-api>=1.32.1,<2.0.0"  # Compatible with langwatch>=0.2.0
 ```
+
+**Key principles:**
+- Core dependencies: Conservative ranges for maximum stability
+- Optional dependencies: Wider ranges to reduce conflicts
+- Avoid overly tight constraints that cause resolution failures
 
 ## Migration Guide
 

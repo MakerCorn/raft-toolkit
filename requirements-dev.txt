@@ -1,5 +1,6 @@
 # Complete development environment
-# Install with: pip install -r requirements-dev.txt
+# For fastest CI builds, use: pip install raft-toolkit[dev]
+# For development with all features: pip install raft-toolkit[all]
 
 -r requirements.txt
 -r requirements-web.txt
@@ -10,5 +11,5 @@
 # Additional development tools
 pre-commit>=3.0.0,<4.0.0
 pip-tools>=7.0.0,<8.0.0
-twine>=4.0.0,<5.0.0
-build>=0.10.0,<1.0.0
+twine>=4.0.0,<6.0.0
+build>=0.10.0,<2.0.0

@@ -1,13 +1,14 @@
 # Web UI dependencies
-# Install with: pip install -r requirements.txt -r requirements-web.txt
+# For fastest CI builds, use: pip install raft-toolkit[web]
+# For development with web: pip install raft-toolkit[standard,web,dev]
 
 -r requirements.txt
 
 # FastAPI web framework
-fastapi>=0.110.2,<1.0.0
-uvicorn[standard]>=0.29.0,<1.0.0
+fastapi>=0.109.0,<1.0.0
+uvicorn[standard]>=0.25.0,<1.0.0
 python-multipart>=0.0.6,<1.0.0
-aiofiles>=23.2.1,<24.0.0
+aiofiles>=23.2.1,<25.0.0
 
 # Background task processing
 redis>=5.0.1,<6.0.0
