@@ -3,6 +3,7 @@ CLI interface for RAFT toolkit using the shared core modules.
 """
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -411,7 +412,8 @@ def validate_only(engine: RaftEngine, config: RaftConfig) -> None:
         if config.source_type == "local":
             datapath = Path(config.datapath) if isinstance(config.datapath, str) else config.datapath
             engine.validate_inputs(datapath)
-            source_info = f"Ready to process: {datapath}"
+            # Use forward slashes for path representation in output for consistency across platforms
+            source_info = f"Ready to process: {str(datapath).replace(os.sep, '/')}"
         else:
             # For remote sources, use async validation
             import asyncio
