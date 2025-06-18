@@ -14,9 +14,11 @@ from .langwatch_service import create_langwatch_service
 
 # Define protocol for embeddings
 class EmbeddingsProtocol(Protocol):
-    def embed_documents(self, texts: List[str]) -> List[List[float]]: ...
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        pass
 
-    def embed_query(self, text: str) -> List[float]: ...
+    def embed_query(self, text: str) -> List[float]:
+        pass
 
 
 # Try to import real implementations
