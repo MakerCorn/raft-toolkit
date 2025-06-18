@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NAMESPACE:-raft-toolkit}
+  labels:
+    name: ${NAMESPACE:-raft-toolkit}
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "RAFT Toolkit deployment namespace"
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: raft-secrets
+  namespace: ${NAMESPACE:-raft-toolkit}
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/managed-by: kubectl
+type: Opaque
+data:
+  openai-api-key: ${OPENAI_API_KEY_B64:-}  # Base64 encoded OpenAI API key
+  # Add other secrets as needed
+  # database-url: ${DATABASE_URL_B64:-}
+  # redis-password: ${REDIS_PASSWORD_B64:-}

@@ -1,0 +1,1050 @@
+name: Publish Wiki Documentation
+
+on:
+  # Manual triggering only
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force update all wiki pages'
+        required: false
+        default: false
+        type: boolean
+      update_reason:
+        description: 'Reason for manual wiki update'
+        required: false
+        default: 'Manual documentation update'
+        type: string
+  
+  # Trigger after successful release workflows
+  workflow_run:
+    workflows: ["Release CLI", "Release Web"]
+    types: [completed]
+    branches: [main]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  check-trigger:
+    name: Determine Wiki Update Trigger
+    runs-on: ubuntu-latest
+    outputs:
+      should_update: ${{ steps.check.outputs.should_update }}
+      update_reason: ${{ steps.check.outputs.update_reason }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    
+    - name: Determine update trigger
+      id: check
+      run: |
+        echo "🔍 Checking wiki update trigger..."
+        
+        # Manual trigger
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "should_update=true" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
+            echo "update_reason=Manual force update: ${{ github.event.inputs.update_reason }}" >> $GITHUB_OUTPUT
+            echo "📝 Manual force update requested"
+          else
+            echo "update_reason=Manual update: ${{ github.event.inputs.update_reason }}" >> $GITHUB_OUTPUT
+            echo "📝 Manual update requested"
+          fi
+          exit 0
+        fi
+        
+        # Workflow run (after release)
+        if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          # Only proceed if the triggering workflow was successful
+          if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "should_update=true" >> $GITHUB_OUTPUT
+            echo "update_reason=Post-release documentation update (triggered by ${{ github.event.workflow_run.name }})" >> $GITHUB_OUTPUT
+            echo "📝 Successful release workflow detected - updating wiki"
+          else
+            echo "should_update=false" >> $GITHUB_OUTPUT
+            echo "update_reason=Release workflow failed - skipping wiki update" >> $GITHUB_OUTPUT
+            echo "❌ Release workflow failed - skipping wiki update"
+          fi
+          exit 0
+        fi
+        
+        # Default: no update
+        echo "should_update=false" >> $GITHUB_OUTPUT
+        echo "update_reason=No qualifying trigger detected" >> $GITHUB_OUTPUT
+        echo "📄 No qualifying trigger for wiki update"
+
+  generate-wiki:
+    name: Generate Wiki Content
+    runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_update == 'true'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml jinja2 markdown
+    
+    - name: Generate wiki content
+      run: |
+        echo "🔧 Generating wiki content..."
+        echo "📝 Update reason: ${{ needs.check-trigger.outputs.update_reason }}"
+        
+        # Create wiki directory
+        mkdir -p wiki
+        
+        # Generate Home page
+        cat > wiki/Home.md << 'EOF'
+        # RAFT Toolkit Wiki
+        
+        Welcome to the RAFT (Retrieval Augmented Fine-Tuning) Toolkit documentation!
+        
+        ## 🚀 Quick Start
+        
+        - [Installation Guide](Installation)
+        - [CLI Usage](CLI-Usage)
+        - [Web Interface](Web-Interface)
+        - [API Reference](API-Reference)
+        
+        ## 📚 Documentation
+        
+        - [Configuration](Configuration)
+        - [Deployment](Deployment)
+        - [Development](Development)
+        - [Troubleshooting](Troubleshooting)
+        
+        ## 🔗 External Links
+        
+        - [GitHub Repository](https://github.com/${{ github.repository }})
+        - [PyPI Package](https://pypi.org/project/raft-toolkit/)
+        - [Docker Images](https://github.com/${{ github.repository }}/pkgs/container/raft-toolkit)
+        
+        ---
+        
+        📝 Last updated: $(date +"%Y-%m-%d %H:%M:%S UTC")
+        🤖 Auto-generated from repository documentation
+        EOF
+        
+        # Generate Installation page
+        cat > wiki/Installation.md << 'EOF'
+        # Installation Guide
+        
+        ## PyPI Installation
+        
+        ### CLI Only
+        ```bash
+        pip install raft-toolkit
+        ```
+        
+        ### Web Application
+        ```bash
+        pip install raft-toolkit[web]
+        ```
+        
+        ### Full Installation (All Features)
+        ```bash
+        pip install raft-toolkit[all]
+        ```
+        
+        ## Docker Installation
+        
+        ### CLI Container
+        ```bash
+        # Pull CLI image
+        docker pull ghcr.io/${{ github.repository }}:cli-latest
+        
+        # Run CLI commands
+        docker run --rm -v $(pwd):/data ghcr.io/${{ github.repository }}:cli-latest raft --help
+        ```
+        
+        ### Web Application Container
+        ```bash
+        # Pull web image
+        docker pull ghcr.io/${{ github.repository }}:web-latest
+        
+        # Run web application
+        docker run -d -p 8000:8000 \
+          -e OPENAI_API_KEY=your_api_key \
+          ghcr.io/${{ github.repository }}:web-latest
+        ```
+        
+        ## Requirements
+        
+        - Python 3.11 or 3.12
+        - OpenAI API key (for AI features)
+        - Redis (for web application background tasks)
+        
+        ## Verification
+        
+        ```bash
+        # Verify CLI installation
+        raft --version
+        
+        # Verify web installation
+        raft-web --help
+        ```
+        EOF
+        
+        # Generate CLI Usage page
+        cat > wiki/CLI-Usage.md << 'EOF'
+        # CLI Usage Guide
+        
+        ## Basic Commands
+        
+        ### Help
+        ```bash
+        raft --help
+        raft-cli --help
+        ```
+        
+        ### Generate RAFT Dataset
+        ```bash
+        # Basic usage
+        raft-cli --datapath documents/ --output training_data/
+        
+        # With custom parameters
+        raft-cli \
+          --datapath sample_data/sample.pdf \
+          --output ./output \
+          --questions 5 \
+          --distractors 3 \
+          --preview
+        ```
+        
+        ### Configuration
+        ```bash
+        # Use configuration file
+        raft-cli --config config.yaml
+        
+        # Set log level
+        raft-cli --log-level DEBUG
+        ```
+        
+        ## Docker CLI Usage
+        
+        ```bash
+        # Mount data directory
+        docker run --rm -v $(pwd)/data:/data \
+          ghcr.io/${{ github.repository }}:cli-latest \
+          raft --datapath /data/documents --output /data/output
+        
+        # Interactive mode
+        docker run -it --rm -v $(pwd):/workspace \
+          ghcr.io/${{ github.repository }}:cli-latest bash
+        ```
+        
+        ## Configuration File Example
+        
+        ```yaml
+        # config.yaml
+        datapath: "documents/"
+        output: "training_data/"
+        questions: 5
+        distractors: 3
+        chunk_size: 512
+        log_level: "INFO"
+        
+        # OpenAI Configuration
+        openai:
+          api_key: "${OPENAI_API_KEY}"
+          model: "gpt-4"
+        ```
+        EOF
+        
+        # Generate Web Interface page
+        cat > wiki/Web-Interface.md << 'EOF'
+        # Web Interface Guide
+        
+        ## Starting the Web Application
+        
+        ### Local Development
+        ```bash
+        # Install with web dependencies
+        pip install raft-toolkit[web]
+        
+        # Start the web server
+        raft-web --port 8000 --host 0.0.0.0
+        
+        # Access the interface
+        open http://localhost:8000
+        ```
+        
+        ### Docker Deployment
+        ```bash
+        # Using Docker Compose
+        docker-compose up -d
+        
+        # Manual Docker run
+        docker run -d \
+          --name raft-web \
+          -p 8000:8000 \
+          -e OPENAI_API_KEY=your_api_key \
+          -e REDIS_URL=redis://redis:6379 \
+          ghcr.io/${{ github.repository }}:web-latest
+        ```
+        
+        ## Features
+        
+        ### 📁 File Upload
+        - Drag and drop document upload
+        - Support for PDF, TXT, DOCX files
+        - Batch processing capabilities
+        
+        ### ⚙️ Configuration
+        - Interactive parameter tuning
+        - Real-time preview
+        - Configuration export/import
+        
+        ### 📊 Progress Tracking
+        - Real-time processing status
+        - Progress bars and logs
+        - Background task monitoring
+        
+        ### 📋 Results Management
+        - Download processed datasets
+        - View generated questions
+        - Export in various formats
+        
+        ## API Access
+        
+        The web application exposes a REST API at `/api/v1/`:
+        
+        - **Documentation**: `/docs` (Swagger UI)
+        - **OpenAPI Spec**: `/openapi.json`
+        - **Health Check**: `/health`
+        
+        ### Example API Usage
+        ```bash
+        # Health check
+        curl http://localhost:8000/health
+        
+        # Upload file
+        curl -X POST \
+          -F "file=@document.pdf" \
+          http://localhost:8000/api/v1/upload
+        
+        # Start processing
+        curl -X POST \
+          -H "Content-Type: application/json" \
+          -d '{"questions": 5, "distractors": 3}' \
+          http://localhost:8000/api/v1/process
+        ```
+        EOF
+        
+        # Generate API Reference page
+        cat > wiki/API-Reference.md << 'EOF'
+        # API Reference
+        
+        The RAFT Toolkit Web application provides a comprehensive REST API for programmatic access.
+        
+        ## Base URL
+        ```
+        http://localhost:8000/api/v1
+        ```
+        
+        ## Authentication
+        Currently, the API uses simple API key authentication:
+        ```bash
+        curl -H "X-API-Key: your-api-key" http://localhost:8000/api/v1/...
+        ```
+        
+        ## Endpoints
+        
+        ### Health Check
+        ```http
+        GET /health
+        ```
+        
+        ### File Management
+        ```http
+        POST /api/v1/upload          # Upload files
+        GET  /api/v1/files           # List uploaded files
+        GET  /api/v1/files/{id}      # Get file details
+        DELETE /api/v1/files/{id}    # Delete file
+        ```
+        
+        ### Processing
+        ```http
+        POST /api/v1/process         # Start processing
+        GET  /api/v1/jobs            # List processing jobs
+        GET  /api/v1/jobs/{id}       # Get job status
+        DELETE /api/v1/jobs/{id}     # Cancel job
+        ```
+        
+        ### Results
+        ```http
+        GET  /api/v1/results         # List results
+        GET  /api/v1/results/{id}    # Download result
+        DELETE /api/v1/results/{id}  # Delete result
+        ```
+        
+        ## Interactive Documentation
+        
+        Visit `/docs` for interactive Swagger UI documentation with:
+        - Complete endpoint documentation
+        - Request/response schemas
+        - Try-it-out functionality
+        - Example requests and responses
+        
+        ## OpenAPI Specification
+        
+        Download the complete OpenAPI 3.0 specification from `/openapi.json`
+        EOF
+        
+        # Generate Deployment page
+        cat > wiki/Deployment.md << 'EOF'
+        # Deployment Guide
+        
+        ## Kubernetes Deployment
+        
+        ### Prerequisites
+        - Kubernetes cluster (GKE, EKS, AKS, or local)
+        - kubectl configured
+        - Docker images available
+        
+        ### Quick Deploy
+        ```bash
+        # Deploy web application
+        kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/main/deploy/kubernetes/
+        
+        # Check deployment status
+        kubectl get pods -n raft-toolkit
+        ```
+        
+        ### Custom Deployment
+        ```yaml
+        # raft-web-deployment.yaml
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: raft-web
+          namespace: raft-toolkit
+        spec:
+          replicas: 3
+          selector:
+            matchLabels:
+              app: raft-web
+          template:
+            metadata:
+              labels:
+                app: raft-web
+            spec:
+              containers:
+              - name: raft-web
+                image: ghcr.io/${{ github.repository }}:web-latest
+                ports:
+                - containerPort: 8000
+                env:
+                - name: OPENAI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: raft-secrets
+                      key: openai-api-key
+                - name: REDIS_URL
+                  value: "redis://redis:6379"
+        ```
+        
+        ## Docker Compose
+        
+        ```yaml
+        # docker-compose.yml
+        version: '3.8'
+        
+        services:
+          raft-web:
+            image: ghcr.io/${{ github.repository }}:web-latest
+            ports:
+              - "8000:8000"
+            environment:
+              - OPENAI_API_KEY=${OPENAI_API_KEY}
+              - REDIS_URL=redis://redis:6379
+            depends_on:
+              - redis
+            volumes:
+              - ./data:/app/data
+        
+          redis:
+            image: redis:7-alpine
+            ports:
+              - "6379:6379"
+            volumes:
+              - redis_data:/data
+        
+        volumes:
+          redis_data:
+        ```
+        
+        ## Cloud Deployment
+        
+        ### AWS ECS
+        ```bash
+        # Create ECS task definition
+        aws ecs register-task-definition --cli-input-json file://raft-task-definition.json
+        
+        # Create ECS service
+        aws ecs create-service \
+          --cluster raft-cluster \
+          --service-name raft-web \
+          --task-definition raft-web:1 \
+          --desired-count 2
+        ```
+        
+        ### Google Cloud Run
+        ```bash
+        # Deploy to Cloud Run
+        gcloud run deploy raft-toolkit \
+          --image gcr.io/project-id/raft-toolkit:web-latest \
+          --platform managed \
+          --region us-central1 \
+          --allow-unauthenticated
+        ```
+        
+        ### Azure Container Instances
+        ```bash
+        # Deploy to ACI
+        az container create \
+          --resource-group raft-rg \
+          --name raft-web \
+          --image ghcr.io/${{ github.repository }}:web-latest \
+          --ports 8000 \
+          --environment-variables OPENAI_API_KEY=your-key
+        ```
+        
+        ## Environment Variables
+        
+        | Variable | Description | Default |
+        |----------|-------------|---------|
+        | `OPENAI_API_KEY` | OpenAI API key (required) | None |
+        | `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
+        | `DATABASE_URL` | Database connection URL | SQLite |
+        | `RAFT_LOG_LEVEL` | Logging level | `INFO` |
+        | `RAFT_WORKERS` | Number of worker processes | `4` |
+        | `RAFT_HOST` | Host to bind to | `0.0.0.0` |
+        | `RAFT_PORT` | Port to bind to | `8000` |
+        EOF
+        
+        # Generate additional pages if force update
+        if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
+          echo "🔄 Force regenerating all wiki pages..."
+          
+          # Add more comprehensive pages here
+          cat > wiki/Configuration.md << 'EOF'
+        # Configuration Guide
+        
+        ## Configuration File
+        
+        RAFT Toolkit uses YAML configuration files for advanced settings.
+        
+        ### Example Configuration
+        ```yaml
+        # raft-config.yaml
+        
+        # Input/Output Settings
+        input:
+          datapath: "documents/"
+          supported_formats: ["pdf", "txt", "docx", "md"]
+          chunk_size: 512
+          overlap: 50
+        
+        output:
+          path: "training_data/"
+          format: "jsonl"
+          include_metadata: true
+        
+        # Generation Settings
+        generation:
+          questions_per_chunk: 5
+          distractors_per_question: 3
+          max_retries: 3
+          temperature: 0.7
+        
+        # OpenAI Configuration
+        openai:
+          api_key: "${OPENAI_API_KEY}"
+          model: "gpt-4"
+          max_tokens: 2000
+          timeout: 30
+        
+        # Logging
+        logging:
+          level: "INFO"
+          format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+          file: "raft.log"
+        
+        # Web Application (if applicable)
+        web:
+          host: "0.0.0.0"
+          port: 8000
+          workers: 4
+          redis_url: "redis://localhost:6379"
+          enable_api_docs: true
+        ```
+        
+        ## Environment Variables
+        
+        Configuration can also be controlled via environment variables:
+        
+        ```bash
+        export RAFT_CONFIG_FILE="config.yaml"
+        export RAFT_LOG_LEVEL="DEBUG"
+        export OPENAI_API_KEY="your-api-key"
+        export REDIS_URL="redis://localhost:6379"
+        ```
+        
+        ## Command Line Options
+        
+        Most configuration options can be overridden via command line:
+        
+        ```bash
+        raft-cli \
+          --config config.yaml \
+          --datapath custom/path \
+          --output custom/output \
+          --questions 10 \
+          --log-level DEBUG
+        ```
+        EOF
+        
+          cat > wiki/Development.md << 'EOF'
+        # Development Guide
+        
+        ## Setting Up Development Environment
+        
+        ### Prerequisites
+        - Python 3.11 or 3.12
+        - Git
+        - Docker (optional)
+        
+        ### Clone and Setup
+        ```bash
+        # Clone repository
+        git clone https://github.com/${{ github.repository }}.git
+        cd raft-toolkit
+        
+        # Create virtual environment
+        python -m venv venv
+        source venv/bin/activate  # Linux/Mac
+        # or
+        venv\Scripts\activate  # Windows
+        
+        # Install development dependencies
+        pip install -e .[dev,all]
+        
+        # Install pre-commit hooks
+        pre-commit install
+        ```
+        
+        ## Project Structure
+        
+        ```
+        raft-toolkit/
+        ├── core/              # Core RAFT functionality
+        ├── cli/               # Command-line interface
+        ├── web/               # Web application
+        ├── tests/             # Test suites
+        ├── deploy/            # Deployment configurations
+        ├── docs/              # Documentation
+        ├── scripts/           # Utility scripts
+        └── pyproject.toml     # Project configuration
+        ```
+        
+        ## Running Tests
+        
+        ```bash
+        # Run all tests
+        pytest
+        
+        # Run specific test categories
+        pytest tests/unit/
+        pytest tests/integration/
+        pytest tests/api/
+        
+        # Run with coverage
+        pytest --cov=core --cov=cli --cov=web
+        ```
+        
+        ## Code Quality
+        
+        ```bash
+        # Format code
+        black .
+        isort .
+        
+        # Lint code
+        flake8 .
+        
+        # Type checking
+        mypy core/ cli/ web/
+        
+        # Security checks
+        bandit -r core/ cli/ web/
+        safety check
+        ```
+        
+        ## Building Docker Images
+        
+        ```bash
+        # Build CLI image
+        docker build --target cli -t raft-toolkit:cli .
+        
+        # Build web image
+        docker build --target production -t raft-toolkit:web .
+        
+        # Build development image
+        docker build --target development -t raft-toolkit:dev .
+        ```
+        
+        ## Contributing
+        
+        1. Fork the repository
+        2. Create a feature branch
+        3. Make your changes
+        4. Add tests
+        5. Run quality checks
+        6. Submit a pull request
+        
+        ### Commit Messages
+        
+        Follow conventional commit format:
+        ```
+        feat: add new feature
+        fix: fix bug
+        docs: update documentation
+        test: add tests
+        refactor: refactor code
+        ```
+        EOF
+        
+          cat > wiki/Troubleshooting.md << 'EOF'
+        # Troubleshooting Guide
+        
+        ## Common Issues
+        
+        ### Installation Issues
+        
+        #### "Package not found" errors
+        ```bash
+        # Update pip
+        pip install --upgrade pip
+        
+        # Clear pip cache
+        pip cache purge
+        
+        # Install with verbose output
+        pip install -v raft-toolkit
+        ```
+        
+        #### Python version compatibility
+        ```bash
+        # Check Python version
+        python --version
+        
+        # RAFT Toolkit requires Python 3.11+
+        # Use pyenv to manage Python versions
+        pyenv install 3.11.0
+        pyenv local 3.11.0
+        ```
+        
+        ### API Key Issues
+        
+        #### OpenAI API key not working
+        ```bash
+        # Test API key
+        curl -H "Authorization: Bearer your-api-key" \
+          https://api.openai.com/v1/models
+        
+        # Set environment variable
+        export OPENAI_API_KEY="your-api-key"
+        
+        # Verify in Python
+        python -c "import os; print(os.getenv('OPENAI_API_KEY'))"
+        ```
+        
+        ### Docker Issues
+        
+        #### Container won't start
+        ```bash
+        # Check container logs
+        docker logs container-name
+        
+        # Run interactively for debugging
+        docker run -it --entrypoint bash raft-toolkit:latest
+        
+        # Check resource usage
+        docker stats
+        ```
+        
+        #### Permission issues
+        ```bash
+        # Fix file permissions
+        sudo chown -R $(id -u):$(id -g) ./data
+        
+        # Use user flag
+        docker run --user $(id -u):$(id -g) raft-toolkit:latest
+        ```
+        
+        ### Web Application Issues
+        
+        #### Redis connection errors
+        ```bash
+        # Check Redis status
+        redis-cli ping
+        
+        # Start Redis
+        redis-server
+        
+        # Use different Redis URL
+        export REDIS_URL="redis://localhost:6380"
+        ```
+        
+        #### Port already in use
+        ```bash
+        # Find process using port
+        lsof -i :8000
+        
+        # Kill process
+        kill -9 <PID>
+        
+        # Use different port
+        raft-web --port 8080
+        ```
+        
+        ## Performance Issues
+        
+        ### Slow processing
+        - Reduce chunk size
+        - Decrease number of questions per chunk
+        - Use faster OpenAI model (e.g., gpt-3.5-turbo)
+        - Increase timeout values
+        
+        ### Memory issues
+        - Process files individually instead of batches
+        - Reduce chunk overlap
+        - Use CLI instead of web interface for large files
+        
+        ## Getting Help
+        
+        ### Debug Information
+        ```bash
+        # Enable debug logging
+        export RAFT_LOG_LEVEL=DEBUG
+        
+        # Generate debug report
+        raft-cli --debug-info
+        ```
+        
+        ### Support Channels
+        - [GitHub Issues](https://github.com/${{ github.repository }}/issues)
+        - [GitHub Discussions](https://github.com/${{ github.repository }}/discussions)
+        - [Documentation](https://github.com/${{ github.repository }}/wiki)
+        
+        When reporting issues, please include:
+        - Python version
+        - RAFT Toolkit version
+        - Operating system
+        - Full error message
+        - Steps to reproduce
+        EOF
+        fi
+        
+        echo "📋 Generated wiki files:"
+        ls -la wiki/
+
+    - name: Upload wiki content as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: wiki-content
+        path: wiki/
+        retention-days: 30
+
+  publish-wiki:
+    name: Publish to GitHub Wiki
+    runs-on: ubuntu-latest
+    needs: [check-trigger, generate-wiki]
+    if: needs.check-trigger.outputs.should_update == 'true'
+    
+    permissions:
+      contents: write  # Required for wiki access
+    
+    steps:
+    - name: Download wiki content
+      uses: actions/download-artifact@v4
+      with:
+        name: wiki-content
+        path: wiki-content/
+    
+    - name: Clone wiki repository
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Get repository info
+        REPO_OWNER="${{ github.repository_owner }}"
+        REPO_NAME="${{ github.event.repository.name }}"
+        WIKI_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}.wiki.git"
+        
+        echo "📡 Cloning wiki repository: $WIKI_URL"
+        
+        # Configure git
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        # Clone wiki repository
+        git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.wiki.git" wiki-repo
+        
+        # If wiki doesn't exist yet, create it
+        if [ ! -d "wiki-repo" ]; then
+          echo "📝 Creating new wiki repository"
+          mkdir wiki-repo
+          cd wiki-repo
+          git init
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.wiki.git"
+          
+          # Create initial Home page if it doesn't exist
+          echo "# Welcome to the RAFT Toolkit Wiki" > Home.md
+          git add Home.md
+          git commit -m "Initialize wiki"
+          git branch -M main
+          git push -u origin main
+          cd ..
+        fi
+    
+    - name: Update wiki pages
+      run: |
+        echo "🔄 Updating wiki pages..."
+        
+        cd wiki-repo
+        
+        # Remove all existing .md files except .git
+        find . -name "*.md" -type f -delete
+        
+        # Copy new content
+        cp -r ../wiki-content/* .
+        
+        # Check if there are actually changes
+        if git diff --quiet && git diff --cached --quiet; then
+          echo "📄 No changes to commit"
+          exit 0
+        fi
+        
+        # Add all changes
+        git add .
+        
+        # Create commit message based on trigger
+        if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          COMMIT_MSG="📖 Update documentation after successful release"
+        elif [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
+          COMMIT_MSG="📖 ${{ needs.check-trigger.outputs.update_reason }}"
+        else
+          COMMIT_MSG="📖 ${{ needs.check-trigger.outputs.update_reason }}"
+        fi
+        
+        echo "💾 Committing changes: $COMMIT_MSG"
+        git commit -m "$COMMIT_MSG
+
+        🤖 Generated with [Claude Code](https://claude.ai/code)
+        
+        Co-Authored-By: Claude <noreply@anthropic.com>"
+        
+        # Push changes (GitHub wikis use master branch)
+        echo "🚀 Pushing to wiki..."
+        git push origin master
+        
+        echo "✅ Wiki updated successfully!"
+    
+    - name: Create deployment summary
+      if: always()
+      run: |
+        echo "## 📖 Wiki Publication Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Item | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Wiki URL | https://github.com/${{ github.repository }}/wiki |" >> $GITHUB_STEP_SUMMARY
+        echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Reason | ${{ needs.check-trigger.outputs.update_reason }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Force Update | ${{ github.event.inputs.force_update || 'false' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ job.status }}" == "success" ]]; then
+          echo "| Status | ✅ Successfully published |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Status | ❌ Publication failed |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📚 Published Pages" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -d "wiki-content" ]; then
+          for file in wiki-content/*.md; do
+            if [ -f "$file" ]; then
+              basename "$file" .md >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+        fi
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [generate-wiki, publish-wiki]
+    if: failure()
+    
+    steps:
+    - name: Create failure issue
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const title = `Wiki Publication Failed - ${new Date().toISOString().split('T')[0]}`;
+          const body = `
+          ## 📖 Wiki Publication Failure
+          
+          The automated wiki publication workflow has failed.
+          
+          **Details:**
+          - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - **Commit**: ${{ github.sha }}
+          - **Trigger**: ${{ github.event_name }}
+          - **Branch**: ${{ github.ref_name }}
+          
+          **Next Steps:**
+          1. Check the workflow logs for detailed error information
+          2. Verify wiki repository permissions
+          3. Manually run the wiki generator if available
+          4. Re-run the failed workflow after fixing issues
+          
+          This issue was created automatically by the wiki publication workflow.
+          `;
+          
+          // Check if a similar issue already exists
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: ['wiki', 'automation', 'bug']
+          });
+          
+          const existingIssue = issues.data.find(issue => 
+            issue.title.includes('Wiki Publication Failed') && 
+            issue.created_at > new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+          );
+          
+          if (!existingIssue) {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['wiki', 'automation', 'bug']
+            });
+          }

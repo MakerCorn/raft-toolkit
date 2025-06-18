@@ -120,6 +120,8 @@ python run_web.py
 # Open http://localhost:8000
 ```
 
+> **📚 For detailed information about dependency management, version constraints, and advanced installation patterns, see [Requirements Management](REQUIREMENTS.md).**
+
 ## 🐳 Docker Installation
 
 ```bash

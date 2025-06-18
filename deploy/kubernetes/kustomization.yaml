@@ -1,0 +1,128 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: raft-toolkit
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: raft-toolkit
+
+resources:
+- namespace.yaml
+- cli-deployment.yaml
+- web-deployment.yaml
+- web-service.yaml
+- redis-deployment.yaml
+
+commonLabels:
+  app.kubernetes.io/name: raft-toolkit
+  app.kubernetes.io/managed-by: kustomize
+
+# Configuration for different environments
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: raft-web
+  spec:
+    template:
+      spec:
+        containers:
+        - name: raft-web
+          env:
+          - name: RAFT_ENVIRONMENT
+            value: production
+
+# Resource quotas and limits
+resources:
+- |-
+  apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: raft-toolkit-quota
+    namespace: raft-toolkit
+  spec:
+    hard:
+      requests.cpu: "2"
+      requests.memory: 4Gi
+      limits.cpu: "4"
+      limits.memory: 8Gi
+      persistentvolumeclaims: "10"
+      count/deployments.apps: "5"
+      count/services: "5"
+
+# Network policies for security
+- |-
+  apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: raft-toolkit-network-policy
+    namespace: raft-toolkit
+  spec:
+    podSelector:
+      matchLabels:
+        app.kubernetes.io/name: raft-toolkit
+    policyTypes:
+    - Ingress
+    - Egress
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: ingress-nginx
+      - namespaceSelector:
+          matchLabels:
+            name: kube-system
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: raft-toolkit
+    egress:
+    - to: []  # Allow all egress for external API calls
+      ports:
+      - protocol: TCP
+        port: 443
+      - protocol: TCP
+        port: 80
+    - to:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: redis
+      ports:
+      - protocol: TCP
+        port: 6379
+
+# Configuration map for common settings
+- |-
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: raft-config
+    namespace: raft-toolkit
+  data:
+    RAFT_LOG_LEVEL: "INFO"
+    RAFT_LOG_FORMAT: "json"
+    RAFT_ENVIRONMENT: "production"
+    REDIS_URL: "redis://redis:6379"
+    WEB_WORKERS: "4"
+
+# Service monitor for Prometheus (if available)
+- |-
+  apiVersion: monitoring.coreos.com/v1
+  kind: ServiceMonitor
+  metadata:
+    name: raft-web-metrics
+    namespace: raft-toolkit
+    labels:
+      app.kubernetes.io/name: raft-toolkit
+      app.kubernetes.io/component: web
+  spec:
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: raft-toolkit
+        app.kubernetes.io/component: web
+    endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

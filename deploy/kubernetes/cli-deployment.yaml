@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raft-cli
+  namespace: ${NAMESPACE:-raft-toolkit}
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: cli
+    app.kubernetes.io/version: "${VERSION:-latest}"
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: raft-toolkit
+      app.kubernetes.io/component: cli
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: raft-toolkit
+        app.kubernetes.io/component: cli
+        app.kubernetes.io/version: "${VERSION:-latest}"
+      annotations:
+        prometheus.io/scrape: "false"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: raft-cli
+        image: ${CLI_IMAGE:-ghcr.io/microsoft/raft-toolkit:cli-latest}
+        imagePullPolicy: Always
+        command: ["sleep"]
+        args: ["infinity"]  # Keep container running for exec commands
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: raft-secrets
+              key: openai-api-key
+        - name: RAFT_ENVIRONMENT
+          value: "cli"
+        - name: RAFT_LOG_LEVEL
+          value: "${LOG_LEVEL:-INFO}"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/data
+        - name: output-volume
+          mountPath: /app/outputs
+        - name: logs-volume
+          mountPath: /app/logs
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: raft-data-pvc
+      - name: output-volume
+        persistentVolumeClaim:
+          claimName: raft-output-pvc
+      - name: logs-volume
+        emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: raft-data-pvc
+  namespace: ${NAMESPACE:-raft-toolkit}
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: ${STORAGE_CLASS:-standard}
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: raft-output-pvc
+  namespace: ${NAMESPACE:-raft-toolkit}
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: ${STORAGE_CLASS:-standard}

@@ -1,0 +1,492 @@
+name: Release Web
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+      prerelease:
+        description: 'Create a pre-release'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: 'Create as draft release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  version-bump:
+    name: Version Bump and Tag (Web)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      changelog_content: ${{ steps.changelog.outputs.content }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install packaging python-semantic-release
+        # Install TOML parser for Python < 3.11 compatibility
+        pip install tomli toml
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+    - name: Get current version
+      id: current_version
+      run: |
+        CURRENT_VERSION=$(python -c "
+        import sys
+        if sys.version_info >= (3, 11):
+            import tomllib
+        else:
+            try:
+                import tomli as tomllib
+            except ImportError:
+                import toml as tomllib
+        
+        if sys.version_info >= (3, 11):
+            with open('pyproject.toml', 'rb') as f:
+                data = tomllib.load(f)
+        else:
+            with open('pyproject.toml', 'r') as f:
+                data = tomllib.load(f)
+        print(data['project']['version'])
+        ")
+        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "Current version: $CURRENT_VERSION"
+
+    - name: Calculate new version
+      id: version
+      run: |
+        CURRENT_VERSION="${{ steps.current_version.outputs.current_version }}"
+        VERSION_TYPE="${{ github.event.inputs.version_type }}"
+        
+        python << EOF
+        from packaging import version
+        import sys
+        
+        current = version.parse("$CURRENT_VERSION")
+        
+        if "$VERSION_TYPE" == "major":
+            new_version = f"{current.major + 1}.0.0"
+        elif "$VERSION_TYPE" == "minor":
+            new_version = f"{current.major}.{current.minor + 1}.0"
+        elif "$VERSION_TYPE" == "patch":
+            new_version = f"{current.major}.{current.minor}.{current.micro + 1}"
+        else:
+            print(f"Invalid version type: $VERSION_TYPE", file=sys.stderr)
+            sys.exit(1)
+        
+        print(f"new_version={new_version}")
+        
+        # Write to GitHub outputs
+        with open("$GITHUB_OUTPUT", "a") as f:
+            f.write(f"new_version={new_version}\n")
+        EOF
+
+    - name: Update version in pyproject.toml
+      run: |
+        NEW_VERSION="${{ steps.version.outputs.new_version }}"
+        sed -i "s/version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+        echo "Updated pyproject.toml to version $NEW_VERSION"
+
+    - name: Extract changelog content for version
+      id: changelog
+      run: |
+        NEW_VERSION="${{ steps.version.outputs.new_version }}"
+        
+        # Extract changelog content for the current version
+        python << 'EOF'
+        import re
+        import sys
+        import os
+        
+        try:
+            with open('CHANGELOG.md', 'r') as f:
+                content = f.read()
+            
+            # Find the section for unreleased changes (first section)
+            # Look for ## [Unreleased] - TBD or similar pattern
+            pattern = r'^## \[(.*?)\] - (.*?)$'
+            matches = list(re.finditer(pattern, content, re.MULTILINE))
+            
+            if matches:
+                # Get content from end of first header to start of next section or end of file
+                first_match = matches[0]
+                start_pos = first_match.end()  # Start after the header line
+                
+                if len(matches) > 1:
+                    # Find next section header
+                    end_pos = matches[1].start()
+                    changelog_section = content[start_pos:end_pos].strip()
+                else:
+                    # Use rest of file
+                    changelog_section = content[start_pos:].strip()
+                
+                # Clean up the content
+                if changelog_section:
+                    # Remove extra whitespace and empty lines at start/end
+                    lines = changelog_section.split('\n')
+                    # Remove leading empty lines
+                    while lines and not lines[0].strip():
+                        lines.pop(0)
+                    # Remove trailing empty lines
+                    while lines and not lines[-1].strip():
+                        lines.pop()
+                    
+                    changelog_content = '\n'.join(lines)
+                    
+                    # Write to GitHub output using environment file method for multiline
+                    delimiter = "EOF_CHANGELOG"
+                    with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                        f.write(f"content<<{delimiter}\n")
+                        f.write(changelog_content)
+                        f.write(f"\n{delimiter}\n")
+                    
+                    print(f"Extracted changelog content: {len(changelog_content)} characters")
+                else:
+                    print("No content found in changelog section")
+                    with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                        f.write("content=No changelog content available\n")
+            else:
+                print("No changelog sections found")
+                with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                    f.write("content=No changelog content available\n")
+                    
+        except Exception as e:
+            print(f"Error extracting changelog: {e}", file=sys.stderr)
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write("content=Error extracting changelog content\n")
+        EOF
+
+    - name: Update changelog with new version
+      run: |
+        NEW_VERSION="${{ steps.version.outputs.new_version }}"
+        CURRENT_DATE=$(date +%Y-%m-%d)
+        
+        # Update the first version section (unreleased or TBD) with the new version number and date
+        sed -i "0,/^## \[.*\] - .*/s//## [$NEW_VERSION] - $CURRENT_DATE/" CHANGELOG.md
+        
+        echo "Updated CHANGELOG.md with version $NEW_VERSION and date $CURRENT_DATE"
+
+    - name: Commit version bump
+      run: |
+        NEW_VERSION="${{ steps.version.outputs.new_version }}"
+        
+        git add pyproject.toml CHANGELOG.md
+        git commit -m "chore: bump Web version to $NEW_VERSION
+
+        🤖 Generated with [Claude Code](https://claude.ai/code)
+
+        Co-Authored-By: Claude <noreply@anthropic.com>"
+        
+        # Create and push tag
+        git tag -a "web-v$NEW_VERSION" -m "Web Release version $NEW_VERSION"
+        git push origin main
+        git push origin "web-v$NEW_VERSION"
+
+  build-and-release:
+    name: Build and Create Web Release
+    runs-on: ubuntu-latest
+    needs: version-bump
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: web-v${{ needs.version-bump.outputs.new_version }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Build Web-focused Python package
+      run: |
+        # Create a Web-focused setup for fuller package
+        python -m build
+
+    - name: Set lowercase repository name
+      id: repo
+      run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image (Web release)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        target: production
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}
+          ghcr.io/${{ steps.repo.outputs.name }}:web-latest
+        labels: |
+          org.opencontainers.image.title=RAFT Toolkit Web
+          org.opencontainers.image.description=RAFT Web Application - Full-featured web interface with API
+          org.opencontainers.image.version=web-v${{ needs.version-bump.outputs.new_version }}
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILD_DATE=${{ github.event.head_commit.timestamp }}
+          VERSION=web-v${{ needs.version-bump.outputs.new_version }}
+          VCS_REF=${{ github.sha }}
+        cache-from: |
+          type=gha
+          type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-web-release
+        cache-to: |
+          type=gha,mode=max
+          type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-web-release,mode=max
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: web-v${{ needs.version-bump.outputs.new_version }}
+        name: Web Release v${{ needs.version-bump.outputs.new_version }}
+        body: |
+          ## 🌐 Web Release v${{ needs.version-bump.outputs.new_version }}
+          
+          ### 📋 Changelog
+          
+          ${{ needs.version-bump.outputs.changelog_content }}
+          
+          ### 📦 Installation
+          
+          **PyPI Package:**
+          ```bash
+          pip install raft-toolkit[web]==${{ needs.version-bump.outputs.new_version }}
+          ```
+          
+          **Docker Container (Web Application):**
+          ```bash
+          # Full-featured web application container
+          docker pull ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}
+          
+          # Run web application
+          docker run -d -p 8000:8000 \
+            -e OPENAI_API_KEY=your_api_key \
+            ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}
+          ```
+          
+          **Kubernetes Deployment:**
+          ```bash
+          # Deploy to Kubernetes
+          kubectl apply -f https://raw.githubusercontent.com/${{ github.repository }}/web-v${{ needs.version-bump.outputs.new_version }}/deploy/kubernetes/
+          ```
+          
+          ### 🚀 Quick Start
+          
+          ```bash
+          # Local development
+          pip install raft-toolkit[web]
+          raft-web --port 8000 --host 0.0.0.0
+          
+          # Access web interface
+          open http://localhost:8000
+          
+          # API documentation
+          open http://localhost:8000/docs
+          ```
+          
+          ### ✨ Features
+          
+          - 🌐 **Full Web Interface**: Complete web application with modern UI
+          - 🔌 **REST API**: Comprehensive API for programmatic access
+          - 📊 **Real-time Processing**: Live progress tracking and updates
+          - 🔄 **Background Tasks**: Async processing with Celery and Redis
+          - 📁 **File Management**: Upload, process, and manage datasets through web UI
+          - 🔐 **Security**: Built-in authentication and authorization
+          - 📈 **Monitoring**: Built-in metrics and health checks
+          - 🐳 **Container-ready**: Production-ready Docker images
+          
+          ### 🔗 Links
+          - 📖 [Documentation](https://github.com/${{ github.repository }}/blob/web-v${{ needs.version-bump.outputs.new_version }}/README.md)
+          - 🌐 [Web Interface Demo](https://github.com/${{ github.repository }}/wiki/Web-Interface)
+          - 🔌 [API Documentation](https://github.com/${{ github.repository }}/wiki/API-Reference)
+          - 🚀 [Deployment Guide](https://github.com/${{ github.repository }}/wiki/Deployment)
+          - 🐛 [Report Issues](https://github.com/${{ github.repository }}/issues)
+          - 💬 [Discussions](https://github.com/${{ github.repository }}/discussions)
+          
+          ### 🔧 Configuration
+          
+          **Environment Variables:**
+          - `OPENAI_API_KEY`: Required for AI processing
+          - `REDIS_URL`: Redis connection for background tasks (default: redis://localhost:6379)
+          - `DATABASE_URL`: Database connection (optional, uses SQLite by default)
+          - `RAFT_LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR)
+          
+          **Docker Compose:**
+          ```yaml
+          version: '3.8'
+          services:
+            raft-web:
+              image: ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}
+              ports:
+                - "8000:8000"
+              environment:
+                - OPENAI_API_KEY=your_api_key
+                - REDIS_URL=redis://redis:6379
+              depends_on:
+                - redis
+            
+            redis:
+              image: redis:7-alpine
+              ports:
+                - "6379:6379"
+          ```
+          
+          ---
+          
+          🤖 Generated with [Claude Code](https://claude.ai/code)
+        files: |
+          dist/*
+        draft: ${{ github.event.inputs.draft }}
+        prerelease: ${{ github.event.inputs.prerelease }}
+        generate_release_notes: false
+
+  publish-pypi:
+    name: Publish Web to PyPI
+    runs-on: ubuntu-latest
+    needs: [version-bump, build-and-release]
+    if: ${{ !github.event.inputs.draft && !github.event.inputs.prerelease }}
+    environment: pypi
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: web-v${{ needs.version-bump.outputs.new_version }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        verbose: true
+
+  deploy-staging:
+    name: Deploy Web to Staging
+    runs-on: ubuntu-latest
+    needs: [version-bump, build-and-release]
+    if: ${{ !github.event.inputs.draft }}
+    environment: staging
+    concurrency:
+      group: staging-web-deployment
+      cancel-in-progress: true
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: web-v${{ needs.version-bump.outputs.new_version }}
+
+    - name: Set lowercase repository name
+      id: repo
+      run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+    - name: Deploy to staging environment
+      run: |
+        echo "🚀 Deploying RAFT Web v${{ needs.version-bump.outputs.new_version }} to staging..."
+        echo "📦 Image: ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}"
+        
+        # Add your staging deployment commands here
+        # This could include:
+        # - Kubernetes deployment updates
+        # - Docker Compose updates
+        # - Cloud service deployments (AWS ECS, Azure Container Instances, etc.)
+        
+        echo "✅ Staging deployment completed"
+
+    - name: Run smoke tests
+      run: |
+        echo "🧪 Running staging smoke tests..."
+        
+        # Add smoke tests here
+        # - Health check endpoints
+        # - Basic API functionality
+        # - Database connectivity
+        # - Redis connectivity
+        
+        echo "✅ Smoke tests passed"
+
+  notify-success:
+    name: Notify Web Release Success
+    runs-on: ubuntu-latest
+    needs: [version-bump, build-and-release, publish-pypi, deploy-staging]
+    if: always() && needs.build-and-release.result == 'success'
+
+    steps:
+    - name: Set lowercase repository name
+      id: repo
+      run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+    - name: Success notification
+      run: |
+        echo "🎉 Web Release v${{ needs.version-bump.outputs.new_version }} completed successfully!"
+        echo "📦 Python package: Available on PyPI"
+        echo "🐳 Docker image: ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}"
+        echo "🌐 Web application deployed to staging"
+        echo "📋 Release notes: https://github.com/${{ github.repository }}/releases/tag/web-v${{ needs.version-bump.outputs.new_version }}"

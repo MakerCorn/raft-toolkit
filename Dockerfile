@@ -1,14 +1,26 @@
 # Multi-stage Dockerfile for RAFT Toolkit
 # Follows Docker best practices and security guidelines
 
+# Build arguments for dynamic configuration
+ARG PYTHON_VERSION=3.11
+ARG BUILD_DATE
+ARG VERSION=0.2.0
+ARG VCS_REF
+
 # Stage 1: Base dependencies
-FROM python:3.11-slim AS base
+FROM python:${PYTHON_VERSION:-3.11}-slim AS base
 
 # Add metadata labels
 LABEL maintainer="RAFT Toolkit Team" \
-      description="Retrieval Augmentation Fine-Tuning Toolkit" \
-      version="0.1.0" \
-      org.opencontainers.image.source="https://github.com/your-org/raft-toolkit"
+      description="Retrieval Augmented Fine-Tuning Toolkit for generating synthetic Q&A datasets" \
+      version="${VERSION:-0.2.0}" \
+      org.opencontainers.image.title="RAFT Toolkit" \
+      org.opencontainers.image.description="Retrieval Augmented Fine-Tuning Toolkit" \
+      org.opencontainers.image.version="${VERSION:-0.2.0}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://github.com/microsoft/raft-toolkit" \
+      org.opencontainers.image.licenses="MIT"
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -36,42 +48,34 @@ WORKDIR /app
 # Stage 2: Dependencies
 FROM base AS dependencies
 
-# Copy requirements files
-COPY requirements*.txt ./
+# Copy project configuration
+COPY pyproject.toml ./
 
 # Install Python dependencies with enhanced error handling
-RUN pip install --upgrade pip && \
-    # Install core requirements first
-    echo "Installing core dependencies..." && \
-    pip install --no-cache-dir -r requirements.txt && \
+RUN pip install --upgrade pip setuptools wheel && \
+    # Install the package with core dependencies
+    echo "Installing RAFT Toolkit with core dependencies..." && \
+    pip install --no-cache-dir -e . && \
     echo "Core dependencies installed successfully" && \
-    # Install web dependencies if they exist
-    if [ -f requirements-web.txt ]; then \
-        echo "Installing web dependencies..." && \
-        pip install --no-cache-dir -r requirements-web.txt && \
-        echo "Web dependencies installed successfully"; \
-    fi && \
     # Verify critical imports work
     echo "Verifying critical dependencies..." && \
-    python -c "import pypdf; import secrets; print('Security dependencies OK')" && \
+    python -c "import pypdf; print('PyPDF OK')" && \
     python -c "import openai; print('OpenAI', openai.__version__, 'OK')" && \
-    python -c "import sys; sys.stdout.write('Azure AI Evaluation: '); exec('try: from azure.ai.evaluation import evaluate; print(\"OK\")\\nexcept ImportError: print(\"not available (optional)\")')" && \
-    python -c "import fastapi; print('FastAPI', fastapi.__version__, 'OK')" && \
-    python -c "import sys; sys.stdout.write('LangWatch: '); exec('try: import langwatch; print(\"OK\")\\nexcept ImportError: print(\"not available (optional)\")')" && \
+    python -c "import transformers; print('Transformers OK')" && \
+    python -c "import pandas; print('Pandas OK')" && \
+    python -c "import pydantic; print('Pydantic OK')" && \
     # Run dependency conflict check
     echo "Checking for dependency conflicts..." && \
     pip check && \
     echo "All dependency verification completed successfully" || \
-    (echo "Dependency verification failed. Run 'python scripts/check_dependencies.py' for details" && exit 1)
+    (echo "Dependency verification failed. Check package dependencies" && exit 1)
 
 # Stage 3: Development
 FROM dependencies AS development
 
 # Install development and testing dependencies
-RUN if [ -f requirements-test.txt ]; then pip install --no-cache-dir -r requirements-test.txt; fi
-
-# Install debugging tools
-RUN pip install debugpy ipdb
+RUN pip install --no-cache-dir -e .[dev,all] && \
+    pip install debugpy ipdb
 
 # Copy source code
 COPY . .
@@ -86,8 +90,12 @@ USER raft
 # Expose ports (app and debugger)
 EXPOSE 8000 5678
 
+# Set development environment variables
+ENV RAFT_ENVIRONMENT=development \
+    RAFT_LOG_LEVEL=DEBUG
+
 # Development command with debugging support
-CMD ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "run_web.py", "--host", "0.0.0.0", "--debug"]
+CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # Stage 4: Testing
 FROM development AS testing
@@ -110,38 +118,40 @@ RUN mkdir -p $TEST_OUTPUT_DIR $TEST_TEMP_DIR $TEST_COVERAGE_DIR && \
 USER raft
 
 # Set test environment variables
-ENV TESTING=true \
-    LOG_LEVEL=DEBUG \
+ENV RAFT_TESTING=true \
+    RAFT_LOG_LEVEL=DEBUG \
     PYTHONPATH=/app
 
 # Health check for testing container
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
     CMD python -c "import sys; sys.exit(0)" || exit 1
 
-# Run tests by default - uses environment variables for directory configuration
-CMD ["python", "run_tests.py", "--coverage"]
+# Run tests by default - uses pytest
+CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=core", "--cov=cli", "--cov=web", "--cov-report=xml", "--cov-report=term-missing"]
 
-# Stage 5: Production
+# Stage 5: Production Web Application
 FROM dependencies AS production
 
 # Build-time arguments for optimization
 ARG KUBERNETES_OPTIMIZED=false
 
+# Install web dependencies
+RUN pip install --no-cache-dir -e .[web] && \
+    if [ "$KUBERNETES_OPTIMIZED" = "true" ]; then \
+        echo "Installing Kubernetes optimizations..." && \
+        pip install --no-cache-dir -e .[kubernetes] && \
+        echo "Kubernetes dependencies installed successfully"; \
+    fi
+
 # Copy source code
 COPY . .
 
 # Remove unnecessary files for production
-RUN rm -rf tests/ docs/ examples/ .git/ .github/ notebooks/ && \
+RUN rm -rf tests/ docs/ examples/ .git/ .github/ notebooks/ scripts/ && \
     find . -name "*.pyc" -delete && \
     find . -name "__pycache__" -type d -exec rm -rf {} + || true && \
-    find . -name "*.pytest_cache" -type d -exec rm -rf {} + || true
-
-# Install Kubernetes-specific dependencies if optimized build
-RUN if [ "$KUBERNETES_OPTIMIZED" = "true" ]; then \
-        echo "Installing Kubernetes optimizations..." && \
-        pip install --no-cache-dir -r requirements-k8s.txt && \
-        echo "Kubernetes dependencies installed successfully"; \
-    fi
+    find . -name "*.pytest_cache" -type d -exec rm -rf {} + || true && \
+    find . -name ".coverage" -delete || true
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/data /app/outputs /app/logs /app/uploads && \
@@ -152,11 +162,12 @@ LABEL io.kubernetes.container.name="raft-toolkit" \
       io.kubernetes.container.component="web" \
       io.openshift.expose-services="8000:http"
 
-# Set Kubernetes-friendly environment variables
-ENV PYTHONUNBUFFERED=1 \
+# Set production environment variables
+ENV RAFT_ENVIRONMENT=production \
+    RAFT_LOG_LEVEL=INFO \
     RAFT_LOG_FORMAT=json \
     RAFT_LOG_OUTPUT=stdout \
-    KUBERNETES_DEPLOYMENT=true
+    PYTHONUNBUFFERED=1
 
 # Switch to app user
 USER raft
@@ -168,25 +179,53 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE 8000
 
-# Production command
-CMD ["python", "run_web.py", "--host", "0.0.0.0", "--port", "8000"]
+# Production command using the web entry point
+CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Stage 6: CLI-only (lightweight)
-FROM dependencies AS cli
+FROM base AS cli
+
+# Copy project configuration and install minimal dependencies
+COPY pyproject.toml ./
+
+# Install only core dependencies (no web, no dev)
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e . && \
+    echo "CLI dependencies installed successfully"
 
 # Copy only CLI-related files
 COPY core/ ./core/
 COPY cli/ ./cli/
 COPY tools/ ./tools/
 COPY templates/ ./templates/
-COPY raft.py ./
+
+# Copy source files
+COPY . .
+
+# Remove unnecessary files for CLI-only image
+RUN rm -rf web/ tests/ docs/ examples/ .git/ .github/ notebooks/ scripts/ && \
+    find . -name "*.pyc" -delete && \
+    find . -name "__pycache__" -type d -exec rm -rf {} + || true
 
 # Create necessary directories and set permissions
-RUN mkdir -p /app/data /app/outputs && \
+RUN mkdir -p /app/data /app/outputs /app/logs && \
     chown -R raft:raft /app
+
+# Add CLI-specific labels
+LABEL io.kubernetes.container.name="raft-toolkit" \
+      io.kubernetes.container.component="cli"
+
+# Set CLI environment variables
+ENV RAFT_ENVIRONMENT=cli \
+    RAFT_LOG_LEVEL=INFO \
+    PYTHONUNBUFFERED=1
 
 # Switch to app user
 USER raft
 
-# CLI command
-ENTRYPOINT ["python", "raft.py"]
+# Set working directory for data processing
+WORKDIR /app
+
+# CLI entry point using the CLI module
+ENTRYPOINT ["python", "-m", "cli.main"]
+CMD ["--help"]

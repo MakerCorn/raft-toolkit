@@ -192,7 +192,9 @@ python raft.py --datapath sample_data/sample.pdf --output ./output --preview
 - **☁️ Cloud Integration**: S3 and SharePoint support - `pip install -e ".[cloud]"`
 - **🔍 Monitoring**: Observability features - `pip install -e ".[tracing]"`
 
-See the [Installation Guide](docs/INSTALLATION_GUIDE.md) for complete setup instructions.
+**📚 Installation Resources:**
+- [Complete Installation Guide](docs/INSTALLATION_GUIDE.md) - Detailed setup instructions
+- [Requirements Management](docs/REQUIREMENTS.md) - Dependency structure and installation patterns
 
 ## 🌐 Usage
 

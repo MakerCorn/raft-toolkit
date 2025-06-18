@@ -201,7 +201,15 @@ async def serve_ui():
     )
 
 
-@app.post("/api/upload", response_model=Dict[str, str])
+class UploadResponse(BaseModel):
+    """Response model for file upload."""
+    file_id: str
+    filename: str
+    file_path: str
+    size: int
+
+
+@app.post("/api/upload", response_model=UploadResponse)
 async def upload_file(file: UploadFile = File(...)):
     """Upload a file for processing with security validation."""
     try:
@@ -254,7 +262,12 @@ async def upload_file(file: UploadFile = File(...)):
         # Set restrictive file permissions
         file_path.chmod(0o600)
 
-        return {"file_id": file_id, "filename": safe_filename, "file_path": str(file_path), "size": len(content)}
+        return UploadResponse(
+            file_id=file_id,
+            filename=safe_filename,
+            file_path=str(file_path),
+            size=len(content)
+        )
 
     except HTTPException:
         raise
@@ -263,20 +276,30 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Upload failed")
 
 
+class PreviewRequest(BaseModel):
+    """Request model for processing preview."""
+    doctype: str
+    chunking_strategy: str = "semantic"
+    chunk_size: int = 512
+    questions: int = 5
+
+
 @app.post("/api/preview", response_model=PreviewResponse)
 async def get_preview(
+    request: PreviewRequest,
     file_path: str,
-    doctype: str,  # Will be converted to DocType
-    chunk_size: int = 512,
-    questions: int = 5,
     config: RaftConfig = Depends(get_raft_config),
 ):
     """Get a preview of what would be processed."""
     try:
+        # Validate file exists
+        if not Path(file_path).exists():
+            raise HTTPException(status_code=400, detail="File not found")
         # Override config with request parameters
-        config.doctype = doctype  # String will be used directly
-        config.chunk_size = chunk_size
-        config.questions = questions
+        config.doctype = request.doctype  # String will be used directly
+        config.chunk_size = request.chunk_size
+        config.questions = request.questions
+        config.chunking_strategy = request.chunking_strategy
 
         engine = RaftEngine(config)
         preview = engine.get_processing_preview(Path(file_path))
@@ -288,6 +311,8 @@ async def get_preview(
             doctype=preview["doctype"],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error generating preview: {e}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -302,6 +327,9 @@ async def start_processing(
 ):
     """Start dataset processing."""
     try:
+        # Validate file exists
+        if not Path(file_path).exists():
+            raise HTTPException(status_code=400, detail="File not found")
         # Create job ID
         job_id = str(uuid.uuid4())
 
@@ -346,6 +374,8 @@ async def start_processing(
 
         return ProcessingResponse(job_id=job_id, status="pending", message="Processing started")
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error starting processing: {e}")
         raise HTTPException(status_code=400, detail=str(e))

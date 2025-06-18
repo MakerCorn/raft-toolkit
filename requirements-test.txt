@@ -1,17 +1,31 @@
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-pytest-cov>=4.0.0
-pytest-mock>=3.10.0
-httpx>=0.24.0
-respx>=0.20.0
+# Testing and development dependencies  
+# Install with: pip install -r requirements.txt -r requirements-test.txt
 
-# Cloud dependencies for testing
-boto3>=1.34.0,<2.0.0
-msal>=1.24.0,<2.0.0
-requests>=2.31.0,<3.0.0
+-r requirements.txt
+
+# Testing framework
+pytest>=7.0.0,<8.0.0
+pytest-asyncio>=0.21.0,<1.0.0
+pytest-cov>=4.0.0,<5.0.0
+pytest-mock>=3.10.0,<4.0.0
+
+# HTTP testing
+httpx<0.28,>=0.24.0  # Version constraint for TestClient compatibility
+respx>=0.20.0,<1.0.0
 
 # Code quality and linting tools
-flake8>=6.0.0
-black>=23.0.0
-isort>=5.12.0
-mypy>=1.0.0
+flake8>=6.0.0,<7.0.0
+black>=23.0.0,<25.0.0
+isort>=5.12.0,<6.0.0
+mypy>=1.0.0,<2.0.0
+
+# Security and code analysis
+bandit>=1.7.0,<2.0.0
+safety>=3.0.0,<4.0.0
+
+# Configuration linting
+yamllint>=1.33.0,<2.0.0
+
+# Documentation
+sphinx>=7.0.0,<8.0.0
+sphinx-rtd-theme>=1.3.0,<2.0.0

@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raft-web
+  namespace: ${NAMESPACE:-raft-toolkit}
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: web
+    app.kubernetes.io/version: "${VERSION:-latest}"
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  replicas: ${WEB_REPLICAS:-2}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: raft-toolkit
+      app.kubernetes.io/component: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: raft-toolkit
+        app.kubernetes.io/component: web
+        app.kubernetes.io/version: "${VERSION:-latest}"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: raft-web
+        image: ${WEB_IMAGE:-ghcr.io/microsoft/raft-toolkit:web-latest}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: raft-secrets
+              key: openai-api-key
+        - name: REDIS_URL
+          value: "redis://redis:6379"
+        - name: RAFT_ENVIRONMENT
+          value: "production"
+        - name: RAFT_LOG_LEVEL
+          value: "${LOG_LEVEL:-INFO}"
+        - name: RAFT_LOG_FORMAT
+          value: "json"
+        - name: RAFT_HOST
+          value: "0.0.0.0"
+        - name: RAFT_PORT
+          value: "8000"
+        - name: RAFT_WORKERS
+          value: "${WEB_WORKERS:-4}"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/data
+        - name: output-volume
+          mountPath: /app/outputs
+        - name: uploads-volume
+          mountPath: /app/uploads
+        - name: logs-volume
+          mountPath: /app/logs
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: raft-data-pvc
+      - name: output-volume
+        persistentVolumeClaim:
+          claimName: raft-output-pvc
+      - name: uploads-volume
+        persistentVolumeClaim:
+          claimName: raft-uploads-pvc
+      - name: logs-volume
+        emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: raft-uploads-pvc
+  namespace: ${NAMESPACE:-raft-toolkit}
+  labels:
+    app.kubernetes.io/name: raft-toolkit
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: ${STORAGE_CLASS:-standard}

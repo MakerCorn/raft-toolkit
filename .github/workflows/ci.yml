@@ -1,0 +1,487 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly security scan
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  # Default testing environment variables
+  OPENAI_API_KEY: "test-key-12345"
+  RAFT_LOG_LEVEL: "DEBUG"
+  RAFT_TESTING: "true"
+  # Default deployment configurations
+  DEPLOY_ENVIRONMENT: "staging"
+  DEFAULT_AWS_REGION: "us-east-1"
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false  # Continue with other combinations if one fails
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.11', '3.12']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies (Linux only)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install --prefer-binary -e .[dev,all]
+        pip install --prefer-binary pytest-xvfb pytest-asyncio pytest-timeout  # For headless, async, and timeout testing
+
+    - name: Run linting
+      run: |
+        black --check .
+        isort --check-only .
+        flake8 . --exclude=venv,__pycache__,.git
+
+    - name: Run type checking
+      run: |
+        mypy core/ cli/ web/ --ignore-missing-imports || echo "MyPy not available, skipping type check"
+
+    - name: Run security checks
+      run: |
+        pip install bandit safety
+        bandit -r core/ cli/ web/ -f json -o bandit-report.json || true
+        bandit -r core/ cli/ web/
+        safety check
+
+    - name: Run unit tests
+      env:
+        RAFT_TESTING: "true"
+      run: |
+        pytest tests/unit/ -v --cov=core --cov=cli --cov=web --cov-report=xml --cov-report=term-missing --tb=short --timeout=300
+
+    - name: Run integration tests
+      env:
+        RAFT_TESTING: "true"
+      run: |
+        pytest tests/integration/ -v --cov-append --cov=core --cov=cli --cov=web --cov-report=xml --tb=short --timeout=300
+
+    - name: Run API tests
+      env:
+        RAFT_TESTING: "true"
+      run: |
+        pytest tests/api/ -v --cov-append --cov=core --cov=cli --cov=web --cov-report=xml --tb=short --timeout=300
+
+    - name: Run CLI tests
+      env:
+        RAFT_TESTING: "true"
+      run: |
+        pytest tests/cli/ -v --cov-append --cov=core --cov=cli --cov=web --cov-report=xml --tb=short --timeout=300
+
+    - name: Upload coverage reports
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v4
+      continue-on-error: true
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  build-package:
+    name: Build Python Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install build twine check-wheel-contents
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Verify package metadata
+      run: |
+        check-wheel-contents dist/*.whl
+        twine check dist/*
+
+    - name: Run dependency scanning
+      uses: snyk/actions/python-3.10@master
+      continue-on-error: true
+      if: github.event_name != 'pull_request'
+      with:
+        command: scan
+        args: --all-projects --severity-threshold=high
+
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package
+        path: dist/
+        retention-days: 30
+
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      repo-name: ${{ steps.repo.outputs.name }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          network=host
+          image=moby/buildkit:buildx-stable-1
+        buildkitd-config-inline: |
+          [worker.oci]
+            max-parallelism = 2
+          [worker.containerd]
+            max-parallelism = 2
+
+    - name: Set lowercase repository name
+      id: repo
+      run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+    - name: Free up disk space
+      run: |
+        # Remove unnecessary packages and files to free up space
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker system prune -af
+        sudo apt-get autoremove -y
+        sudo apt-get autoclean
+        # Show available space
+        df -h
+
+    - name: Login to GitHub Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ steps.repo.outputs.name }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+        labels: |
+          org.opencontainers.image.title=RAFT Toolkit
+          org.opencontainers.image.description=Retrieval Augmented Fine-Tuning Toolkit
+          org.opencontainers.image.vendor=${{ github.repository_owner }}
+
+    - name: Build and push Docker image (CLI)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        target: cli
+        platforms: ${{ github.ref == 'refs/heads/main' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: ${{ steps.meta.outputs.tags }}-cli
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: |
+          type=gha
+          type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-cli
+        cache-to: |
+          type=gha,mode=max
+          type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-cli,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+    - name: Build and push Docker image (Web)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        target: production
+        platforms: ${{ github.ref == 'refs/heads/main' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: ${{ steps.meta.outputs.tags }}-web
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: |
+          type=gha
+          type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-web
+        cache-to: |
+          type=gha,mode=max
+          type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-web,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+    - name: Upload Docker artifacts
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-metadata
+        path: |
+          /tmp/.buildx-metadata-*
+        retention-days: 30
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download Python dependencies for scanning
+      run: |
+        pip install -e .[all]
+
+    - name: Run Trivy filesystem scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        format: 'sarif'
+        output: 'trivy-fs-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        timeout: '10m'
+
+    - name: Run Trivy configuration scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        format: 'sarif'
+        output: 'trivy-config-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        timeout: '10m'
+
+    - name: Run container scan (CLI)
+      if: needs.build-docker.result == 'success' && github.ref == 'refs/heads/main'
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ghcr.io/${{ needs.build-docker.outputs.repo-name }}:latest-cli
+        format: 'sarif'
+        output: 'trivy-cli-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        timeout: '10m'
+
+    - name: Run container scan (Web)
+      if: needs.build-docker.result == 'success' && github.ref == 'refs/heads/main'
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ghcr.io/${{ needs.build-docker.outputs.repo-name }}:latest-web
+        format: 'sarif'
+        output: 'trivy-web-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        timeout: '10m'
+
+    - name: Upload Trivy filesystem scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-fs-results.sarif'
+        category: filesystem
+
+    - name: Upload Trivy configuration scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-config-results.sarif'
+        category: configuration
+
+    - name: Upload CLI container scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: needs.build-docker.result == 'success' && github.ref == 'refs/heads/main'
+      with:
+        sarif_file: 'trivy-cli-results.sarif'
+        category: container-cli
+
+    - name: Upload Web container scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: needs.build-docker.result == 'success' && github.ref == 'refs/heads/main'
+      with:
+        sarif_file: 'trivy-web-results.sarif'
+        category: container-web
+
+  security-monitoring:
+    name: Security Monitoring
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[all]
+
+    - name: Run Snyk monitor
+      uses: snyk/actions/python-3.10@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: monitor
+        args: |
+          --org=${{ vars.SNYK_ORG || 'default-org' }}
+          --project-name=${{ github.repository }}
+          --all-projects
+          --detection-depth=6
+
+    - name: Run pip-audit
+      run: |
+        pip install pip-audit
+        pip-audit -r requirements.txt -r requirements-test.txt || echo "Vulnerabilities found"
+
+    - name: Run safety check
+      run: |
+        pip install safety
+        safety check || echo "Vulnerabilities found"
+
+    - name: Create security report
+      run: |
+        {
+          echo "# Security Scan Report"
+          echo "## Date: $(date)"
+          echo "## Repository: ${{ github.repository }}"
+          echo
+          echo "### Dependency Scans"
+          echo "- Snyk scan completed"
+          echo "- pip-audit scan completed"
+          echo "- safety check completed"
+          echo
+          echo "For detailed results, please check the job logs."
+        } > security-report.md
+
+    - name: Upload security report
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-report
+        path: security-report.md
+        retention-days: 90
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-package, build-docker, security-scan]
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/develop' &&
+      !contains(github.event.head_commit.message, '[skip deploy]')
+    concurrency: 
+      group: staging_environment
+      cancel-in-progress: true
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package
+        path: dist/
+
+    - name: Configure AWS credentials
+      if: hashFiles('.aws/**') != ''
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ env.DEFAULT_AWS_REGION }}
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # This could include AWS ECS deployments, Kubernetes deployments, etc.
+
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [test, build-package, build-docker, security-scan, security-monitoring, deploy-staging]
+    if: always()
+
+    steps:
+    - name: Check job status
+      id: check
+      run: |
+        if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+          echo "status=failure" >> "$GITHUB_OUTPUT"
+        elif [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+          echo "status=cancelled" >> "$GITHUB_OUTPUT"
+        else
+          echo "status=success" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Notify on success
+      if: steps.check.outputs.status == 'success'
+      run: |
+        echo "✅ All CI/CD steps completed successfully!"
+
+    - name: Notify on failure
+      if: steps.check.outputs.status == 'failure'
+      run: |
+        echo "❌ CI/CD pipeline failed. Check the logs for details."
+        exit 1

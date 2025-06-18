@@ -1,6 +1,5 @@
 # Core dependencies for RAFT Toolkit
-# This file contains only the essential dependencies for basic functionality
-# Use -r requirements-*.txt for additional features
+# Generate requirements.txt with: pip-compile requirements.in
 
 # Core ML and AI libraries
 openai>=1.68.2,<2.0.0

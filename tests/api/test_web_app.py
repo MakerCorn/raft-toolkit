@@ -89,7 +89,7 @@ class TestUploadEndpoint:
         assert "file_id" in data
         assert "file_path" in data
         assert data["filename"] == "test.txt"
-        assert data["size"] == 43  # Length of test content
+        assert data["size"] == 43  # Length of test content (now integer)
         assert Path(data["file_path"]).exists()
 
     @pytest.mark.api
@@ -106,10 +106,9 @@ class TestUploadEndpoint:
         """Test upload with empty filename."""
         response = client.post("/api/upload", files={"file": ("", b"content", "text/plain")})
 
-        assert response.status_code == 400
+        assert response.status_code == 422  # FastAPI validation error for missing filename
         data = response.json()
         assert "detail" in data
-        assert "Filename is required" in data["detail"]
 
 
 @pytest.mark.api
@@ -155,6 +154,7 @@ class TestProcessEndpoint:
         assert response.status_code == 400
         data = response.json()
         assert "detail" in data
+        assert "File not found" in data["detail"]
 
     @pytest.mark.api
     def test_start_processing_invalid_config(self, client, temp_upload_file):
@@ -170,7 +170,7 @@ class TestProcessEndpoint:
 
         response = client.post(f"/api/process?file_path={file_path}", json=process_request)
 
-        assert response.status_code == 422  # Pydantic validation error
+        assert response.status_code == 422  # Pydantic validation error for invalid chunk_size
         data = response.json()
         assert "detail" in data
 
@@ -365,6 +365,7 @@ class TestPreviewEndpoint:
         assert response.status_code == 400
         data = response.json()
         assert "detail" in data
+        assert "File not found" in data["detail"]
 
 
 @pytest.mark.api

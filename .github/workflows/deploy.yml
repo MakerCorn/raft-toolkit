@@ -1,0 +1,402 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+      cloud_provider:
+        description: 'Cloud provider'
+        required: true
+        default: 'gke'
+        type: choice
+        options:
+        - gke
+        - eks
+        - aks
+      deployment_type:
+        description: 'Deployment type'
+        required: true
+        default: 'web'
+        type: choice
+        options:
+        - web
+        - cli
+        - both
+      image_tag:
+        description: 'Image tag to deploy (leave empty for auto-detection)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Perform dry run'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment || 'staging' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment || 'staging' }}
+    
+    permissions:
+      contents: read
+      packages: read
+      id-token: write  # For OIDC authentication
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for proper tag detection
+
+    - name: Set lowercase repository name
+      id: repo
+      run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+    - name: Determine deployment parameters
+      id: params
+      run: |
+        # Set environment (from input or auto-detect)
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          ENVIRONMENT="${{ inputs.environment }}"
+          CLOUD_PROVIDER="${{ inputs.cloud_provider }}"
+          DEPLOYMENT_TYPE="${{ inputs.deployment_type }}"
+          DRY_RUN="${{ inputs.dry_run }}"
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          ENVIRONMENT="staging"
+          CLOUD_PROVIDER="gke"
+          DEPLOYMENT_TYPE="web"
+          DRY_RUN="false"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          ENVIRONMENT="development"
+          CLOUD_PROVIDER="gke"
+          DEPLOYMENT_TYPE="both"
+          DRY_RUN="false"
+        else
+          ENVIRONMENT="development"
+          CLOUD_PROVIDER="gke"
+          DEPLOYMENT_TYPE="both"
+          DRY_RUN="true"
+        fi
+        
+        echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+        echo "cloud-provider=${CLOUD_PROVIDER}" >> $GITHUB_OUTPUT
+        echo "deployment-type=${DEPLOYMENT_TYPE}" >> $GITHUB_OUTPUT
+        echo "dry-run=${DRY_RUN}" >> $GITHUB_OUTPUT
+
+    - name: Generate dynamic image tags
+      id: image
+      run: |
+        # If image tag provided via input, use it
+        if [[ -n "${{ inputs.image_tag }}" ]]; then
+          BASE_TAG="${{ inputs.image_tag }}"
+        else
+          # Auto-generate based on Git context
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            BASE_TAG="${{ github.ref_name }}"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            BASE_TAG="main-$(echo ${{ github.sha }} | cut -c1-8)"
+          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+            BASE_TAG="develop-$(echo ${{ github.sha }} | cut -c1-8)"
+          else
+            BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+            BASE_TAG="${BRANCH_NAME}-$(echo ${{ github.sha }} | cut -c1-8)"
+          fi
+        fi
+        
+        # Set image tags for CLI and Web variants
+        CLI_TAG="${BASE_TAG}-cli"
+        WEB_TAG="${BASE_TAG}-web"
+        
+        echo "base-tag=${BASE_TAG}" >> $GITHUB_OUTPUT
+        echo "cli-tag=${CLI_TAG}" >> $GITHUB_OUTPUT
+        echo "web-tag=${WEB_TAG}" >> $GITHUB_OUTPUT
+        echo "cli-image=ghcr.io/${{ steps.repo.outputs.name }}:${CLI_TAG}" >> $GITHUB_OUTPUT
+        echo "web-image=ghcr.io/${{ steps.repo.outputs.name }}:${WEB_TAG}" >> $GITHUB_OUTPUT
+
+    - name: Validate images exist
+      run: |
+        DEPLOYMENT_TYPE="${{ steps.params.outputs.deployment-type }}"
+        
+        echo "Validating required images for deployment type: ${DEPLOYMENT_TYPE}"
+        
+        # Function to check if image exists
+        check_image() {
+          local image=$1
+          local variant=$2
+          
+          echo "Checking ${variant} image: ${image}"
+          if docker buildx imagetools inspect "${image}" >/dev/null 2>&1; then
+            echo "✅ ${variant} image exists and is accessible"
+            return 0
+          else
+            echo "❌ ${variant} image not found: ${image}"
+            return 1
+          fi
+        }
+        
+        # Check required images based on deployment type
+        case "$DEPLOYMENT_TYPE" in
+          cli)
+            check_image "${{ steps.image.outputs.cli-image }}" "CLI" || exit 1
+            ;;
+          web)
+            check_image "${{ steps.image.outputs.web-image }}" "Web" || exit 1
+            ;;
+          both)
+            check_image "${{ steps.image.outputs.cli-image }}" "CLI" || exit 1
+            check_image "${{ steps.image.outputs.web-image }}" "Web" || exit 1
+            ;;
+        esac
+
+    - name: Setup Kubernetes tools
+      run: |
+        # Install kubectl
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+        
+        # Install kustomize
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+        
+        # Install Helm
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+    - name: Configure cloud authentication
+      run: |
+        case "${{ steps.params.outputs.cloud-provider }}" in
+          gke)
+            echo "Configuring GKE authentication..."
+            # Set environment variables for GKE
+            echo "GKE_CLUSTER_NAME=${{ vars.GKE_CLUSTER_NAME || 'raft-toolkit-cluster' }}" >> $GITHUB_ENV
+            echo "GKE_ZONE=${{ vars.GKE_ZONE || 'us-central1-a' }}" >> $GITHUB_ENV
+            echo "GCP_PROJECT_ID=${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            
+            # Configure GKE authentication (requires GCP service account key)
+            if [[ -n "${{ secrets.GCP_SA_KEY }}" ]]; then
+              echo "${{ secrets.GCP_SA_KEY }}" | base64 -d > gcp-key.json
+              gcloud auth activate-service-account --key-file gcp-key.json
+              gcloud container clusters get-credentials "$GKE_CLUSTER_NAME" --zone "$GKE_ZONE" --project "$GCP_PROJECT_ID"
+            else
+              echo "⚠️  GCP_SA_KEY secret not configured - skipping GKE authentication"
+            fi
+            ;;
+          eks)
+            echo "Configuring EKS authentication..."
+            # Set environment variables for EKS
+            echo "EKS_CLUSTER_NAME=${{ vars.EKS_CLUSTER_NAME || 'raft-toolkit-cluster' }}" >> $GITHUB_ENV
+            echo "AWS_REGION=${{ vars.AWS_REGION || 'us-east-1' }}" >> $GITHUB_ENV
+            
+            # Configure AWS credentials and EKS access
+            if [[ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]] && [[ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]]; then
+              aws configure set aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}"
+              aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+              aws configure set region "$AWS_REGION"
+              aws eks update-kubeconfig --region "$AWS_REGION" --name "$EKS_CLUSTER_NAME"
+            else
+              echo "⚠️  AWS credentials not configured - skipping EKS authentication"
+            fi
+            ;;
+          aks)
+            echo "Configuring AKS authentication..."
+            # Set environment variables for AKS
+            echo "AKS_CLUSTER_NAME=${{ vars.AKS_CLUSTER_NAME || 'raft-toolkit-cluster' }}" >> $GITHUB_ENV
+            echo "AKS_RESOURCE_GROUP=${{ vars.AKS_RESOURCE_GROUP || 'raft-toolkit-rg' }}" >> $GITHUB_ENV
+            
+            # Configure Azure authentication
+            if [[ -n "${{ secrets.AZURE_CLIENT_ID }}" ]] && [[ -n "${{ secrets.AZURE_CLIENT_SECRET }}" ]] && [[ -n "${{ secrets.AZURE_TENANT_ID }}" ]]; then
+              az login --service-principal -u "${{ secrets.AZURE_CLIENT_ID }}" -p "${{ secrets.AZURE_CLIENT_SECRET }}" --tenant "${{ secrets.AZURE_TENANT_ID }}"
+              az aks get-credentials --resource-group "$AKS_RESOURCE_GROUP" --name "$AKS_CLUSTER_NAME"
+            else
+              echo "⚠️  Azure credentials not configured - skipping AKS authentication"
+            fi
+            ;;
+        esac
+
+    - name: Deploy to Kubernetes
+      run: |
+        export ENVIRONMENT="${{ steps.params.outputs.environment }}"
+        export CLOUD_PROVIDER="${{ steps.params.outputs.cloud-provider }}"
+        export DEPLOYMENT_TYPE="${{ steps.params.outputs.deployment-type }}"
+        export CLI_IMAGE="${{ steps.image.outputs.cli-image }}"
+        export WEB_IMAGE="${{ steps.image.outputs.web-image }}"
+        export DRY_RUN="${{ steps.params.outputs.dry-run }}"
+        export NAMESPACE="raft-toolkit-${{ steps.params.outputs.environment }}"
+        
+        echo "🚀 Deploying RAFT Toolkit to Kubernetes..."
+        echo "Environment: $ENVIRONMENT"
+        echo "Cloud Provider: $CLOUD_PROVIDER"
+        echo "Deployment Type: $DEPLOYMENT_TYPE"
+        echo "CLI Image: $CLI_IMAGE"
+        echo "Web Image: $WEB_IMAGE"
+        echo "Namespace: $NAMESPACE"
+        echo "Dry Run: $DRY_RUN"
+        
+        # Create namespace if it doesn't exist
+        if [[ "$DRY_RUN" == "false" ]]; then
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+        else
+          echo "DRY RUN: Would create namespace $NAMESPACE"
+        fi
+        
+        # Deploy based on deployment type
+        case "$DEPLOYMENT_TYPE" in
+          cli)
+            echo "📦 Deploying CLI components..."
+            if [[ "$DRY_RUN" == "false" ]]; then
+              envsubst < deploy/kubernetes/cli-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+            else
+              echo "DRY RUN: Would deploy CLI components"
+              envsubst < deploy/kubernetes/cli-deployment.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+            fi
+            ;;
+          web)
+            echo "🌐 Deploying Web components..."
+            if [[ "$DRY_RUN" == "false" ]]; then
+              envsubst < deploy/kubernetes/web-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+              envsubst < deploy/kubernetes/web-service.yaml | kubectl apply -n "$NAMESPACE" -f -
+              envsubst < deploy/kubernetes/redis-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+            else
+              echo "DRY RUN: Would deploy Web components"
+              envsubst < deploy/kubernetes/web-deployment.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+              envsubst < deploy/kubernetes/web-service.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+              envsubst < deploy/kubernetes/redis-deployment.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+            fi
+            ;;
+          both)
+            echo "🔄 Deploying both CLI and Web components..."
+            if [[ "$DRY_RUN" == "false" ]]; then
+              envsubst < deploy/kubernetes/cli-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+              envsubst < deploy/kubernetes/web-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+              envsubst < deploy/kubernetes/web-service.yaml | kubectl apply -n "$NAMESPACE" -f -
+              envsubst < deploy/kubernetes/redis-deployment.yaml | kubectl apply -n "$NAMESPACE" -f -
+            else
+              echo "DRY RUN: Would deploy both CLI and Web components"
+              envsubst < deploy/kubernetes/cli-deployment.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+              envsubst < deploy/kubernetes/web-deployment.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+              envsubst < deploy/kubernetes/web-service.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+              envsubst < deploy/kubernetes/redis-deployment.yaml | kubectl apply -n "$NAMESPACE" --dry-run=client -f -
+            fi
+            ;;
+        esac
+
+    - name: Wait for deployment rollout
+      if: steps.params.outputs.dry-run == 'false'
+      run: |
+        NAMESPACE="raft-toolkit-${{ steps.params.outputs.environment }}"
+        DEPLOYMENT_TYPE="${{ steps.params.outputs.deployment-type }}"
+        
+        echo "⏳ Waiting for deployment rollout to complete..."
+        
+        # Wait for deployments based on type
+        case "$DEPLOYMENT_TYPE" in
+          cli)
+            kubectl rollout status deployment/raft-cli -n "$NAMESPACE" --timeout=300s
+            ;;
+          web)
+            kubectl rollout status deployment/raft-web -n "$NAMESPACE" --timeout=300s
+            kubectl rollout status deployment/redis -n "$NAMESPACE" --timeout=300s
+            ;;
+          both)
+            kubectl rollout status deployment/raft-cli -n "$NAMESPACE" --timeout=300s
+            kubectl rollout status deployment/raft-web -n "$NAMESPACE" --timeout=300s
+            kubectl rollout status deployment/redis -n "$NAMESPACE" --timeout=300s
+            ;;
+        esac
+
+    - name: Run post-deployment tests
+      if: steps.params.outputs.dry-run == 'false'
+      run: |
+        echo "🧪 Running post-deployment verification..."
+        
+        NAMESPACE="raft-toolkit-${{ steps.params.outputs.environment }}"
+        DEPLOYMENT_TYPE="${{ steps.params.outputs.deployment-type }}"
+        
+        # Check pod status
+        echo "📋 Pod status:"
+        kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name=raft-toolkit
+        
+        # Health checks based on deployment type
+        case "$DEPLOYMENT_TYPE" in
+          web|both)
+            echo "🌐 Testing web service health..."
+            # Wait for service to be ready
+            kubectl wait --for=condition=available --timeout=300s deployment/raft-web -n "$NAMESPACE"
+            
+            # Run health check
+            kubectl run test-pod --rm -i --restart=Never --image=curlimages/curl:latest -n "$NAMESPACE" -- \
+              curl -f "http://raft-web-service:8000/health" || echo "⚠️  Health check endpoint not available"
+            ;;
+        esac
+        
+        case "$DEPLOYMENT_TYPE" in
+          cli|both)
+            echo "📦 Testing CLI functionality..."
+            # Test CLI pod can start and respond
+            kubectl wait --for=condition=available --timeout=300s deployment/raft-cli -n "$NAMESPACE"
+            
+            # Run a simple CLI test
+            kubectl run cli-test --rm -i --restart=Never --image="${{ steps.image.outputs.cli-image }}" -n "$NAMESPACE" -- \
+              raft --help || echo "⚠️  CLI test failed"
+            ;;
+        esac
+
+    - name: Deployment summary
+      if: always()
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Environment | ${{ steps.params.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Cloud Provider | ${{ steps.params.outputs.cloud-provider }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Deployment Type | ${{ steps.params.outputs.deployment-type }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| CLI Image | ${{ steps.image.outputs.cli-image }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Web Image | ${{ steps.image.outputs.web-image }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Namespace | raft-toolkit-${{ steps.params.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Dry Run | ${{ steps.params.outputs.dry-run }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ steps.params.outputs.dry-run }}" == "false" ]]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Access Information" >> $GITHUB_STEP_SUMMARY
+          
+          case "${{ steps.params.outputs.deployment-type }}" in
+            web|both)
+              echo "- **Web Interface**: Access via LoadBalancer or Ingress (check service configuration)" >> $GITHUB_STEP_SUMMARY
+              echo "- **API Documentation**: \`/docs\` endpoint on web service" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
+          
+          case "${{ steps.params.outputs.deployment-type }}" in
+            cli|both)
+              echo "- **CLI Access**: Execute commands via kubectl exec into CLI pods" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Useful Commands" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# View pods" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl get pods -n raft-toolkit-${{ steps.params.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# View services" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl get services -n raft-toolkit-${{ steps.params.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# View logs" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl logs -f deployment/raft-web -n raft-toolkit-${{ steps.params.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
