@@ -108,7 +108,9 @@ def _get_token(token_key: str, resource: str) -> Optional[str]:
             return None
         else:
             # Use cached token - we already checked it's not None above
-            assert cached_token is not None
+            if cached_token is None:
+                log.error("Unexpected state: cached_token is None when it should exist")
+                return None
 
             # Extract token string
             if hasattr(cached_token, "token"):
