@@ -6,17 +6,8 @@
 -r requirements-cloud.txt
 
 # Kubernetes core
-kubernetes>=29.0.0,<31.0.0
-jinja2>=3.1.0,<4.0.0
-
-# Cloud provider specific Kubernetes management
-azure-mgmt-containerservice>=30.0.0,<32.0.0
-google-cloud-container>=2.40.0,<3.0.0
+kubernetes>=30.1.0,<31.0.0
+jinja2>=3.1.4,<4.0.0
 
 # Monitoring and observability
-prometheus-client>=0.19.0,<1.0.0
-
-# Optional: Enhanced Kubernetes management (commented out by default)
-# kubectl-client>=1.0.0,<2.0.0  # For programmatic kubectl operations
-# helm>=3.0.0,<4.0.0  # For Helm chart management
-# kustomize>=5.0.0,<6.0.0  # For Kustomize operations
+prometheus-client>=0.21.0,<1.0.0

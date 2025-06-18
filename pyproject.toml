@@ -25,140 +25,115 @@ classifiers = [
 requires-python = ">=3.11, <3.14"
 dependencies = [
     # Essential runtime core
-    "pydantic>=2.0.0,<3.0.0",
-    "requests>=2.31.0,<3.0.0",
-    "python-dotenv>=1.0.0,<2.0.0",
-    "pyyaml>=6.0.0,<7.0.0",
-    "tenacity>=8.2.0,<9.0.0",
-    "tqdm>=4.64.0,<5.0.0",
-    "coloredlogs>=15.0.0,<16.0.0",
+    "pydantic>=2.8.0,<3.0.0",
+    "requests>=2.32.0,<3.0.0",
+    "python-dotenv>=1.0.1,<2.0.0",
+    "pyyaml>=6.0.1,<7.0.0",
+    "tenacity>=8.5.0,<9.0.0",
+    "tqdm>=4.66.0,<5.0.0",
+    "coloredlogs>=15.0.1,<16.0.0",
     
     # Core LLM functionality (lightweight)
     "openai>=1.68.2,<2.0.0",
-    "tiktoken>=0.5.0,<1.0.0",
-    "langchain-core>=0.3.0,<0.4.0",
+    "tiktoken>=0.7.0,<1.0.0",
+    "langchain-core>=0.3.5,<0.4.0",
     
     # Basic data handling
-    "pandas>=2.0.0,<3.0.0",
+    "pandas>=2.2.0,<3.0.0",
     "jsonlines>=4.0.0,<5.0.0",
     
     # Essential document processing
-    "pypdf>=4.0.0,<5.0.0",
+    "pypdf>=4.3.0,<5.0.0",
 ]
 
 [project.optional-dependencies]
 # Core AI/ML functionality
 ai = [
-    "transformers>=4.44.0,<5.0.0",
-    "sentence-transformers>=3.1.0,<4.0.0",
-    "scikit-learn>=1.3.0,<2.0.0",
-    "datasets>=2.16.0,<3.0.0",
-    "pyarrow>=10.0.0,<16.0.0",
+    "transformers>=4.45.0,<5.0.0",
+    "sentence-transformers>=3.2.0,<4.0.0",
+    "scikit-learn>=1.5.0,<2.0.0",
+    "datasets>=3.0.0,<4.0.0",
+    "pyarrow>=17.0.0,<18.0.0",
 ]
 
 # LangChain ecosystem
 langchain = [
-    "langchain-openai>=0.3.0,<0.4.0",
-    "langchain-community>=0.3.0,<0.4.0",
-    "langchain-experimental>=0.3.0,<0.4.0",  # CVE-2024-46946 affects LLMSymbolicMathChain, we only use SemanticChunker
-    "langchain-text-splitters>=0.3.0,<0.4.0",
+    "langchain-openai>=0.3.7,<0.4.0",
+    "langchain-community>=0.3.7,<0.4.0",
+    "langchain-experimental>=0.3.3,<0.4.0",  # CVE-2024-46946 affects LLMSymbolicMathChain, we only use SemanticChunker
+    "langchain-text-splitters>=0.3.2,<0.4.0",
 ]
 
 # Embedding providers
 embeddings = [
-    "nomic>=3.0.0,<4.0.0",
+    "nomic>=3.1.0,<4.0.0",
 ]
 
 # Extended document processing
 documents = [
-    "python-pptx>=0.6.0,<1.0.0",
-    "pdfplumber>=0.9.0,<1.0.0",
+    "python-pptx>=0.6.23,<1.0.0",
+    "pdfplumber>=0.11.0,<1.0.0",
 ]
 
 # Web interface
 web = [
-    "fastapi>=0.109.0,<1.0.0",
-    "uvicorn[standard]>=0.25.0,<1.0.0",
-    "python-multipart>=0.0.6,<1.0.0",
-    "aiofiles>=23.2.1,<25.0.0",
-    "redis>=5.0.1,<6.0.0",
-    "celery>=5.3.4,<6.0.0",
+    "fastapi>=0.115.0,<1.0.0",
+    "uvicorn[standard]>=0.32.0,<1.0.0",
+    "python-multipart>=0.0.12,<1.0.0",
+    "aiofiles>=24.1.0,<25.0.0",
+    "redis>=5.2.0,<6.0.0",
+    "celery>=5.4.0,<6.0.0",
 ]
 
-# Kubernetes deployment
+# Kubernetes deployment - Simplified
 kubernetes = [
-    "kubernetes>=29.0.0,<31.0.0",
-    "jinja2>=3.1.0,<4.0.0",
-    "azure-mgmt-containerservice>=30.0.0,<32.0.0",
-    "google-cloud-container>=2.40.0,<3.0.0",
-    "prometheus-client>=0.19.0,<1.0.0",
+    "kubernetes>=30.1.0,<31.0.0",
+    "jinja2>=3.1.4,<4.0.0",
+    "prometheus-client>=0.21.0,<1.0.0",
 ]
 
-# Cloud services
+# Cloud services - Simplified for better resolution
 cloud = [
     # AWS Services
-    "boto3>=1.34.0,<1.36.0",
-    "botocore>=1.34.0,<1.36.0",
-    # Azure Core Services
-    "azure-identity>=1.15.0,<1.19.0",
-    "azure-core>=1.30.0,<1.32.0",
-    "azure-keyvault-secrets>=4.7.0,<4.9.0",
-    # Azure AI and ML Services
-    "azure-ai-ml>=1.13.0,<1.20.0",
-    "azure-ai-evaluation>=1.0.0,<1.1.0",
-    "azure-cognitiveservices-language-textanalytics>=0.2.0,<0.3.0",
-    "azure-search-documents>=11.4.0,<11.6.0",
+    "boto3>=1.35.0,<1.36.0",
+    "botocore>=1.35.0,<1.36.0",
+    # Azure Core Services  
+    "azure-identity>=1.18.0,<1.19.0",
+    "azure-core>=1.31.0,<1.32.0",
+    "azure-keyvault-secrets>=4.8.0,<4.9.0",
     # Azure Storage
-    "azure-storage-blob>=12.19.0,<12.25.0",
-    "azure-storage-queue>=12.9.0,<12.12.0",
-    # Azure Resource Management
-    "azure-mgmt-resource>=23.0.0,<24.0.0",
-    "azure-mgmt-storage>=21.0.0,<22.0.0",
-    "azure-mgmt-containerinstance>=10.1.0,<11.0.0",
+    "azure-storage-blob>=12.23.0,<12.25.0",
     # SharePoint integration
-    "requests-oauthlib>=1.3.0,<1.4.0",
-    "msal>=1.24.0,<1.32.0",
-    # Additional Azure services
-    "promptflow-core>=1.18.0,<1.20.0",
+    "requests-oauthlib>=1.3.1,<1.4.0",
+    "msal>=1.31.0,<1.32.0",
 ]
 
-# Observability and tracing
+# Observability and tracing - Simplified
 tracing = [
     "opentelemetry-api>=1.32.1,<2.0.0",
     "opentelemetry-sdk>=1.32.1,<2.0.0",
-    "opentelemetry-exporter-otlp>=1.32.1,<2.0.0",
-    "opentelemetry-instrumentation>=0.50b0,<1.0.0",
-    "structlog>=23.2.0,<24.5.0",
-    "sentry-sdk>=2.8.0,<2.20.0",
+    "structlog>=24.4.0,<25.0.0", 
+    "sentry-sdk>=2.17.0,<3.0.0",
     "langwatch>=0.2.0,<0.5.0",
 ]
 
-# Development and testing
+# Development and testing - Essential only
 dev = [
     # Testing framework
-    "pytest>=7.0.0,<8.0.0",
-    "pytest-asyncio>=0.21.0,<1.0.0",
-    "pytest-cov>=4.0.0,<6.0.0",
-    "pytest-mock>=3.10.0,<4.0.0",
-    # Note: py package (CVE-2022-42969) not needed - pytest>=7.0 has built-in functionality
+    "pytest>=8.3.0,<9.0.0",
+    "pytest-asyncio>=0.24.0,<1.0.0",
+    "pytest-cov>=6.0.0,<7.0.0",
+    "pytest-mock>=3.14.0,<4.0.0",
     # HTTP testing
-    "httpx>=0.24.0,<1.0.0",  # Version constraint for TestClient compatibility
-    "respx>=0.20.0,<1.0.0",
+    "httpx>=0.28.0,<1.0.0",
     # Code quality and linting tools
-    "flake8>=6.0.0,<7.0.0",
-    "black>=23.0.0,<25.0.0",
-    "isort>=5.12.0,<6.0.0",
-    "mypy>=1.0.0,<2.0.0",
+    "flake8>=7.1.0,<8.0.0",
+    "black>=24.10.0,<25.0.0",
+    "isort>=5.13.0,<6.0.0",
+    "mypy>=1.13.0,<2.0.0",
     # Security and code analysis
-    "bandit>=1.7.0,<2.0.0",
-    "safety>=3.0.0,<4.0.0",  # See .safety-policy.yml for vulnerability exceptions
-    # Configuration linting
-    "yamllint>=1.33.0,<2.0.0",
-    # Development tools
-    "pre-commit>=3.0.0,<4.0.0",
-    "pip-tools>=7.0.0,<8.0.0",
-    "twine>=4.0.0,<6.0.0",
-    "build>=0.10.0,<2.0.0",
+    "bandit>=1.8.0,<2.0.0",
+    "safety>=3.2.0,<4.0.0",
 ]
 
 # Convenience groups for common install patterns

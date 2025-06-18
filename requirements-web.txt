@@ -5,11 +5,11 @@
 -r requirements.txt
 
 # FastAPI web framework
-fastapi>=0.109.0,<1.0.0
-uvicorn[standard]>=0.25.0,<1.0.0
-python-multipart>=0.0.6,<1.0.0
-aiofiles>=23.2.1,<25.0.0
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.32.0,<1.0.0
+python-multipart>=0.0.12,<1.0.0
+aiofiles>=24.1.0,<25.0.0
 
 # Background task processing
-redis>=5.0.1,<6.0.0
-celery>=5.3.4,<6.0.0
+redis>=5.2.0,<6.0.0
+celery>=5.4.0,<6.0.0
