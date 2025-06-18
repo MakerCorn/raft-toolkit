@@ -28,15 +28,16 @@ try:
     HAS_OPENAI_EMBEDDINGS = True
 except ImportError:
     HAS_OPENAI_EMBEDDINGS = False
+    # Create stub classes only if imports fail
 
-    class OpenAIEmbeddings:
+    class OpenAIEmbeddings:  # type: ignore
         def embed_documents(self, texts):
             pass
 
         def embed_query(self, text):
             pass
 
-    class AzureOpenAIEmbeddings:
+    class AzureOpenAIEmbeddings:  # type: ignore
         def embed_documents(self, texts):
             pass
 
@@ -51,8 +52,9 @@ try:
     HAS_NOMIC_EMBEDDINGS = True
 except ImportError:
     HAS_NOMIC_EMBEDDINGS = False
+    # Create stub class only if import fails
 
-    class NomicEmbeddings:
+    class NomicEmbeddings:  # type: ignore
         def embed_documents(self, texts):
             pass
 
@@ -86,7 +88,7 @@ class EmbeddingService:
         logger.warning("Langchain embeddings not available, using mock implementation")
         return MockEmbeddings()
 
-    def _build_embeddings_model(self) -> EmbeddingsProtocol:
+    def _build_embeddings_model(self) -> Any:
         """Build the underlying embeddings model."""
         try:
             if self.config.use_azure_identity:
@@ -132,7 +134,7 @@ class EmbeddingService:
                         # Convert SecretStr to string for compatibility
                         kwargs["api_key"] = api_key
 
-                    return AzureOpenAIEmbeddings(**kwargs)
+                    return AzureOpenAIEmbeddings(**kwargs)  # type: ignore
                 else:
                     # Create a mock embeddings model if real implementation not available
                     if not HAS_OPENAI_EMBEDDINGS:
@@ -148,7 +150,7 @@ class EmbeddingService:
                         # Use raw string instead of SecretStr
                         kwargs["api_key"] = api_key
 
-                    return OpenAIEmbeddings(**kwargs)
+                    return OpenAIEmbeddings(**kwargs)  # type: ignore
         except ImportError:
             return self._create_mock_embeddings()
 

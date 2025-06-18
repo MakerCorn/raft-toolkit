@@ -354,7 +354,7 @@ class DocumentService:
                     if api_key:
                         kwargs["api_key"] = api_key
 
-                    return AzureOpenAIEmbeddings(**kwargs)
+                    return AzureOpenAIEmbeddings(**kwargs)  # type: ignore
                 else:
                     if not HAS_LANGCHAIN_OPENAI:
                         return self._create_mock_embeddings()
@@ -368,7 +368,7 @@ class DocumentService:
                     if self.config.openai_key:
                         kwargs["api_key"] = self.config.openai_key
 
-                    return OpenAIEmbeddings(**kwargs)
+                    return OpenAIEmbeddings(**kwargs)  # type: ignore
         except Exception as e:
             logger.error(f"Error building embeddings model: {e}")
             return self._create_mock_embeddings()

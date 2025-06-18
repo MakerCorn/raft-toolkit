@@ -131,6 +131,11 @@ dev = [
     "black>=24.10.0,<25.0.0",
     "isort>=5.13.0,<6.0.0",
     "mypy>=1.13.0,<2.0.0",
+    # Type stubs for mypy
+    "types-requests>=2.32.0,<3.0.0",
+    "types-PyYAML>=6.0.0,<7.0.0",
+    "types-simplejson>=3.20.0,<4.0.0",
+    "types-ujson>=5.10.0,<6.0.0",
     # Security and code analysis
     "bandit>=1.8.0,<2.0.0",
     "safety>=3.2.0,<4.0.0",

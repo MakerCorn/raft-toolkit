@@ -124,7 +124,7 @@ class TraceableLoggerAdapter(ProgressLoggerAdapter):
             self.span_id = str(uuid.uuid4())[:8]
         elif _tracer:
             # Use OpenTelemetry if available
-            span = _tracer.start_span(operation_name, attributes=attributes)
+            span = _tracer.start_span(operation_name, attributes=attributes)  # type: ignore
             span_context = span.get_span_context()
             self.trace_id = format(span_context.trace_id, "032x")[:8]
             self.span_id = format(span_context.span_id, "016x")[:8]

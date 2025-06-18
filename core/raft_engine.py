@@ -205,10 +205,6 @@ class RaftEngine:
                 raise ValueError("No data path specified")
             data_path = Path(config_datapath) if isinstance(config_datapath, str) else config_datapath
 
-        # Ensure data_path is a Path object
-        if isinstance(data_path, str):
-            data_path = Path(data_path)
-
         if not data_path.exists():
             raise FileNotFoundError(f"Input data path does not exist: {data_path}")
 

@@ -17,9 +17,9 @@ class LangWatchService:
 
     def __init__(self, config: RaftConfig):
         self.config = config
-        self.enabled = config.langwatch_enabled
-        self.langwatch = None
-        self.current_trace = None
+        self.enabled: bool = config.langwatch_enabled
+        self.langwatch: Optional[Any] = None
+        self.current_trace: Optional[Any] = None
 
         if self.enabled:
             self._initialize_langwatch()
@@ -64,30 +64,31 @@ class LangWatchService:
             name: Name of the operation
             metadata: Additional metadata for the trace
         """
-        if not self.enabled or not self.langwatch:
-            yield None
-            return
+        # Check if LangWatch is available and enabled
+        if self.enabled and self.langwatch is not None:
+            # Create a new trace for the operation
+            try:
+                trace = self.langwatch.trace(name=name, metadata=metadata or {})
+                self.current_trace = trace
 
-        # Create a new trace for the operation
-        try:
-            trace = self.langwatch.trace(name=name, metadata=metadata or {})
-            self.current_trace = trace
+                if self.config.langwatch_debug:
+                    logger.debug(f"Started LangWatch trace: {name}")
 
-            if self.config.langwatch_debug:
-                logger.debug(f"Started LangWatch trace: {name}")
+                yield trace
 
-            yield trace
-
-        except Exception as e:
-            logger.warning(f"LangWatch trace error: {e}")
-            yield None
-        finally:
-            if hasattr(self, "current_trace") and self.current_trace:
-                try:
-                    self.current_trace.deferred_send_spans()
-                except Exception as e:
-                    logger.warning(f"Error sending LangWatch spans: {e}")
+            except Exception as e:
+                logger.warning(f"LangWatch trace error: {e}")
+                yield None
+            finally:
+                if hasattr(self, "current_trace") and self.current_trace:
+                    try:
+                        self.current_trace.deferred_send_spans()
+                    except Exception as e:
+                        logger.warning(f"Error sending LangWatch spans: {e}")
                 self.current_trace = None
+        else:
+            # LangWatch not available, yield None
+            yield None
 
     @contextmanager
     def span_operation(
@@ -106,21 +107,22 @@ class LangWatchService:
             input_data: Input data for the span
             metadata: Additional metadata
         """
-        if not self.enabled or not self.langwatch or not self.current_trace:
-            yield None
-            return
+        # Check if LangWatch and current trace are available
+        if self.enabled and self.langwatch is not None and self.current_trace is not None:
+            # Create span
+            try:
+                span = self.current_trace.span(name=name, type=span_type, input=input_data, metadata=metadata or {})
 
-        # Create span
-        try:
-            span = self.current_trace.span(name=name, type=span_type, input=input_data, metadata=metadata or {})
+                if self.config.langwatch_debug:
+                    logger.debug(f"Started LangWatch span: {name} (type: {span_type})")
 
-            if self.config.langwatch_debug:
-                logger.debug(f"Started LangWatch span: {name} (type: {span_type})")
+                yield span
 
-            yield span
-
-        except Exception as e:
-            logger.warning(f"LangWatch span error: {e}")
+            except Exception as e:
+                logger.warning(f"LangWatch span error: {e}")
+                yield None
+        else:
+            # LangWatch or trace not available, yield None
             yield None
 
     def setup_openai_tracking(self, client):
@@ -130,15 +132,13 @@ class LangWatchService:
         Args:
             client: OpenAI client instance
         """
-        if not self.enabled or not self.langwatch or not self.current_trace:
-            return
-
-        try:
-            self.current_trace.autotrack_openai_calls(client)
-            if self.config.langwatch_debug:
-                logger.debug("OpenAI automatic tracking enabled for current trace")
-        except Exception as e:
-            logger.warning(f"Failed to setup OpenAI tracking: {e}")
+        if self.enabled and self.langwatch and self.current_trace:
+            try:
+                self.current_trace.autotrack_openai_calls(client)
+                if self.config.langwatch_debug:
+                    logger.debug("OpenAI automatic tracking enabled for current trace")
+            except Exception as e:
+                logger.warning(f"Failed to setup OpenAI tracking: {e}")
 
     def track_document_processing(
         self, chunks: List[DocumentChunk], processing_time: float, metadata: Optional[Dict[str, Any]] = None
