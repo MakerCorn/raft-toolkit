@@ -19,7 +19,7 @@ from .llm_service import LLMService
 try:
     import pypdf
 except ImportError:
-    pypdf = None
+    pypdf = None  # type: ignore
 
 try:
     from pptx import Presentation

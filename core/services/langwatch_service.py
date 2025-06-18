@@ -4,7 +4,7 @@ LangWatch observability service for tracking LLM interactions and performance.
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from ..config import RaftConfig
 from ..models import DocumentChunk, QADataPoint, Question
@@ -33,13 +33,13 @@ class LangWatchService:
             import langwatch
 
             # Setup LangWatch with configuration
-            setup_kwargs = {}
+            setup_kwargs: Dict[str, Union[str, int, float, bool, List[str]]] = {}
             if self.config.langwatch_api_key:
                 setup_kwargs["api_key"] = self.config.langwatch_api_key
             if self.config.langwatch_endpoint:
                 setup_kwargs["endpoint"] = self.config.langwatch_endpoint
 
-            langwatch.setup(**setup_kwargs)
+            langwatch.setup(**setup_kwargs)  # type: ignore
             self.langwatch = langwatch
 
             logger.info("LangWatch observability initialized successfully")
