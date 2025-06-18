@@ -13,6 +13,7 @@ from core.models import DocumentChunk, ProcessingResult
 from core.services.llm_service import LLMService
 
 
+@pytest.mark.integration
 class TestLLMServiceIntegration:
     """Integration tests for LLM service."""
 

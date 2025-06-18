@@ -14,6 +14,7 @@ from core.models import DocumentChunk, ProcessingResult, ProcessingStatistics, Q
 from core.raft_engine import RaftEngine
 
 
+@pytest.mark.integration
 class TestRaftEngineIntegration:
     """Integration tests for RAFT engine."""
 

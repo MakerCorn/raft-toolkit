@@ -16,6 +16,7 @@ from core.services.document_service import DocumentService
 from core.services.llm_service import LLMService
 
 
+@pytest.mark.integration
 class TestDocumentServiceIntegration:
     """Integration tests for document service."""
 

@@ -174,18 +174,13 @@ OPENAI_API_KEY=config-key
             env_file = f.name
 
         try:
-            # Temporarily remove the environment variable set by the autouse fixture
-            original_key = os.environ.pop("OPENAI_API_KEY", None)
-            try:
+            # Clear environment variables to test env file loading properly
+            with patch.dict(os.environ, {}, clear=True):
                 config = get_config(env_file)
 
                 assert str(config.datapath) == str(test_file)
                 assert config.output == "config_output"
                 assert config.openai_key == "config-key"
-            finally:
-                # Restore the original environment variable
-                if original_key is not None:
-                    os.environ["OPENAI_API_KEY"] = original_key
         finally:
             os.unlink(env_file)
 
