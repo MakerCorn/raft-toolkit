@@ -19,8 +19,8 @@ def config():
     return config
 
 
-@patch("core.services.embedding_service.NomicEmbeddings")
-@patch("core.services.embedding_service.HAS_NOMIC_EMBEDDINGS", True)
+@patch("raft_toolkit.core.services.embedding_service.NomicEmbeddings")
+@patch("raft_toolkit.core.services.embedding_service.HAS_NOMIC_EMBEDDINGS", True)
 def test_nomic_embeddings_creation(mock_nomic, config):
     """Test that Nomic embeddings are created when specified in config."""
     # Setup mock
@@ -28,7 +28,7 @@ def test_nomic_embeddings_creation(mock_nomic, config):
     mock_nomic.return_value = mock_instance
 
     # Create embedding service with client builder patched to avoid import
-    with patch("core.clients.openai_client.build_langchain_embeddings", side_effect=ImportError):
+    with patch("raft_toolkit.core.clients.openai_client.build_langchain_embeddings", side_effect=ImportError):
         EmbeddingService(config)
 
     # Verify Nomic embeddings were created
@@ -41,7 +41,7 @@ def test_nomic_embeddings_via_client_builder(config):
     mock_instance = MagicMock()
 
     # Create embedding service with patched client builder
-    with patch("core.clients.openai_client.build_langchain_embeddings") as mock_builder:
+    with patch("raft_toolkit.core.clients.openai_client.build_langchain_embeddings") as mock_builder:
         mock_builder.return_value = mock_instance
         service = EmbeddingService(config)
 
@@ -53,9 +53,9 @@ def test_nomic_embeddings_via_client_builder(config):
 def test_fallback_when_nomic_not_available(config):
     """Test fallback to mock embeddings when Nomic is not available."""
     # Create embedding service with Nomic unavailable
-    with patch("core.services.embedding_service.HAS_NOMIC_EMBEDDINGS", False):
-        with patch("core.services.embedding_service.HAS_OPENAI_EMBEDDINGS", False):
-            with patch("core.clients.openai_client.build_langchain_embeddings", side_effect=ImportError):
+    with patch("raft_toolkit.core.services.embedding_service.HAS_NOMIC_EMBEDDINGS", False):
+        with patch("raft_toolkit.core.services.embedding_service.HAS_OPENAI_EMBEDDINGS", False):
+            with patch("raft_toolkit.core.clients.openai_client.build_langchain_embeddings", side_effect=ImportError):
                 service = EmbeddingService(config)
 
                 # Verify that a mock embeddings instance was created
