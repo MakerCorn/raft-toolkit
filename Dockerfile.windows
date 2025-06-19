@@ -8,9 +8,8 @@ ARG VERSION=0.2.0
 ARG VCS_REF
 
 # Stage 1: Base dependencies (Windows)
-# Using official Python image which includes Python pre-installed
-# Alternative: mcr.microsoft.com/windows/servercore:ltsc2022 + manual Python install
-FROM python:${PYTHON_VERSION:-3.11}-windowsservercore AS base
+# Using Windows Server Core and manually installing Python
+FROM mcr.microsoft.com/windows/servercore:ltsc2022 AS base
 
 # Add metadata labels
 LABEL maintainer="RAFT Toolkit Team" \
@@ -30,31 +29,73 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=C:\\app \
-    PYTHONIOENCODING=utf-8
+    PYTHONIOENCODING=utf-8 \
+    PATH="C:\\Program Files\\Python311;C:\\Program Files\\Python311\\Scripts;${PATH}"
 
 # Use PowerShell for RUN commands (more reliable on Windows containers)
-# This fixes the "cmd: executable file not found" error on modern Windows containers
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
-# Verify Python installation (should be included in python:windowsservercore image)
-RUN Write-Host "Verifying Python installation from base image..."; \
-    python --version; \
-    if ($LASTEXITCODE -ne 0) { \
-        Write-Host "ERROR: Python not found - this suggests the base image is incorrect"; \
-        Write-Host "Expected: python:3.11-windowsservercore should include Python"; \
+# Install Python 3.11 manually
+RUN Write-Host "Downloading Python 3.11.9..."; \
+    $pythonMinorVersion = '3.11.9'; \
+    $url = "https://www.python.org/ftp/python/$pythonMinorVersion/python-$pythonMinorVersion-amd64.exe"; \
+    Write-Host "Downloading Python $pythonMinorVersion from: $url"; \
+    try { \
+        Invoke-WebRequest -Uri $url -OutFile python-installer.exe -UseBasicParsing; \
+        $fileSize = (Get-Item python-installer.exe).Length; \
+        Write-Host "Python installer downloaded successfully ($fileSize bytes)" \
+    } catch { \
+        Write-Host "ERROR: Failed to download Python installer: $_"; \
+        exit 1 \
+    }
+
+RUN Write-Host "Installing Python..."; \
+    $installArgs = @('/quiet', 'InstallAllUsers=1', 'PrependPath=1', 'Include_test=0', 'Include_doc=0', 'Include_dev=0', 'Include_debug=0', 'Include_launcher=1', 'Include_tcltk=0'); \
+    $process = Start-Process python-installer.exe -Wait -ArgumentList $installArgs -PassThru; \
+    if ($process.ExitCode -ne 0) { \
+        Write-Host "ERROR: Python installation failed with exit code $($process.ExitCode)"; \
         exit 1 \
     }; \
-    Write-Host "Python found and working"
+    Remove-Item python-installer.exe; \
+    Write-Host "Python installation completed successfully"
 
-# Ensure pip is available (may not be included in Windows Server Core images)
-RUN Write-Host "Checking if pip is available..."; \
-    python -m pip --version 2>$null; \
+# Refresh environment variables and verify Python installation
+RUN Write-Host "Refreshing environment and verifying Python..."; \
+    $machinePath = [System.Environment]::GetEnvironmentVariable('PATH', 'Machine'); \
+    $userPath = [System.Environment]::GetEnvironmentVariable('PATH', 'User'); \
+    $env:PATH = "$machinePath;$userPath"; \
+    Write-Host "Updated PATH: $env:PATH"; \
+    \
+    # Try to find Python executable
+    $pythonPath = Get-Command python -ErrorAction SilentlyContinue; \
+    if (-not $pythonPath) { \
+        Write-Host "Python not found in PATH, searching for installation..."; \
+        $pythonExe = Get-ChildItem -Path 'C:\Program Files\Python*' -Recurse -Name python.exe -ErrorAction SilentlyContinue | Select-Object -First 1; \
+        if ($pythonExe) { \
+            $pythonDir = Split-Path (Get-ChildItem -Path 'C:\Program Files\Python*' -Recurse -Filter python.exe | Select-Object -First 1).FullName; \
+            $env:PATH = "$pythonDir;$env:PATH"; \
+            Write-Host "Added Python directory to PATH: $pythonDir" \
+        } else { \
+            Write-Host "ERROR: Python executable not found anywhere"; \
+            exit 1 \
+        } \
+    }; \
+    \
+    python --version; \
+    if ($LASTEXITCODE -ne 0) { \
+        Write-Host "ERROR: Python command failed"; \
+        exit 1 \
+    }; \
+    Write-Host "Python verified successfully"
+
+# Ensure pip is available and working
+RUN Write-Host "Verifying pip installation..."; \
+    python -m pip --version; \
     if ($LASTEXITCODE -ne 0) { \
         Write-Host "Pip not found, installing via ensurepip..."; \
         python -m ensurepip --upgrade; \
         if ($LASTEXITCODE -ne 0) { \
             Write-Host "ERROR: Failed to install pip via ensurepip"; \
-            Write-Host "This may indicate an issue with the Python installation"; \
             exit 1 \
         }; \
         python -m pip --version; \
@@ -63,9 +104,9 @@ RUN Write-Host "Checking if pip is available..."; \
             exit 1 \
         } \
     }; \
-    Write-Host "Pip is available and working"
+    Write-Host "Pip verified successfully"
 
-RUN Write-Host "Python and pip verification completed successfully"
+RUN Write-Host "Python and pip installation completed successfully"
 
 # Install system dependencies (Windows)
 # Skip additional dependencies for basic functionality
