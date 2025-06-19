@@ -97,7 +97,7 @@ ENV RAFT_ENVIRONMENT=development \
     RAFT_LOG_LEVEL=DEBUG
 
 # Development command with debugging support
-CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["python", "-m", "raft_toolkit.web.app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # Stage 4: Testing
 FROM development AS testing
@@ -129,7 +129,7 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=2 \
     CMD python -c "import sys; sys.exit(0)" || exit 1
 
 # Run tests by default - uses pytest
-CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=core", "--cov=cli", "--cov=web", "--cov-report=xml", "--cov-report=term-missing"]
+CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=raft_toolkit", "--cov-report=xml", "--cov-report=term-missing"]
 
 # Stage 5: Production Web Application
 FROM dependencies AS production
@@ -182,7 +182,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 8000
 
 # Production command using the web entry point
-CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "raft_toolkit.web.app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Stage 6: CLI-only (lightweight)
 FROM base AS cli
@@ -196,16 +196,13 @@ RUN pip install --upgrade pip setuptools wheel && \
     echo "CLI dependencies installed successfully"
 
 # Copy only CLI-related files
-COPY core/ ./core/
-COPY cli/ ./cli/
-COPY tools/ ./tools/
-COPY templates/ ./templates/
+COPY raft_toolkit/ ./raft_toolkit/
 
 # Copy source files
 COPY . .
 
 # Remove unnecessary files for CLI-only image
-RUN rm -rf web/ tests/ docs/ examples/ .git/ .github/ notebooks/ scripts/ && \
+RUN rm -rf raft_toolkit/web/ tests/ docs/ examples/ .git/ .github/ notebooks/ scripts/ && \
     find . -name "*.pyc" -delete && \
     find . -name "__pycache__" -type d -exec rm -rf {} + || true
 
@@ -229,5 +226,5 @@ USER raft
 WORKDIR /app
 
 # CLI entry point using the CLI module
-ENTRYPOINT ["python", "-m", "cli.main"]
+ENTRYPOINT ["python", "-m", "raft_toolkit.cli.main"]
 CMD ["--help"]
