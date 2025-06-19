@@ -8,6 +8,8 @@ ARG VERSION=0.2.0
 ARG VCS_REF
 
 # Stage 1: Base dependencies (Windows)
+# Using official Python image which includes Python pre-installed
+# Alternative: mcr.microsoft.com/windows/servercore:ltsc2022 + manual Python install
 FROM python:${PYTHON_VERSION:-3.11}-windowsservercore AS base
 
 # Add metadata labels
@@ -27,11 +29,43 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH=C:\\app
+    PYTHONPATH=C:\\app \
+    PYTHONIOENCODING=utf-8
 
 # Use PowerShell for RUN commands (more reliable on Windows containers)
 # This fixes the "cmd: executable file not found" error on modern Windows containers
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+
+# Verify Python installation (should be included in python:windowsservercore image)
+RUN Write-Host "Verifying Python installation from base image..."; \
+    python --version; \
+    if ($LASTEXITCODE -ne 0) { \
+        Write-Host "ERROR: Python not found - this suggests the base image is incorrect"; \
+        Write-Host "Expected: python:3.11-windowsservercore should include Python"; \
+        exit 1 \
+    }; \
+    Write-Host "Python found and working"
+
+# Ensure pip is available (may not be included in Windows Server Core images)
+RUN Write-Host "Checking if pip is available..."; \
+    python -m pip --version 2>$null; \
+    if ($LASTEXITCODE -ne 0) { \
+        Write-Host "Pip not found, installing via ensurepip..."; \
+        python -m ensurepip --upgrade; \
+        if ($LASTEXITCODE -ne 0) { \
+            Write-Host "ERROR: Failed to install pip via ensurepip"; \
+            Write-Host "This may indicate an issue with the Python installation"; \
+            exit 1 \
+        }; \
+        python -m pip --version; \
+        if ($LASTEXITCODE -ne 0) { \
+            Write-Host "ERROR: Pip still not working after ensurepip"; \
+            exit 1 \
+        } \
+    }; \
+    Write-Host "Pip is available and working"
+
+RUN Write-Host "Python and pip verification completed successfully"
 
 # Install system dependencies (Windows)
 # Skip additional dependencies for basic functionality
@@ -46,8 +80,8 @@ FROM base AS dependencies
 COPY pyproject.toml .
 
 # Install Python dependencies with enhanced error handling
-RUN pip install --upgrade pip setuptools wheel; if ($LASTEXITCODE -ne 0) { exit 1 }
-RUN pip install --no-cache-dir -e .; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN python -m pip install --upgrade pip setuptools wheel; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN python -m pip install --no-cache-dir -e .; if ($LASTEXITCODE -ne 0) { exit 1 }
 RUN Write-Host "Core dependencies installed successfully"
 
 # Verify critical imports work
@@ -58,7 +92,7 @@ RUN python -c "import pandas; print('Pandas OK')"
 RUN python -c "import pydantic; print('Pydantic OK')"
 RUN python -c "import langchain_core; print('LangChain Core OK')"
 RUN python -c "import langchain_community; print('LangChain Community OK')"
-RUN pip check
+RUN python -m pip check
 RUN Write-Host "All dependency verification completed successfully"
 
 # Stage 3: Development (Windows)
@@ -140,8 +174,8 @@ FROM base AS cli
 COPY pyproject.toml .
 
 # Install only core dependencies (no web, no dev)
-RUN pip install --upgrade pip setuptools wheel; if ($LASTEXITCODE -ne 0) { exit 1 }
-RUN pip install --no-cache-dir -e .; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN python -m pip install --upgrade pip setuptools wheel; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN python -m pip install --no-cache-dir -e .; if ($LASTEXITCODE -ne 0) { exit 1 }
 RUN Write-Host "CLI dependencies installed successfully"
 
 # Copy source files
