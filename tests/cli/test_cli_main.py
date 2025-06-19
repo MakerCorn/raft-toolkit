@@ -346,9 +346,9 @@ class TestMainFunction:
         test_args = ["raft.py", "--datapath", str(test_file), "--preview"]
 
         with patch("sys.argv", test_args):
-            with patch("cli.main.get_config") as mock_get_config:
-                with patch("cli.main.RaftEngine") as mock_engine_class:
-                    with patch("cli.main.show_preview") as mock_show_preview:
+            with patch("raft_toolkit.cli.main.get_config") as mock_get_config:
+                with patch("raft_toolkit.cli.main.RaftEngine") as mock_engine_class:
+                    with patch("raft_toolkit.cli.main.show_preview") as mock_show_preview:
 
                         mock_config = Mock()
                         mock_config.source_type = "local"
@@ -378,9 +378,9 @@ class TestMainFunction:
         test_args = ["raft.py", "--datapath", str(test_file), "--validate"]
 
         with patch("sys.argv", test_args):
-            with patch("cli.main.get_config") as mock_get_config:
-                with patch("cli.main.RaftEngine") as mock_engine_class:
-                    with patch("cli.main.validate_only") as mock_validate:
+            with patch("raft_toolkit.cli.main.get_config") as mock_get_config:
+                with patch("raft_toolkit.cli.main.RaftEngine") as mock_engine_class:
+                    with patch("raft_toolkit.cli.main.validate_only") as mock_validate:
 
                         mock_config = Mock()
                         mock_config.source_type = "local"
@@ -405,10 +405,10 @@ class TestMainFunction:
         test_args = ["raft.py", "--datapath", str(test_file), "--output", str(output_dir)]
 
         with patch("sys.argv", test_args):
-            with patch("cli.main.get_config") as mock_get_config:
-                with patch("cli.main.RaftEngine") as mock_engine_class:
-                    with patch("cli.main.get_logger") as mock_get_logger:
-                        with patch("cli.main.log_setup"):
+            with patch("raft_toolkit.cli.main.get_config") as mock_get_config:
+                with patch("raft_toolkit.cli.main.RaftEngine") as mock_engine_class:
+                    with patch("raft_toolkit.cli.main.get_logger") as mock_get_logger:
+                        with patch("raft_toolkit.cli.main.log_setup"):
 
                             mock_config = Mock()
                             mock_config.source_type = "local"
@@ -469,8 +469,8 @@ class TestMainFunction:
         test_args = ["raft.py", "--datapath", str(test_file)]
 
         with patch("sys.argv", test_args):
-            with patch("cli.main.get_config") as mock_get_config:
-                with patch("cli.main.RaftEngine") as mock_engine_class:
+            with patch("raft_toolkit.cli.main.get_config") as mock_get_config:
+                with patch("raft_toolkit.cli.main.RaftEngine") as mock_engine_class:
 
                     mock_config = Mock()
                     mock_get_config.return_value = mock_config
@@ -491,8 +491,8 @@ class TestMainFunction:
         test_args = ["raft.py", "--datapath", str(test_file)]
 
         with patch("sys.argv", test_args):
-            with patch("cli.main.get_config") as mock_get_config:
-                with patch("cli.main.RaftEngine") as mock_engine_class:
+            with patch("raft_toolkit.cli.main.get_config") as mock_get_config:
+                with patch("raft_toolkit.cli.main.RaftEngine") as mock_engine_class:
 
                     mock_config = Mock()
                     mock_get_config.return_value = mock_config
@@ -515,9 +515,9 @@ class TestMainFunction:
         test_args = ["raft.py", "--datapath", str(test_file), "--env-file", str(env_file), "--preview"]
 
         with patch("sys.argv", test_args):
-            with patch("cli.main.get_config") as mock_get_config:
-                with patch("cli.main.RaftEngine") as mock_engine_class:
-                    with patch("cli.main.show_preview"):
+            with patch("raft_toolkit.cli.main.get_config") as mock_get_config:
+                with patch("raft_toolkit.cli.main.RaftEngine") as mock_engine_class:
+                    with patch("raft_toolkit.cli.main.show_preview"):
 
                         mock_config = Mock()
                         mock_config.source_type = "local"

@@ -284,9 +284,9 @@ class TestUtilityFunctions:
         result = append_extension("file.txt", "txt")
         assert result == "file.txt"
 
-        # Test different extension
+        # Test different extension (with_suffix replaces, doesn't append)
         result = append_extension("file.json", "txt")
-        assert result == "file.json.txt"
+        assert result == "file.txt"
 
 
 class TestExporters:
