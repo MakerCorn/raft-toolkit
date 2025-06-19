@@ -152,8 +152,8 @@ class TestIdentityUtils:
         # This test just verifies the flag exists and is a boolean
         assert isinstance(AZURE_AVAILABLE, bool)
 
-    @patch("core.utils.identity_utils.AZURE_AVAILABLE", True)
-    @patch("core.utils.identity_utils.credential")
+    @patch("raft_toolkit.core.utils.identity_utils.AZURE_AVAILABLE", True)
+    @patch("raft_toolkit.core.utils.identity_utils.credential")
     @pytest.mark.unit
     def test_get_azure_openai_token_success(self, mock_credential):
         """Test successful Azure OpenAI token retrieval."""
@@ -167,15 +167,15 @@ class TestIdentityUtils:
         assert token == "test-azure-token"
         mock_credential.get_token.assert_called_once()
 
-    @patch("core.utils.identity_utils.AZURE_AVAILABLE", False)
+    @patch("raft_toolkit.core.utils.identity_utils.AZURE_AVAILABLE", False)
     @pytest.mark.unit
     def test_get_azure_openai_token_unavailable(self):
         """Test Azure OpenAI token when Azure is unavailable."""
         token = get_azure_openai_token()
         assert token is None
 
-    @patch("core.utils.identity_utils.AZURE_AVAILABLE", True)
-    @patch("core.utils.identity_utils.credential")
+    @patch("raft_toolkit.core.utils.identity_utils.AZURE_AVAILABLE", True)
+    @patch("raft_toolkit.core.utils.identity_utils.credential")
     @pytest.mark.unit
     def test_get_cognitive_service_token_success(self, mock_credential):
         """Test successful cognitive services token retrieval."""
@@ -189,8 +189,8 @@ class TestIdentityUtils:
         assert token == "test-cognitive-token"
         mock_credential.get_token.assert_called_once()
 
-    @patch("core.utils.identity_utils.AZURE_AVAILABLE", True)
-    @patch("core.utils.identity_utils.credential")
+    @patch("raft_toolkit.core.utils.identity_utils.AZURE_AVAILABLE", True)
+    @patch("raft_toolkit.core.utils.identity_utils.credential")
     @pytest.mark.unit
     def test_get_db_token_success(self, mock_credential):
         """Test successful database token retrieval."""
@@ -204,8 +204,8 @@ class TestIdentityUtils:
         assert token == "test-db-token"
         mock_credential.get_token.assert_called_once()
 
-    @patch("core.utils.identity_utils.AZURE_AVAILABLE", True)
-    @patch("core.utils.identity_utils.credential")
+    @patch("raft_toolkit.core.utils.identity_utils.AZURE_AVAILABLE", True)
+    @patch("raft_toolkit.core.utils.identity_utils.credential")
     @pytest.mark.unit
     def test_token_caching(self, mock_credential):
         """Test token caching behavior."""

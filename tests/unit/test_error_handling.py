@@ -103,6 +103,10 @@ class TestErrorHandling:
 
         dataset_service = DatasetService(config)
 
+        # Create mock dataset with save_to_disk method
+        mock_dataset = Mock()
+        mock_dataset.save_to_disk = Mock(side_effect=PermissionError("Permission denied"))
+
         # Should handle directory creation errors gracefully
-        with pytest.raises((PermissionError, OSError)):
-            dataset_service.save_dataset([], config.output)
+        with pytest.raises(PermissionError):
+            dataset_service.save_dataset(mock_dataset, config.output)

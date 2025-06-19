@@ -104,11 +104,12 @@ class Question:
     id: str
     text: str
     chunk_id: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def create(cls, text: str, chunk_id: str, metadata: Optional[Dict[str, Any]] = None) -> "Question":
         """Create a new question with generated ID."""
-        return cls(id=str(uuid.uuid4()), text=text, chunk_id=chunk_id)
+        return cls(id=str(uuid.uuid4()), text=text, chunk_id=chunk_id, metadata=metadata or {})
 
 
 @dataclass
@@ -122,6 +123,8 @@ class QADataPoint:
     oracle_context: str
     cot_answer: str
     instruction: str
+    doctype: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def create(
@@ -156,6 +159,8 @@ class QADataPoint:
             oracle_context=oracle_context,
             cot_answer=cot_answer,
             instruction=instruction,
+            doctype=doctype,
+            metadata=metadata or {},
         )
 
     def get_all_contexts(self) -> List[str]:
@@ -204,6 +209,7 @@ class ProcessingJob:
     num_distractors: int
     include_oracle_probability: float
     status: str = "pending"  # pending, processing, completed, failed
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def create(
@@ -221,6 +227,7 @@ class ProcessingJob:
             num_questions=num_questions,
             num_distractors=num_distractors,
             include_oracle_probability=include_oracle_probability,
+            metadata=metadata or {},
         )
 
 

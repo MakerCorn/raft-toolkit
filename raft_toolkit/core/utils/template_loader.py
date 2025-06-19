@@ -332,13 +332,45 @@ Answer:""",
             Formatted template
         """
         try:
-            return template.format(**kwargs)
-        except KeyError as e:
-            logger.warning(f"Template variable not provided: {e}")
-            return template
+            # Use safe_substitute to handle missing variables gracefully
+            from string import Template
+
+            # Convert {var} format to $var format for Template
+            template_str = template
+            for key, value in kwargs.items():
+                template_str = template_str.replace(f"{{{key}}}", f"${key}")
+
+            # Use Template.safe_substitute to handle missing variables
+            template_obj = Template(template_str)
+            result = template_obj.safe_substitute(**kwargs)
+
+            # Convert back any remaining $var to {var} for consistency
+            import re
+
+            result = re.sub(r"\$(\w+)", r"{\1}", result)
+
+            return result
         except Exception as e:
             logger.error(f"Template formatting error: {e}")
-            return template
+            # Fallback: try simple format with available kwargs only
+            try:
+                import re
+
+                # Find all {var} patterns in template
+                pattern = r"\{(\w+)\}"
+                matches = re.findall(pattern, template)
+
+                # Only use kwargs that exist in template
+                safe_kwargs = {k: v for k, v in kwargs.items() if k in matches}
+
+                # Replace only the variables we have values for
+                result = template
+                for key, value in safe_kwargs.items():
+                    result = result.replace(f"{{{key}}}", str(value))
+
+                return result
+            except Exception:
+                return template
 
     def get_available_templates(self) -> Dict[str, list]:
         """

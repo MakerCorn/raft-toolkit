@@ -19,8 +19,8 @@ from raft_toolkit.core.clients.openai_client import build_langchain_embeddings, 
 class TestOpenAIClient:
     """Test OpenAI client utilities."""
 
-    @patch("core.clients.openai_client.is_azure")
-    @patch("core.clients.openai_client.OpenAI")
+    @patch("raft_toolkit.core.clients.openai_client.is_azure")
+    @patch("raft_toolkit.core.clients.openai_client.OpenAI")
     @pytest.mark.unit
     def test_build_openai_client_standard(self, mock_openai, mock_is_azure):
         """Test building standard OpenAI client."""
@@ -37,8 +37,8 @@ class TestOpenAIClient:
             assert client == mock_client
             mock_openai.assert_called_once()
 
-    @patch("core.clients.openai_client.is_azure")
-    @patch("core.clients.openai_client.AzureOpenAI")
+    @patch("raft_toolkit.core.clients.openai_client.is_azure")
+    @patch("raft_toolkit.core.clients.openai_client.AzureOpenAI")
     @pytest.mark.unit
     def test_build_openai_client_azure(self, mock_azure_openai, mock_is_azure):
         """Test building Azure OpenAI client."""
@@ -82,7 +82,7 @@ class TestOpenAIClient:
         with patch.dict("os.environ", {}):
             assert is_azure() is False
 
-    @patch("core.clients.openai_client.is_azure")
+    @patch("raft_toolkit.core.clients.openai_client.is_azure")
     @pytest.mark.unit
     def test_build_langchain_embeddings_standard(self, mock_is_azure):
         """Test building standard LangChain embeddings."""
@@ -97,7 +97,7 @@ class TestOpenAIClient:
             assert embeddings == mock_instance
             mock_embeddings.assert_called_once_with(api_key="test-key", model="text-embedding-ada-002")
 
-    @patch("core.clients.openai_client.is_azure")
+    @patch("raft_toolkit.core.clients.openai_client.is_azure")
     @pytest.mark.unit
     def test_build_langchain_embeddings_azure(self, mock_is_azure):
         """Test building Azure LangChain embeddings."""

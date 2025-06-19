@@ -49,6 +49,7 @@ class TestBasicFunctionality:
                     oracle_context="Oracle context",
                     cot_answer="A.",
                     instruction="Answer the question",
+                    doctype="pdf",
                 )
             ],
             processing_time=1.0,
@@ -173,6 +174,7 @@ class TestBasicFunctionality:
                     oracle_context="Oracle 1",
                     cot_answer="A1.",
                     instruction="Answer the question",
+                    doctype="pdf",
                 ),
                 QADataPoint(
                     id="qa2",
@@ -182,6 +184,7 @@ class TestBasicFunctionality:
                     oracle_context="Oracle 2",
                     cot_answer="A2.",
                     instruction="Answer the question",
+                    doctype="pdf",
                 ),
             ],
             processing_time=2.5,

@@ -48,6 +48,7 @@ class TestDatasetService:
                         oracle_context="AI oracle context",
                         cot_answer="AI is artificial intelligence.",
                         instruction="Answer the question",
+                        doctype="pdf",
                     )
                 ],
                 processing_time=1.0,
@@ -65,6 +66,7 @@ class TestDatasetService:
                         oracle_context="ML oracle context",
                         cot_answer="ML is machine learning.",
                         instruction="Answer the question",
+                        doctype="pdf",
                     )
                 ],
                 processing_time=2.0,

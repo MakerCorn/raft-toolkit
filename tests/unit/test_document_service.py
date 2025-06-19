@@ -53,6 +53,7 @@ class TestDocumentService:
             temp_path = Path(f.name)
 
         try:
+            document_service.config.doctype = "json"
             result = document_service._extract_text(temp_path)
             assert result == "Test content"
         finally:
@@ -66,6 +67,7 @@ class TestDocumentService:
             temp_path = Path(f.name)
 
         try:
+            document_service.config.doctype = "txt"
             result = document_service._extract_text(temp_path)
             assert result == test_content
         finally:
