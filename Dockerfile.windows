@@ -30,8 +30,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=C:\\app
 
 # Install system dependencies (Windows)
-# Skip chocolatey installation as it's not needed for basic functionality
-RUN echo "Skipping additional system dependencies for Windows container"
+# Skip additional dependencies for basic functionality
 
 # Set working directory
 WORKDIR C:\\app
@@ -101,7 +100,14 @@ RUN pip install --no-cache-dir -e .[web]
 COPY . .
 
 # Remove unnecessary files for production
-RUN powershell -Command "Remove-Item -Recurse -Force raft_toolkit\\web, tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
+RUN if exist raft_toolkit\\web rmdir /s /q raft_toolkit\\web & \
+    if exist tests rmdir /s /q tests & \
+    if exist docs rmdir /s /q docs & \
+    if exist examples rmdir /s /q examples & \
+    if exist .git rmdir /s /q .git & \
+    if exist .github rmdir /s /q .github & \
+    if exist notebooks rmdir /s /q notebooks & \
+    if exist scripts rmdir /s /q scripts
 
 # Create necessary directories
 RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs C:\\app\\uploads
@@ -115,7 +121,7 @@ ENV RAFT_ENVIRONMENT=production \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD powershell -Command "try { Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing; exit 0 } catch { exit 1 }"
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port
 EXPOSE 8000
@@ -138,7 +144,14 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY . .
 
 # Remove unnecessary files for CLI-only image
-RUN powershell -Command "Remove-Item -Recurse -Force raft_toolkit\\web, tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
+RUN if exist raft_toolkit\\web rmdir /s /q raft_toolkit\\web & \
+    if exist tests rmdir /s /q tests & \
+    if exist docs rmdir /s /q docs & \
+    if exist examples rmdir /s /q examples & \
+    if exist .git rmdir /s /q .git & \
+    if exist .github rmdir /s /q .github & \
+    if exist notebooks rmdir /s /q notebooks & \
+    if exist scripts rmdir /s /q scripts
 
 # Create necessary directories
 RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs
