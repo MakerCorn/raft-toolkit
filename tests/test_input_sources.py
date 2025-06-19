@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from core.sources import InputSourceConfig, InputSourceFactory, LocalInputSource, SourceValidationError
+from raft_toolkit.core.sources import InputSourceConfig, InputSourceFactory, LocalInputSource, SourceValidationError
 
 
 class TestInputSourceConfig:
@@ -194,7 +194,7 @@ class TestS3InputSource:
         # Test if S3 source can be created (may fail if boto3 not available)
         try:
             config = InputSourceConfig(source_type="s3", source_uri="s3://my-bucket/my-prefix")
-            from core.sources.s3 import S3InputSource
+            from raft_toolkit.core.sources.s3 import S3InputSource
 
             source = S3InputSource(config)
             assert source.bucket_name == "my-bucket"
@@ -206,7 +206,7 @@ class TestS3InputSource:
     def test_invalid_bucket_names(self):
         """Test S3 bucket name validation."""
         try:
-            from core.sources.s3 import S3InputSource
+            from raft_toolkit.core.sources.s3 import S3InputSource
 
             config = InputSourceConfig(source_type="s3", source_uri="s3://Invalid_Bucket_Name/prefix")
 
@@ -227,7 +227,7 @@ class TestSharePointInputSource:
                 source_type="sharepoint",
                 source_uri="https://company.sharepoint.com/sites/mysite/Shared Documents/folder",
             )
-            from core.sources.sharepoint import SharePointInputSource
+            from raft_toolkit.core.sources.sharepoint import SharePointInputSource
 
             source = SharePointInputSource(config)
             assert source.site_url == "https://company.sharepoint.com/sites/mysite"
@@ -239,7 +239,7 @@ class TestSharePointInputSource:
     def test_invalid_sharepoint_url(self):
         """Test SharePoint URL validation."""
         try:
-            from core.sources.sharepoint import SharePointInputSource
+            from raft_toolkit.core.sources.sharepoint import SharePointInputSource
 
             config = InputSourceConfig(source_type="sharepoint", source_uri="https://invalid-url.com/not-sharepoint")
 

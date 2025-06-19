@@ -9,10 +9,10 @@ import pytest
 try:
     from openai import AzureOpenAI, OpenAI
 except ImportError:
-    OpenAI = None
-    AzureOpenAI = None
+    OpenAI = None  # type: ignore
+    AzureOpenAI = None  # type: ignore
 
-from core.clients.openai_client import build_langchain_embeddings, build_openai_client, is_azure
+from raft_toolkit.core.clients.openai_client import build_langchain_embeddings, build_openai_client, is_azure
 
 
 @pytest.mark.unit
@@ -124,7 +124,7 @@ class TestStatsCompleter:
     @pytest.mark.unit
     def test_stats_completer_basic_usage(self):
         """Test basic usage of StatsCompleter."""
-        from core.clients import StatsCompleter
+        from raft_toolkit.core.clients import StatsCompleter
 
         # Mock the underlying completion function
         mock_completion_func = Mock()
@@ -158,7 +158,7 @@ class TestUsageStats:
     @pytest.mark.unit
     def test_usage_stats_creation(self):
         """Test UsageStats creation and basic properties."""
-        from core.clients import UsageStats
+        from raft_toolkit.core.clients import UsageStats
 
         stats = UsageStats()
 
@@ -171,7 +171,7 @@ class TestUsageStats:
     @pytest.mark.unit
     def test_usage_stats_addition(self):
         """Test adding UsageStats together."""
-        from core.clients import UsageStats
+        from raft_toolkit.core.clients import UsageStats
 
         stats1 = UsageStats()
         stats1.total_tokens = 100

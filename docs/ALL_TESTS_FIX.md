@@ -35,7 +35,7 @@ Only integration tests worked because they had markers already added in previous
 **File**: `tests/api/test_web_app.py`
 - ✅ Added `@pytest.mark.api` to **6 test classes**
 - ✅ Added `@pytest.mark.api` to **20 test methods**
-- ✅ Fixed import: `from web.app import app, jobs`
+- ✅ Fixed import: `from raft_toolkit.web.app import app, jobs`
 - ✅ Fixed references: `job_manager.jobs` → `jobs`
 
 **Result**: **20 API tests** now properly discovered
@@ -169,18 +169,18 @@ class TestClassName:
 ### Import Fixes Applied
 ```python
 # Before (API tests)
-from web.app import app
+from raft_toolkit.web.app import app
 job_manager.jobs[job_id] = {...}
 
 # After (API tests)
-from web.app import app, jobs  
+from raft_toolkit.web.app import app, jobs  
 jobs[job_id] = {...}
 
 # Before (Unit tests)
-from core.utils.file_utils import ensure_directory_exists, get_file_size
+from raft_toolkit.core.utils.file_utils import ensure_directory_exists, get_file_size
 
 # After (Unit tests)
-from core.utils.file_utils import split_jsonl_file, extract_random_jsonl_rows
+from raft_toolkit.core.utils.file_utils import split_jsonl_file, extract_random_jsonl_rows
 ```
 
 ## Benefits Achieved

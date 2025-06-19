@@ -86,8 +86,8 @@ class DockerTestRunner:
 
         if missing_files:
             print("❌ Missing required files:")
-            for file_path in missing_files:
-                print(f"   - {file_path}")
+            for missing_file in missing_files:
+                print(f"   - {missing_file}")
             return False
 
         print("✅ All required Docker files present")

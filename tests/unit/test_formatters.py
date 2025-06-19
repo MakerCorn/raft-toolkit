@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from datasets import Dataset
 
-from core.formatters.dataset_converter import (
+from raft_toolkit.core.formatters.dataset_converter import (
     DatasetConverter,
     EvalDatasetFormatter,
     HuggingFaceDatasetFormatter,
@@ -21,7 +21,7 @@ from core.formatters.dataset_converter import (
     extract_context,
     extract_final_answer,
 )
-from core.models import QADataPoint
+from raft_toolkit.core.models import QADataPoint
 
 
 class TestDatasetConverter:

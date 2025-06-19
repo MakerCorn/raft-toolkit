@@ -8,10 +8,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.config import RaftConfig
-from core.sources.base import InputSourceConfig
-from core.sources.factory import InputSourceFactory
-from core.sources.local import LocalInputSource
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.sources.base import InputSourceConfig
+from raft_toolkit.core.sources.factory import InputSourceFactory
+from raft_toolkit.core.sources.local import LocalInputSource
 
 
 class TestLocalInputSource:
@@ -183,7 +183,7 @@ class TestInputSourceFactory:
         """Test handling of invalid source type."""
         config = InputSourceConfig(source_type="invalid_type", source_uri="invalid://uri")
 
-        from core.sources.base import SourceValidationError
+        from raft_toolkit.core.sources.base import SourceValidationError
 
         with pytest.raises(SourceValidationError):
             InputSourceFactory.create_source(config)

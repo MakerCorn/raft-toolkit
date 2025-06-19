@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from core.config import RaftConfig, get_config
+from raft_toolkit.core.config import RaftConfig, get_config
 
 
 @pytest.mark.unit

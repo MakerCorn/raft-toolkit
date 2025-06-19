@@ -790,14 +790,14 @@ data:
 - **Split large JSONL files:**
 
   ```python
-  from core.utils.file_utils import split_jsonl_file
+  from raft_toolkit.core.utils.file_utils import split_jsonl_file
   split_jsonl_file('yourfile.jsonl', max_size=50_000_000)
   ```
 
 - **Extract random rows:**
 
   ```python
-  from core.utils.file_utils import extract_random_jsonl_rows
+  from raft_toolkit.core.utils.file_utils import extract_random_jsonl_rows
   extract_random_jsonl_rows('yourfile.jsonl', 100, 'sampled_output.jsonl')
   ```
 

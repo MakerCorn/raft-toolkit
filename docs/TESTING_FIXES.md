@@ -27,7 +27,7 @@ Fixed the test infrastructure that was causing "no tests collected" error and en
 
 **Fixes**:
 - `tests/unit/test_utils.py`: Removed imports for non-existent functions (`ensure_directory_exists`, `get_file_size`)
-- `tests/api/test_web_app.py`: Removed import for non-existent `job_manager` from web.app
+- `tests/api/test_web_app.py`: Removed import for non-existent `job_manager` from raft_toolkit.web.app
 
 ### 3. Test Collection Results ✅
 

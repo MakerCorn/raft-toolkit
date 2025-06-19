@@ -4,7 +4,7 @@ Unit tests for security utilities.
 
 import pytest
 
-from core.security import SecurityConfig
+from raft_toolkit.core.security import SecurityConfig
 
 
 class TestSecurityConfig:

@@ -10,9 +10,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.utils.env_config import read_env_config, set_env
-from core.utils.file_utils import extract_random_jsonl_rows, split_jsonl_file
-from core.utils.identity_utils import AZURE_AVAILABLE, get_azure_openai_token, get_cognitive_service_token, get_db_token
+from raft_toolkit.core.utils.env_config import read_env_config, set_env
+from raft_toolkit.core.utils.file_utils import extract_random_jsonl_rows, split_jsonl_file
+from raft_toolkit.core.utils.identity_utils import (
+    AZURE_AVAILABLE,
+    get_azure_openai_token,
+    get_cognitive_service_token,
+    get_db_token,
+)
 
 
 @pytest.mark.unit
@@ -137,7 +142,7 @@ class TestIdentityUtils:
     def setup_method(self):
         """Clear token cache before each test."""
         # Clear the global token cache
-        from core.utils.identity_utils import tokens
+        from raft_toolkit.core.utils.identity_utils import tokens
 
         tokens.clear()
 

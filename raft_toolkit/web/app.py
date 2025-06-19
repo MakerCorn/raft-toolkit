@@ -16,9 +16,9 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from core.config import RaftConfig, get_config
-from core.raft_engine import RaftEngine
-from core.security import SecurityConfig
+from raft_toolkit.core.config import RaftConfig, get_config
+from raft_toolkit.core.raft_engine import RaftEngine
+from raft_toolkit.core.security import SecurityConfig
 
 logger = logging.getLogger(__name__)
 
@@ -512,7 +512,7 @@ def create_app() -> FastAPI:
 
 def run_server(host: str = "127.0.0.1", port: int = 8000, reload: bool = False):
     """Run the web server."""
-    uvicorn.run("web.app:app", host=host, port=port, reload=reload, log_level="info")
+    uvicorn.run("raft_toolkit.web.app:app", host=host, port=port, reload=reload, log_level="info")
 
 
 if __name__ == "__main__":

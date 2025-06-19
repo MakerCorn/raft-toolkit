@@ -559,7 +559,7 @@ python raft.py --datapath docs.pdf --output ./results
 **Custom Integration:**
 
 ```python
-from core.logging.setup import setup_external_logging
+from raft_toolkit.core.logging.setup import setup_external_logging
 
 def custom_handler(log_entry, record):
     # Send to your logging service

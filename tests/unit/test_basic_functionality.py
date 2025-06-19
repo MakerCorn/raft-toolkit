@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from core.config import RaftConfig
-from core.models import DocumentChunk, ProcessingResult, QADataPoint
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk, ProcessingResult, QADataPoint
 
 
 class TestBasicFunctionality:

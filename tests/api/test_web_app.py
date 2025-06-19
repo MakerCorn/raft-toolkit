@@ -14,7 +14,7 @@ try:
 except ImportError:
     from starlette.testclient import TestClient
 
-from web.app import app, jobs
+from raft_toolkit.web.app import app, jobs
 
 
 @pytest.fixture

@@ -7,7 +7,12 @@ from unittest.mock import patch
 
 import pytest
 
-from core.utils.rate_limiter import RateLimitConfig, RateLimiter, RateLimitStrategy, create_rate_limiter_from_config
+from raft_toolkit.core.utils.rate_limiter import (
+    RateLimitConfig,
+    RateLimiter,
+    RateLimitStrategy,
+    create_rate_limiter_from_config,
+)
 
 
 @pytest.mark.unit
@@ -204,7 +209,7 @@ class TestRateLimiterIntegration:
 
         # Make rapid requests
         start_time = time.time()
-        total_wait_time = 0
+        total_wait_time = 0.0
 
         for _ in range(5):
             wait_time = limiter.acquire()

@@ -486,7 +486,7 @@ curl http://localhost:8000/metrics
 # System status
 docker compose exec raft-toolkit python -c "
 import sys
-from core.config import RaftConfig
+from raft_toolkit.core.config import RaftConfig
 config = RaftConfig()
 print(f'Status: OK')
 print(f'Version: {config.version}')

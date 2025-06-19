@@ -56,12 +56,12 @@ class TestHealthEndpoint:
 **Updated imports**:
 ```python
 # Before
-from web.app import app
-from core.models import JobStatus
+from raft_toolkit.web.app import app
+from raft_toolkit.core.models import JobStatus
 
 # After  
-from web.app import app, jobs
-from core.models import JobStatus
+from raft_toolkit.web.app import app, jobs
+from raft_toolkit.core.models import JobStatus
 ```
 
 **Updated job references**:

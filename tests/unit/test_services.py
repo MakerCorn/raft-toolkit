@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from core.config import RaftConfig
-from core.models import DocumentChunk, ProcessingResult, QADataPoint
-from core.services.dataset_service import DatasetService
-from core.services.document_service import DocumentService
-from core.services.input_service import InputService
-from core.services.llm_service import LLMService
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk, ProcessingResult, QADataPoint
+from raft_toolkit.core.services.dataset_service import DatasetService
+from raft_toolkit.core.services.document_service import DocumentService
+from raft_toolkit.core.services.input_service import InputService
+from raft_toolkit.core.services.llm_service import LLMService
 
 
 class TestDatasetService:

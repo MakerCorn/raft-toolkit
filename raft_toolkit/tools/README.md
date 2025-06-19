@@ -548,7 +548,7 @@ if __name__ == "__main__":
 ### 🔌 With Main RAFT Toolkit
 
 ```python
-from core.raft_engine import RaftEngine
+from raft_toolkit.core.raft_engine import RaftEngine
 from tools.eval import get_answer, write_result_to_file
 
 # Generate dataset
