@@ -66,7 +66,7 @@
     # Set overall status
     if [[ $failed_count -eq 0 ]]; then
         echo "tests-passed=true" >> $GITHUB_OUTPUT
-        echo "🎉 **Core tests passed!**" >> $GITHUB_STEP_SUMMARY
+        echo "🎉 **All core tests passed!**" >> $GITHUB_STEP_SUMMARY
         exit 0
     else
         echo "tests-passed=false" >> $GITHUB_OUTPUT

@@ -138,12 +138,12 @@ jobs:
       run: |
         # Test console script availability
         echo "Testing console scripts..."
-        raft-eval --help || echo "❌ raft-eval console script not working"
-        raft-answer --help || echo "❌ raft-answer console script not working"
+        raft-eval --help || echo "ERROR: raft-eval console script not working"
+        raft-answer --help || echo "ERROR: raft-answer console script not working"
         # Test tools can be imported
         echo "Testing tool imports..."
-        python -c "from raft_toolkit.tools.eval import main; print('✅ eval tool works')" || echo "❌ eval tool import failed"
-        python -c "from raft_toolkit.tools.answer import main; print('✅ answer tool works')" || echo "❌ answer tool import failed"
+        python -c "from raft_toolkit.tools.eval import main; print('SUCCESS: eval tool works')" || echo "ERROR: eval tool import failed"
+        python -c "from raft_toolkit.tools.answer import main; print('SUCCESS: answer tool works')" || echo "ERROR: answer tool import failed"
 
     - name: Upload coverage reports
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'

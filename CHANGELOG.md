@@ -60,6 +60,7 @@
   - Improved CI reliability with better error handling for Windows builds, mypy checks, and tool tests
   - Added timeouts and fallback handling for Windows Visual Studio Build Tools installation
   - Fixed cross-platform mypy command compatibility (Unix shell vs PowerShell syntax)
+  - Fixed Unicode encoding errors in Windows CI workflow steps by replacing emoji characters with plain text for Windows cp1252 compatibility
 
 ### Changed
 - **BREAKING**: Refactored package structure to use `raft_toolkit` as single top-level package
