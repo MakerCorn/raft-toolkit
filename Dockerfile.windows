@@ -8,7 +8,7 @@ ARG VERSION=0.2.0
 ARG VCS_REF
 
 # Stage 1: Base dependencies (Windows)
-FROM python:${PYTHON_VERSION:-3.11}-windowsservercore-1809 AS base
+FROM python:${PYTHON_VERSION:-3.11}-windowsservercore AS base
 
 # Add metadata labels
 LABEL maintainer="RAFT Toolkit Team" \
@@ -29,8 +29,9 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=C:\\app
 
-# Use CMD instead of PowerShell for RUN commands
-SHELL ["cmd", "/S", "/C"]
+# Use PowerShell for RUN commands (more reliable on Windows containers)
+# This fixes the "cmd: executable file not found" error on modern Windows containers
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
 # Install system dependencies (Windows)
 # Skip additional dependencies for basic functionality
@@ -45,9 +46,9 @@ FROM base AS dependencies
 COPY pyproject.toml .
 
 # Install Python dependencies with enhanced error handling
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -e .
-RUN echo "Core dependencies installed successfully"
+RUN pip install --upgrade pip setuptools wheel; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN pip install --no-cache-dir -e .; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN Write-Host "Core dependencies installed successfully"
 
 # Verify critical imports work
 RUN python -c "import pypdf; print('PyPDF OK')"
@@ -58,7 +59,7 @@ RUN python -c "import pydantic; print('Pydantic OK')"
 RUN python -c "import langchain_core; print('LangChain Core OK')"
 RUN python -c "import langchain_community; print('LangChain Community OK')"
 RUN pip check
-RUN echo "All dependency verification completed successfully"
+RUN Write-Host "All dependency verification completed successfully"
 
 # Stage 3: Development (Windows)
 FROM dependencies AS development
@@ -70,7 +71,7 @@ RUN pip install --no-cache-dir -e .[dev,all]
 COPY . .
 
 # Create necessary directories
-RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs C:\\app\\uploads C:\\app\\test-results
+RUN New-Item -ItemType Directory -Force -Path C:\\app\\data, C:\\app\\outputs, C:\\app\\logs, C:\\app\\uploads, C:\\app\\test-results
 
 # Expose ports (app and debugger)
 EXPOSE 8000 5678
@@ -103,17 +104,17 @@ RUN pip install --no-cache-dir -e .[web]
 COPY . .
 
 # Remove unnecessary files for production
-RUN if exist raft_toolkit\\web rmdir /s /q raft_toolkit\\web & \
-    if exist tests rmdir /s /q tests & \
-    if exist docs rmdir /s /q docs & \
-    if exist examples rmdir /s /q examples & \
-    if exist .git rmdir /s /q .git & \
-    if exist .github rmdir /s /q .github & \
-    if exist notebooks rmdir /s /q notebooks & \
-    if exist scripts rmdir /s /q scripts
+RUN if (Test-Path raft_toolkit\\web) { Remove-Item -Recurse -Force raft_toolkit\\web }; \
+    if (Test-Path tests) { Remove-Item -Recurse -Force tests }; \
+    if (Test-Path docs) { Remove-Item -Recurse -Force docs }; \
+    if (Test-Path examples) { Remove-Item -Recurse -Force examples }; \
+    if (Test-Path .git) { Remove-Item -Recurse -Force .git }; \
+    if (Test-Path .github) { Remove-Item -Recurse -Force .github }; \
+    if (Test-Path notebooks) { Remove-Item -Recurse -Force notebooks }; \
+    if (Test-Path scripts) { Remove-Item -Recurse -Force scripts }
 
 # Create necessary directories
-RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs C:\\app\\uploads
+RUN New-Item -ItemType Directory -Force -Path C:\\app\\data, C:\\app\\outputs, C:\\app\\logs, C:\\app\\uploads
 
 # Set production environment variables
 ENV RAFT_ENVIRONMENT=production \
@@ -139,25 +140,25 @@ FROM base AS cli
 COPY pyproject.toml .
 
 # Install only core dependencies (no web, no dev)
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -e .
-RUN echo "CLI dependencies installed successfully"
+RUN pip install --upgrade pip setuptools wheel; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN pip install --no-cache-dir -e .; if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN Write-Host "CLI dependencies installed successfully"
 
 # Copy source files
 COPY . .
 
 # Remove unnecessary files for CLI-only image
-RUN if exist raft_toolkit\\web rmdir /s /q raft_toolkit\\web & \
-    if exist tests rmdir /s /q tests & \
-    if exist docs rmdir /s /q docs & \
-    if exist examples rmdir /s /q examples & \
-    if exist .git rmdir /s /q .git & \
-    if exist .github rmdir /s /q .github & \
-    if exist notebooks rmdir /s /q notebooks & \
-    if exist scripts rmdir /s /q scripts
+RUN if (Test-Path raft_toolkit\\web) { Remove-Item -Recurse -Force raft_toolkit\\web }; \
+    if (Test-Path tests) { Remove-Item -Recurse -Force tests }; \
+    if (Test-Path docs) { Remove-Item -Recurse -Force docs }; \
+    if (Test-Path examples) { Remove-Item -Recurse -Force examples }; \
+    if (Test-Path .git) { Remove-Item -Recurse -Force .git }; \
+    if (Test-Path .github) { Remove-Item -Recurse -Force .github }; \
+    if (Test-Path notebooks) { Remove-Item -Recurse -Force notebooks }; \
+    if (Test-Path scripts) { Remove-Item -Recurse -Force scripts }
 
 # Create necessary directories
-RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs
+RUN New-Item -ItemType Directory -Force -Path C:\\app\\data, C:\\app\\outputs, C:\\app\\logs
 
 # Set CLI environment variables
 ENV RAFT_ENVIRONMENT=cli \
