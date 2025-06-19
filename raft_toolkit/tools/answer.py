@@ -4,12 +4,11 @@ import logging
 import random
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
 
 from client_utils import ChatCompleter, build_openai_client
 from dotenv import load_dotenv
 from logconf import log_setup
-from openai import OpenAI, RateLimitError
+from openai import RateLimitError
 from tenacity import retry, retry_if_exception_type, wait_exponential
 from tqdm import tqdm
 

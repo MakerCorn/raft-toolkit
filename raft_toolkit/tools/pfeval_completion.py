@@ -7,17 +7,14 @@ from datetime import datetime
 
 from azure.ai.evaluation import (
     AzureOpenAIModelConfiguration,
-    CoherenceEvaluator,
-    FluencyEvaluator,
     GroundednessEvaluator,
-    RelevanceEvaluator,
     SimilarityEvaluator,
     evaluate,
 )
-from client_utils import build_openai_client, is_azure
+from client_utils import build_openai_client
 from dotenv import load_dotenv
 from logconf import log_setup
-from openai import OpenAI, RateLimitError
+from openai import RateLimitError
 from tenacity import retry, retry_if_exception_type, wait_exponential
 from tqdm import tqdm
 
