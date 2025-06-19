@@ -113,6 +113,43 @@ jobs:
         
         Welcome to the RAFT (Retrieval Augmented Fine-Tuning) Toolkit documentation!
         
+        ## What is RAFT?
+        
+        RAFT (Retrieval Augmented Fine-Tuning) is a technique that improves language model performance by training on domain-specific question-answer pairs generated from your documents. This toolkit automates the creation of high-quality synthetic training datasets.
+        
+        ### RAFT Training Process Flow
+
+        ```mermaid
+        graph TD
+            A[📄 Input Sources<br/>Local, S3, SharePoint] --> B{🔧 RAFT Toolkit<br/>CLI or Web UI}
+            
+            B --> C[📑 Document Chunking<br/>Semantic/Fixed/Sentence]
+            C --> D[❓ Question Generation<br/>LLM-powered Q&A creation]
+            D --> E[📝 Answer Generation<br/>Context-based responses]
+            E --> F[🎭 Distractor Addition<br/>Irrelevant docs for robustness]
+            F --> G[📊 Training Dataset<br/>JSONL/Parquet format]
+            
+            G --> H[🤖 Model Fine-tuning<br/>OpenAI/HuggingFace/Azure]
+            H --> I[🎯 Fine-tuned Model<br/>Domain-optimized LLM]
+            
+            G --> J{🛠️ Analysis Tools}
+            J --> K[📈 Dataset Evaluation<br/>eval.py]
+            J --> L[💬 Answer Generation<br/>answer.py]  
+            J --> M[🔍 PromptFlow Analysis<br/>pfeval_*.py]
+            
+            K --> N[📊 Performance Metrics]
+            L --> O[🔄 Model Comparison]
+            M --> P[📋 Quality Assessment]
+            
+            N --> Q[✨ Production Model<br/>Optimized for RAG tasks]
+            O --> Q
+            P --> Q
+            
+            style B fill:#e1f5fe,color:#000000
+            style J fill:#f3e5f5,color:#000000
+            style Q fill:#e8f5e8,color:#000000
+        ```
+        
         ## 🚀 Quick Start
         
         - [Installation Guide](Installation)
@@ -122,10 +159,48 @@ jobs:
         
         ## 📚 Documentation
         
+        ### Getting Started
+        - [Installation Guide](Installation)
+        - [Requirements](Requirements)
+        - [Python 3.11 Setup](Python-311-Setup)
+        
+        ### Architecture & Design
+        - [Architecture](Architecture)
+        - [Project Structure](Project-Structure)
         - [Configuration](Configuration)
+        
+        ### Usage & Reference
+        - [CLI Reference](CLI-Reference)
+        - [CLI Quick Reference](CLI-Quick-Reference)
+        - [Input Sources](Input-Sources)
+        - [Tools](Tools)
+        - [Web Interface](Web-Interface)
+        
+        ### Development & Testing
+        - [Testing](Testing)
+        - [Test Coverage Improvements](Test-Coverage-Improvements)
+        - [Test Directories](Test-Directories)
+        - [Dependency Troubleshooting](Dependency-Troubleshooting)
+        
+        ### Deployment & Operations
         - [Deployment](Deployment)
-        - [Development](Development)
-        - [Troubleshooting](Troubleshooting)
+        - [Kubernetes](Kubernetes)
+        - [Build Optimization](Build-Optimization)
+        - [CI Optimization](CI-Optimization)
+        
+        ### Releases & Changes
+        - [Releases](Releases)
+        - [Quality Transition](Quality-Transition)
+        
+        ### Technical Guides
+        - [Nomic Embeddings](Nomic-Embeddings)
+        
+        ### Troubleshooting & Fixes
+        - [All Tests Fix](All-Tests-Fix)
+        - [API Tests Fix](API-Tests-Fix)
+        - [Flake8 Fix](Flake8-Fix)
+        - [Test Fixes Summary](Test-Fixes-Summary)
+        - [Testing Fixes](Testing-Fixes)
         
         ## 🔗 External Links
         
