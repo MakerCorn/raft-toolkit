@@ -46,11 +46,21 @@
   - Fixed cross-platform mypy configuration with `warn_unused_ignores = false`
   - Resolved import sorting issues across all test files
   - Fixed specific failing tests in nomic embeddings, LLM service integration, and CLI modules
+- **Fixed Windows Docker containerization issues**:
+  - Implemented direct Python 3.11.9 download and installation for Windows containers
+  - Fixed Python installation and PATH configuration in Windows Server Core containers
+  - Added PowerShell Core installation before using PowerShell commands in Windows containers
+  - Enhanced PowerShell-based build process with comprehensive error handling and logging
+  - Fixed GitHub Container Registry authentication for Windows builds in CI pipeline
+  - Added robust Python and pip verification steps before dependency installation
+  - Resolved Docker registry cache authentication errors on pull requests
 
 ### Changed
 - **BREAKING**: Refactored package structure to use `raft_toolkit` as single top-level package
+- **BREAKING**: Removed symbolic links (cli, core, web) and updated all imports to use full `raft_toolkit.*` paths
 - Updated all imports to use absolute imports with new package structure
 - Moved templates directory into package structure
+- Updated pytest configuration and documentation to reference new package paths
 - **MAJOR: Optimized dependency structure for 70-80% faster CI builds**:
   - Reduced core dependencies from ~45 to ~15 packages
   - Moved heavy ML libraries (transformers, sentence-transformers, scikit-learn) to optional 'ai' group
