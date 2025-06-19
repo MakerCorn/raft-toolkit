@@ -46,10 +46,12 @@
   - Fixed cross-platform mypy configuration with `warn_unused_ignores = false`
   - Resolved import sorting issues across all test files
   - Fixed specific failing tests in nomic embeddings, LLM service integration, and CLI modules
-- **Fixed Windows Docker containerization issues**:
-  - Implemented direct Python 3.11.9 download and installation for Windows containers
-  - Fixed Python installation and PATH configuration in Windows Server Core containers
-  - Added PowerShell Core installation before using PowerShell commands in Windows containers
+- **Fixed Docker containerization issues**:
+  - **Linux Docker**: Fixed dependency verification to only check core dependencies in base stage
+  - **Linux Docker**: Added proper verification of optional dependencies in development stage
+  - **Windows Docker**: Implemented direct Python 3.11.9 download and installation for Windows containers
+  - **Windows Docker**: Fixed Python installation and PATH configuration in Windows Server Core containers
+  - **Windows Docker**: Added PowerShell Core installation before using PowerShell commands in Windows containers
   - Enhanced PowerShell-based build process with comprehensive error handling and logging
   - Fixed GitHub Container Registry authentication for Windows builds in CI pipeline
   - Added robust Python and pip verification steps before dependency installation

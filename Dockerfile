@@ -57,15 +57,14 @@ RUN pip install --upgrade pip setuptools wheel && \
     echo "Installing RAFT Toolkit with core dependencies..." && \
     pip install --no-cache-dir -e . && \
     echo "Core dependencies installed successfully" && \
-    # Verify critical imports work
+    # Verify core dependencies only (transformers/langchain_community are optional)
     echo "Verifying critical dependencies..." && \
     python -c "import pypdf; print('PyPDF OK')" && \
     python -c "import openai; print('OpenAI', openai.__version__, 'OK')" && \
-    python -c "import transformers; print('Transformers OK')" && \
     python -c "import pandas; print('Pandas OK')" && \
     python -c "import pydantic; print('Pydantic OK')" && \
     python -c "import langchain_core; print('LangChain Core OK')" && \
-    python -c "import langchain_community; print('LangChain Community OK')" && \
+    python -c "import tiktoken; print('TikToken OK')" && \
     # Run dependency conflict check
     echo "Checking for dependency conflicts..." && \
     pip check && \
@@ -77,7 +76,13 @@ FROM dependencies AS development
 
 # Install development and testing dependencies
 RUN pip install --no-cache-dir -e .[dev,all] && \
-    pip install debugpy ipdb
+    pip install debugpy ipdb && \
+    # Verify optional dependencies are now available
+    echo "Verifying extended dependencies..." && \
+    python -c "import transformers; print('Transformers OK')" && \
+    python -c "import langchain_community; print('LangChain Community OK')" && \
+    python -c "import sentence_transformers; print('Sentence Transformers OK')" && \
+    echo "All development dependencies verified successfully"
 
 # Copy source code
 COPY . .
