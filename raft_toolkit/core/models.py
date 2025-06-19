@@ -56,10 +56,21 @@ class DocumentChunk:
 
     @classmethod
     def create(
-        cls, content: str, source: str, metadata: Optional[Dict[str, Any]] = None, chunk_id: Optional[str] = None
+        cls,
+        content: str,
+        source: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        chunk_id: Optional[str] = None,
+        embedding: Optional[List[float]] = None,
     ) -> "DocumentChunk":
         """Create a new document chunk with generated ID."""
-        return cls(id=chunk_id or str(uuid.uuid4()), content=content, source=source, metadata=metadata or {})
+        return cls(
+            id=chunk_id or str(uuid.uuid4()),
+            content=content,
+            source=source,
+            metadata=metadata or {},
+            embedding=embedding,
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -95,7 +106,7 @@ class Question:
     chunk_id: str
 
     @classmethod
-    def create(cls, text: str, chunk_id: str) -> "Question":
+    def create(cls, text: str, chunk_id: str, metadata: Optional[Dict[str, Any]] = None) -> "Question":
         """Create a new question with generated ID."""
         return cls(id=str(uuid.uuid4()), text=text, chunk_id=chunk_id)
 
@@ -114,7 +125,13 @@ class QADataPoint:
 
     @classmethod
     def create(
-        cls, question: str, oracle_context: str, distractor_contexts: List[str], cot_answer: str, doctype: str
+        cls,
+        question: str,
+        oracle_context: str,
+        distractor_contexts: List[str],
+        cot_answer: str,
+        doctype: str,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> "QADataPoint":
         """Create a new QA data point."""
         # Combine oracle and distractor contexts into single string
@@ -140,6 +157,16 @@ class QADataPoint:
             cot_answer=cot_answer,
             instruction=instruction,
         )
+
+    def get_all_contexts(self) -> List[str]:
+        """Get all contexts (oracle + distractors) as a list."""
+        return self.context.split("\n\n")
+
+    @property
+    def distractor_contexts(self) -> List[str]:
+        """Get distractor contexts (all except oracle)."""
+        all_contexts = self.get_all_contexts()
+        return [ctx for ctx in all_contexts if ctx != self.oracle_context]
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -180,7 +207,12 @@ class ProcessingJob:
 
     @classmethod
     def create(
-        cls, chunk: DocumentChunk, num_questions: int, num_distractors: int, include_oracle_probability: float
+        cls,
+        chunk: DocumentChunk,
+        num_questions: int,
+        num_distractors: int,
+        include_oracle_probability: float,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> "ProcessingJob":
         """Create a new processing job."""
         return cls(

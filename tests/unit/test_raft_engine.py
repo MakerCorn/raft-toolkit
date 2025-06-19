@@ -120,13 +120,16 @@ class TestRaftEngine:
 
         assert "total_qa_points" in result
         assert "successful_chunks" in result
-        assert "processing_time" in result
+        assert "total_processing_time" in result
 
     def test_validate_inputs_local(self, raft_engine, tmp_path):
         """Test local input validation."""
         # Create a test file
         test_file = tmp_path / "test.pdf"
         test_file.write_text("test content")
+
+        # Update the config to point to the test file
+        raft_engine.config.datapath = test_file
 
         raft_engine.validate_inputs(test_file)
         # Should not raise exception

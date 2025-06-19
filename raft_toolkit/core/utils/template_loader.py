@@ -143,22 +143,36 @@ Answer:""",
         self.templates_dir = Path(config.templates)
         self._cache: Dict[str, str] = {}
 
-    def load_template(self, template_name: str, template_type: str = "prompt") -> str:
+    def load_template(self, template_name: str, template_type: str = "prompt") -> Optional[str]:
         """
-        Load a template from file or return default.
+        Load a template from file.
 
         Args:
-            template_name: Name of the template (e.g., "embedding", "gpt", "llama")
+            template_name: Name of the template file or key
             template_type: Type of template ("prompt", "qa", "embedding")
 
         Returns:
-            Template content as string
+            Template content as string, or None if not found
         """
         cache_key = f"{template_name}_{template_type}"
 
         # Return cached template if available
         if cache_key in self._cache:
             return self._cache[cache_key]
+
+        # If template_name ends with .txt, treat it as a direct file path
+        if template_name.endswith(".txt"):
+            file_path = self.templates_dir / template_name
+            try:
+                if file_path.exists():
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        logger.debug(f"Loaded template from {file_path}")
+                        self._cache[cache_key] = content
+                        return content
+            except Exception as e:
+                logger.warning(f"Failed to load template from {file_path}: {e}")
+            return None
 
         # Try to load from file
         template_content = self._load_from_file(template_name, template_type)
@@ -385,6 +399,14 @@ Answer:""",
         except Exception as e:
             logger.error(f"Template validation error: {e}")
             return False
+
+    def get_template_path(self, template_name: str) -> Path:
+        """Get the full path to a template file."""
+        return self.templates_dir / template_name
+
+    def template_exists(self, template_name: str) -> bool:
+        """Check if a template file exists."""
+        return self.get_template_path(template_name).exists()
 
 
 def create_template_loader(config: RaftConfig) -> TemplateLoader:

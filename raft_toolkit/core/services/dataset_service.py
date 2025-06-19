@@ -63,7 +63,19 @@ class DatasetService:
                 logger.warning(f"Skipping failed result for job {result.job_id}: {result.error}")
 
         if not all_qa_points:
-            raise ValueError("No successful QA data points to create dataset")
+            # Return empty dataset instead of raising error
+            empty_records = []
+            if pa is None or Dataset is None:
+                # Mock empty dataset
+                class EmptyDataset:
+                    def __len__(self):
+                        return 0
+
+                return EmptyDataset()
+            table = pa.Table.from_pylist(empty_records)
+            dataset = Dataset(table)
+            logger.info("Created empty dataset - no successful QA data points")
+            return dataset
 
         # Convert QA data points to dictionary format
         data_records = []
@@ -75,6 +87,7 @@ class DatasetService:
                 "context": qa_point.context,
                 "oracle_context": qa_point.oracle_context,
                 "cot_answer": qa_point.cot_answer,
+                "answer": qa_point.cot_answer,  # Add 'answer' field for compatibility
                 "instruction": qa_point.instruction,
             }
             data_records.append(record)
@@ -157,3 +170,56 @@ class DatasetService:
             stats["type_distribution"] = type_counts
 
         return stats
+
+    def _format_qa_point(self, qa_point: Any) -> Dict[str, Any]:
+        """Format QA point based on output format."""
+        if self.config.output_format == "hf":
+            return self._format_hf(qa_point)
+        elif self.config.output_format == "completion":
+            return self._format_completion(qa_point)
+        elif self.config.output_format == "chat":
+            return self._format_chat(qa_point)
+        elif self.config.output_format == "eval":
+            return self._format_eval(qa_point)
+        else:
+            raise ValueError(f"Unsupported output format: {self.config.output_format}")
+
+    def _format_hf(self, qa_point: Any) -> Dict[str, Any]:
+        """Format as HuggingFace dataset record."""
+        return {
+            "id": qa_point.id,
+            "question": qa_point.question,
+            "context": qa_point.context,
+            "answer": qa_point.cot_answer,
+            "oracle_context": qa_point.oracle_context,
+            "instruction": qa_point.instruction,
+        }
+
+    def _format_completion(self, qa_point: Any) -> Dict[str, Any]:
+        """Format as completion dataset record."""
+        prompt = f"Context: {qa_point.context}\n\nQuestion: {qa_point.question}\n\nAnswer:"
+        return {
+            "prompt": prompt,
+            "completion": qa_point.cot_answer,
+        }
+
+    def _format_chat(self, qa_point: Any) -> Dict[str, Any]:
+        """Format as chat dataset record."""
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that answers questions based on provided context.",
+            },
+            {"role": "user", "content": f"Context: {qa_point.context}\n\nQuestion: {qa_point.question}"},
+            {"role": "assistant", "content": qa_point.cot_answer},
+        ]
+        return {"messages": messages}
+
+    def _format_eval(self, qa_point: Any) -> Dict[str, Any]:
+        """Format as evaluation dataset record."""
+        return {
+            "question": qa_point.question,
+            "context": qa_point.context,
+            "gold_final_answer": qa_point.cot_answer,
+            "oracle_context": qa_point.oracle_context,
+        }

@@ -107,7 +107,6 @@ class TestInputService:
             source_path="/path/test.pdf",
             size=1000,
             last_modified=datetime.now(),
-            extension=".pdf",
             content_type="application/pdf",
         )
 

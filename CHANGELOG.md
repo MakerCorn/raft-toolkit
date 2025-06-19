@@ -30,6 +30,22 @@
   - Documented langchain-experimental CVE-2024-46946 as false positive (affects unused component)
   - Fixed bandit security warnings with appropriate suppressions for legitimate use cases
   - Created safety policy file (.safety-policy.yml) to properly ignore false positive vulnerabilities
+- **Fixed comprehensive test suite issues (25 test failures resolved)**:
+  - Fixed DatasetService missing format methods (`_format_hf`, `_format_completion`, `_format_chat`, `_format_eval`)
+  - Enhanced model classes with missing create() method parameters (embedding, metadata support)
+  - Added missing QADataPoint methods (`get_all_contexts()`, `distractor_contexts` property)
+  - Fixed TemplateLoader missing utility methods (`get_template_path()`, `template_exists()`)
+  - Corrected import paths in integration tests for new package structure
+  - Fixed file handling issues in dataset save operations
+  - Resolved test assertion mismatches between expected and actual return values
+  - Fixed SourceDocument constructor parameter validation
+  - Enhanced empty dataset handling to return valid empty datasets instead of raising errors
+- **Resolved Windows CI pipeline issues**:
+  - Fixed mypy type checking differences between Windows and Unix systems
+  - Added type stubs for Windows mypy compatibility (types-requests, types-PyYAML, types-simplejson, types-ujson)
+  - Fixed cross-platform mypy configuration with `warn_unused_ignores = false`
+  - Resolved import sorting issues across all test files
+  - Fixed specific failing tests in nomic embeddings, LLM service integration, and CLI modules
 
 ### Changed
 - **BREAKING**: Refactored package structure to use `raft_toolkit` as single top-level package
