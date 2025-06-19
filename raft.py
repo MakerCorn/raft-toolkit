@@ -2,7 +2,7 @@
 """
 Entry point for the CLI application.
 """
-from cli.main import main
+from raft_toolkit.cli.main import main
 
 if __name__ == "__main__":
     main()

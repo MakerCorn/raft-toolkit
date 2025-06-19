@@ -9,12 +9,12 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-from core.config import RaftConfig, get_config
-from core.raft_engine import RaftEngine
+from raft_toolkit.core.config import RaftConfig, get_config
+from raft_toolkit.core.raft_engine import RaftEngine
 
 # Import enhanced logging setup
 try:
-    from core.logging.setup import configure_logging, get_logger, log_setup, setup_sentry_logging
+    from raft_toolkit.core.logging.setup import configure_logging, get_logger, log_setup, setup_sentry_logging
 except ImportError:
     # Fallback to basic logging if enhanced logging is not available
 

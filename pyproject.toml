@@ -22,7 +22,7 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
 ]
-requires-python = ">=3.11, <3.14"
+requires-python = ">=3.9, <3.14"
 dependencies = [
     # Essential runtime core
     "pydantic>=2.8.0,<3.0.0",
@@ -148,9 +148,9 @@ complete = ["raft-toolkit[ai,langchain,embeddings,documents,cloud,tracing]"]
 all = ["raft-toolkit[ai,langchain,embeddings,documents,web,kubernetes,cloud,tracing,dev]"]
 
 [project.scripts]
-raft = "cli.main:main"
-raft-cli = "cli.main:main"
-raft-web = "web.app:run_server"
+raft = "raft_toolkit.cli.main:main"
+raft-cli = "raft_toolkit.cli.main:main"
+raft-web = "raft_toolkit.web.app:run_server"
 
 [project.urls]
 "Homepage" = "https://github.com/microsoft/raft-toolkit"
@@ -158,13 +158,13 @@ raft-web = "web.app:run_server"
 "Source" = "https://github.com/microsoft/raft-toolkit"
 
 [tool.setuptools.packages.find]
-include = ["core*", "cli*", "web*", "tools*"]
+include = ["raft_toolkit*"]
 exclude = ["tests*", "notebooks*", "templates*", "docs*", "scripts*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.txt", "*.yaml", "*.yml"]
-templates = ["*.txt"]
-web = ["static/*"]
+"raft_toolkit" = ["*.txt", "*.yaml", "*.yml"]
+"raft_toolkit.templates" = ["*.txt"]
+"raft_toolkit.web" = ["static/*"]
 
 [tool.black]
 line-length = 120

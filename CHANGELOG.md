@@ -15,6 +15,7 @@
 - Improved error handling in semantic chunking with fallback to fixed chunking
 - Fixed type hints in OpenAI client implementation
 - Added proper error handling for embedding model initialization
+- Fixed wheel packaging issues by consolidating modules under single package namespace
 - Resolved all flake8 linting errors across the codebase:
   - Fixed import redefinition errors (F811) in CLI and service modules
   - Removed unused imports (F401) throughout test files and core modules
@@ -31,6 +32,9 @@
   - Created safety policy file (.safety-policy.yml) to properly ignore false positive vulnerabilities
 
 ### Changed
+- **BREAKING**: Refactored package structure to use `raft_toolkit` as single top-level package
+- Updated all imports to use absolute imports with new package structure
+- Moved templates directory into package structure
 - **MAJOR: Optimized dependency structure for 70-80% faster CI builds**:
   - Reduced core dependencies from ~45 to ~15 packages
   - Moved heavy ML libraries (transformers, sentence-transformers, scikit-learn) to optional 'ai' group

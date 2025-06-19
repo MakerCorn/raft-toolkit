@@ -6,7 +6,6 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
-
 from core.config import RaftConfig
 
 

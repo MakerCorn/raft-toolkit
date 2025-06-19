@@ -11,9 +11,9 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from cli.main import create_parser, main, override_config_from_args, show_preview, validate_only
-from core.config import RaftConfig
-from core.raft_engine import RaftEngine
+from raft_toolkit.cli.main import create_parser, main, override_config_from_args, show_preview, validate_only
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.raft_engine import RaftEngine
 
 
 @pytest.mark.cli

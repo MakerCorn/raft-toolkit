@@ -6,7 +6,6 @@ from datetime import datetime
 from uuid import UUID
 
 import pytest
-
 from core.models import ChunkingStrategy, DocType, DocumentChunk, JobStatus, OutputFormat, ProcessingResult, QADataPoint
 
 

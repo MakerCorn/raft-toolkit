@@ -807,26 +807,28 @@ data:
 
 ``` text
 raft-toolkit/
-├── 📁 core/                      # Core business logic
-│   ├── clients/                  # External API clients
-│   ├── config.py                 # Configuration management
-│   ├── formatters/               # Dataset format converters
-│   ├── models.py                 # Data models and schemas
-│   ├── raft_engine.py           # Main orchestration engine
-│   ├── security.py              # Security utilities
-│   └── services/                 # Business services
-│       ├── dataset_service.py    # Dataset operations
-│       ├── document_service.py   # Document processing
-│       └── llm_service.py       # LLM interactions
-├── 📁 cli/                       # Command-line interface
-│   └── main.py                   # CLI entry point
-├── 📁 web/                       # Web interface
-│   ├── app.py                    # FastAPI application
-│   └── static/                   # Frontend assets
-├── 📁 tools/                     # Standalone evaluation tools
-│   ├── eval.py                   # Dataset evaluation
-│   ├── answer.py                 # Answer generation
-│   └── pfeval_*.py              # PromptFlow evaluations
+├── 📁 raft_toolkit/              # Main package
+│   ├── 📁 core/                  # Core business logic
+│   │   ├── clients/              # External API clients
+│   │   ├── config.py             # Configuration management
+│   │   ├── formatters/           # Dataset format converters
+│   │   ├── models.py             # Data models and schemas
+│   │   ├── raft_engine.py       # Main orchestration engine
+│   │   ├── security.py          # Security utilities
+│   │   └── services/             # Business services
+│   │       ├── dataset_service.py    # Dataset operations
+│   │       ├── document_service.py   # Document processing
+│   │       └── llm_service.py       # LLM interactions
+│   ├── 📁 cli/                   # Command-line interface
+│   │   └── main.py               # CLI entry point
+│   ├── 📁 web/                   # Web interface
+│   │   ├── app.py                # FastAPI application
+│   │   └── static/               # Frontend assets
+│   ├── 📁 tools/                 # Standalone evaluation tools
+│   │   ├── eval.py               # Dataset evaluation
+│   │   ├── answer.py             # Answer generation
+│   │   └── pfeval_*.py          # PromptFlow evaluations
+│   └── 📁 templates/             # Prompt templates
 ├── 📁 tests/                     # Comprehensive test suite
 │   ├── unit/                     # Unit tests
 │   ├── integration/              # Integration tests
@@ -861,14 +863,16 @@ This toolkit follows **12-factor app principles** with a modular architecture:
 
 ```
 raft-toolkit/
-├── core/                    # Shared business logic
-│   ├── config.py           # Configuration management
-│   ├── models.py           # Data models
-│   ├── raft_engine.py      # Main orchestration
-│   └── services/           # Business services
-├── cli/                    # Command-line interface
-├── web/                    # Web interface & API
-├── run_cli.py             # CLI entry point
+├── raft_toolkit/           # Main package
+│   ├── core/              # Shared business logic
+│   │   ├── config.py      # Configuration management
+│   │   ├── models.py      # Data models
+│   │   ├── raft_engine.py # Main orchestration
+│   │   └── services/      # Business services
+│   ├── cli/               # Command-line interface
+│   ├── web/               # Web interface & API
+│   └── tools/             # Evaluation tools
+├── raft.py                # CLI entry point
 ├── run_web.py             # Web entry point
 └── docker-compose.yml     # Container orchestration
 ```

@@ -6,10 +6,10 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Protocol
 
-from ..config import RaftConfig
-from ..models import DocumentChunk
-from ..utils.template_loader import create_template_loader
-from .langwatch_service import create_langwatch_service
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk
+from raft_toolkit.core.services.langwatch_service import create_langwatch_service
+from raft_toolkit.core.utils.template_loader import create_template_loader
 
 
 # Define protocol for embeddings

@@ -6,7 +6,6 @@ import time
 from unittest.mock import patch
 
 import pytest
-
 from core.utils.rate_limiter import RateLimitConfig, RateLimiter, RateLimitStrategy, create_rate_limiter_from_config
 
 

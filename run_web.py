@@ -4,7 +4,7 @@ Entry point for the web application.
 """
 import os
 
-from web.app import run_server
+from raft_toolkit.web.app import run_server
 
 if __name__ == "__main__":
     host = os.getenv("WEB_HOST", "127.0.0.1")

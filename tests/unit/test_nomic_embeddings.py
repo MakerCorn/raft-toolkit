@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.config import RaftConfig
-from core.services.embedding_service import EmbeddingService
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.services.embedding_service import EmbeddingService
 
 
 @pytest.fixture

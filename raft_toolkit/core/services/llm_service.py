@@ -53,11 +53,11 @@ except ImportError:
         pass
 
 
-from ..config import RaftConfig
-from ..models import DocumentChunk, ProcessingJob, ProcessingResult, QADataPoint, Question
-from ..utils.rate_limiter import create_rate_limiter_from_config, get_common_rate_limits
-from ..utils.template_loader import create_template_loader
-from .langwatch_service import create_langwatch_service
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk, ProcessingJob, ProcessingResult, QADataPoint, Question
+from raft_toolkit.core.services.langwatch_service import create_langwatch_service
+from raft_toolkit.core.utils.rate_limiter import create_rate_limiter_from_config, get_common_rate_limits
+from raft_toolkit.core.utils.template_loader import create_template_loader
 
 
 # Define protocol for chat completion
@@ -86,8 +86,8 @@ class ChatCompleterBase(Protocol):
 
 # Try to import real implementation
 try:
-    from ..clients import ChatCompleter as RealChatCompleter
-    from ..clients import build_openai_client as real_build_openai_client
+    from raft_toolkit.core.clients import ChatCompleter as RealChatCompleter
+    from raft_toolkit.core.clients import build_openai_client as real_build_openai_client
 
     ChatCompleter: Type = RealChatCompleter
 
@@ -150,7 +150,7 @@ class LLMService:
         """Build OpenAI client."""
         try:
             if self.config.use_azure_identity:
-                from ..utils import get_azure_openai_token
+                from raft_toolkit.core.utils import get_azure_openai_token
 
                 api_key = get_azure_openai_token()
             else:

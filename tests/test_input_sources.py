@@ -9,7 +9,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from core.sources import InputSourceConfig, InputSourceFactory, LocalInputSource, SourceValidationError
 
 
