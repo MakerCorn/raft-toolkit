@@ -9,9 +9,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.config import RaftConfig
-from core.models import DocumentChunk, ProcessingResult, ProcessingStatistics, QADataPoint
-from core.raft_engine import RaftEngine
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk, ProcessingResult, ProcessingStatistics, QADataPoint
+from raft_toolkit.core.raft_engine import RaftEngine
 
 
 @pytest.mark.integration

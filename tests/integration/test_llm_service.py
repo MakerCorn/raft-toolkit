@@ -8,9 +8,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.config import RaftConfig
-from core.models import DocumentChunk, ProcessingResult
-from core.services.llm_service import LLMService
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk, ProcessingResult
+from raft_toolkit.core.services.llm_service import LLMService
 
 
 @pytest.mark.integration
@@ -45,7 +45,7 @@ class TestLLMServiceIntegration:
             embedding=None,
         )
 
-    @patch("core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
     def test_process_chunks_batch_single(self, mock_client_builder, llm_service, sample_document_chunk):
         """Test processing a single chunk using batch method."""
         # Mock OpenAI client
@@ -82,7 +82,7 @@ class TestLLMServiceIntegration:
             # Just check that we got a result
             assert isinstance(results[0], ProcessingResult)
 
-    @patch("core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
     def test_process_chunks_with_distractors(self, mock_client_builder, llm_service, sample_document_chunk):
         """Test processing chunk with distractor documents."""
         # Mock OpenAI client
@@ -121,7 +121,7 @@ class TestLLMServiceIntegration:
         if results[0].success:
             assert len(results[0].qa_data_points) >= 1
 
-    @patch("core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
     def test_process_chunk_invalid_json_response(self, mock_client_builder, llm_service, sample_document_chunk):
         """Test handling of invalid JSON response."""
         # Mock OpenAI client
@@ -139,7 +139,7 @@ class TestLLMServiceIntegration:
         assert len(results) == 1
         # The service should handle invalid JSON gracefully
 
-    @patch("core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
     def test_process_chunks_batch(self, mock_client_builder, llm_service):
         """Test batch processing of multiple chunks."""
         # Mock OpenAI client
@@ -173,7 +173,7 @@ class TestLLMServiceIntegration:
         successful_results = [r for r in results if r.success]
         assert len(successful_results) >= 0
 
-    @patch("core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
     def test_process_chunks_batch_with_failures(self, mock_client_builder, llm_service):
         """Test batch processing with some failures."""
         # Mock OpenAI client that raises exceptions
@@ -238,7 +238,7 @@ class TestLLMServiceIntegration:
         assert llm_service.config.p <= 1.0
 
     @patch("time.sleep")
-    @patch("core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
     def test_rate_limiting_with_pacing(self, mock_client_builder, mock_sleep, llm_service):
         """Test rate limiting and pacing functionality."""
         # Mock OpenAI client

@@ -10,10 +10,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.config import RaftConfig
-from core.models import DocumentChunk
-from core.services.document_service import DocumentService
-from core.services.llm_service import LLMService
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk
+from raft_toolkit.core.services.document_service import DocumentService
+from raft_toolkit.core.services.llm_service import LLMService
 
 
 @pytest.mark.integration

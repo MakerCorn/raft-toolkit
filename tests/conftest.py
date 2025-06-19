@@ -9,8 +9,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.config import RaftConfig
-from core.models import DocumentChunk, QADataPoint
+from raft_toolkit.core.config import RaftConfig
+from raft_toolkit.core.models import DocumentChunk, QADataPoint
 
 
 @pytest.fixture

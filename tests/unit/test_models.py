@@ -1,237 +1,181 @@
 """
-Tests for core.models module.
+Tests for core models.
 """
-
-from datetime import datetime
-from uuid import UUID
 
 import pytest
 
-from core.models import ChunkingStrategy, DocType, DocumentChunk, JobStatus, OutputFormat, ProcessingResult, QADataPoint
+from raft_toolkit.core.models import DocumentChunk, ProcessingJob, ProcessingResult, QADataPoint, Question
 
 
 @pytest.mark.unit
 class TestDocumentChunk:
     """Test DocumentChunk model."""
 
-    @pytest.mark.unit
-    def test_document_chunk_creation(self):
-        """Test basic document chunk creation."""
-        chunk = DocumentChunk.create(content="Test content", source="test.pdf", metadata={"type": "pdf"})
+    def test_create_basic(self):
+        """Test basic chunk creation."""
+        chunk = DocumentChunk.create(content="Test content", source="test.pdf")
 
         assert chunk.content == "Test content"
         assert chunk.source == "test.pdf"
-        assert chunk.metadata == {"type": "pdf"}
-        assert isinstance(chunk.id, str)
-        assert isinstance(chunk.created_at, datetime)
-        assert len(chunk.id) > 0
+        assert chunk.id is not None
+        assert chunk.metadata == {}
+        assert chunk.embedding is None
 
-    @pytest.mark.unit
-    def test_document_chunk_with_custom_id(self):
-        """Test document chunk creation with custom ID."""
-        custom_id = "custom-chunk-id"
-        chunk = DocumentChunk.create(content="Test content", source="test.pdf", chunk_id=custom_id)
+    def test_create_with_metadata(self):
+        """Test chunk creation with metadata."""
+        metadata = {"type": "pdf", "page": 1}
+        chunk = DocumentChunk.create(content="Test content", source="test.pdf", metadata=metadata)
 
-        assert chunk.id == custom_id
+        assert chunk.metadata == metadata
 
-    @pytest.mark.unit
-    def test_document_chunk_serialization(self):
-        """Test document chunk serialization."""
-        chunk = DocumentChunk.create(content="Test content", source="test.pdf", metadata={"type": "pdf", "page": 1})
+    def test_create_with_embedding(self):
+        """Test chunk creation with embedding."""
+        embedding = [0.1, 0.2, 0.3]
+        chunk = DocumentChunk.create(content="Test content", source="test.pdf", embedding=embedding)
 
-        data = chunk.to_dict()
+        assert chunk.embedding == embedding
 
-        assert data["content"] == "Test content"
-        assert data["source"] == "test.pdf"
-        assert data["metadata"]["type"] == "pdf"
-        assert data["metadata"]["page"] == 1
-        assert "id" in data
-        assert "created_at" in data
 
-    @pytest.mark.unit
-    def test_document_chunk_from_dict(self):
-        """Test document chunk deserialization."""
-        data = {
-            "id": "test-id",
-            "content": "Test content",
-            "source": "test.pdf",
-            "metadata": {"type": "pdf"},
-            "created_at": datetime.now().isoformat(),
-        }
+@pytest.mark.unit
+class TestQuestion:
+    """Test Question model."""
 
-        chunk = DocumentChunk.from_dict(data)
+    def test_create_basic(self):
+        """Test basic question creation."""
+        question = Question.create("What is the capital?", "chunk_123")
 
-        assert chunk.id == "test-id"
-        assert chunk.content == "Test content"
-        assert chunk.source == "test.pdf"
-        assert chunk.metadata == {"type": "pdf"}
-        assert isinstance(chunk.created_at, datetime)
+        assert question.text == "What is the capital?"
+        assert question.chunk_id == "chunk_123"
+        assert question.id is not None
+
+    def test_create_with_metadata(self):
+        """Test question creation with metadata."""
+        metadata = {"difficulty": "easy"}
+        question = Question.create("What is the capital?", "chunk_123", metadata=metadata)
+
+        assert question.metadata == metadata
 
 
 @pytest.mark.unit
 class TestQADataPoint:
     """Test QADataPoint model."""
 
-    @pytest.mark.unit
-    def test_qa_datapoint_creation(self):
+    def test_create_basic(self):
         """Test basic QA data point creation."""
-        qa_point = QADataPoint(
-            id="test-qa-1",
-            type="cot",
-            question="What is AI?",
-            context="Context about AI",
-            oracle_context="Oracle context about AI",
-            cot_answer="AI is artificial intelligence.",
-            instruction="Answer the question.",
+        qa_point = QADataPoint.create(
+            question="What is the capital?",
+            oracle_context="Paris is the capital of France.",
+            distractor_contexts=["London is in England."],
+            cot_answer="The capital is Paris.",
+            doctype="pdf",
         )
 
-        assert qa_point.id == "test-qa-1"
-        assert qa_point.type == "cot"
-        assert qa_point.question == "What is AI?"
-        assert qa_point.context == "Context about AI"
-        assert qa_point.oracle_context == "Oracle context about AI"
-        assert qa_point.cot_answer == "AI is artificial intelligence."
-        assert qa_point.instruction == "Answer the question."
+        assert qa_point.question == "What is the capital?"
+        assert qa_point.oracle_context == "Paris is the capital of France."
+        assert qa_point.distractor_contexts == ["London is in England."]
+        assert qa_point.cot_answer == "The capital is Paris."
+        assert qa_point.doctype == "pdf"
+        assert qa_point.id is not None
 
-    @pytest.mark.unit
-    def test_qa_datapoint_serialization(self):
-        """Test QA data point serialization."""
-        qa_point = QADataPoint(
-            id="test-qa-1",
-            type="cot",
-            question="What is AI?",
-            context="Context about AI",
-            oracle_context="Oracle context about AI",
-            cot_answer="AI is artificial intelligence.",
-            instruction="Answer the question.",
+    def test_create_with_metadata(self):
+        """Test QA data point creation with metadata."""
+        metadata = {"source": "test.pdf"}
+        qa_point = QADataPoint.create(
+            question="What is the capital?",
+            oracle_context="Paris is the capital of France.",
+            distractor_contexts=[],
+            cot_answer="The capital is Paris.",
+            doctype="pdf",
+            metadata=metadata,
         )
 
-        data = qa_point.to_dict()
+        assert qa_point.metadata == metadata
 
-        assert data["id"] == "test-qa-1"
-        assert data["type"] == "cot"
-        assert data["question"] == "What is AI?"
-        assert data["context"] == "Context about AI"
-        assert data["oracle_context"] == "Oracle context about AI"
-        assert data["cot_answer"] == "AI is artificial intelligence."
-        assert data["instruction"] == "Answer the question."
+    def test_get_all_contexts(self):
+        """Test getting all contexts."""
+        qa_point = QADataPoint.create(
+            question="What is the capital?",
+            oracle_context="Paris is the capital of France.",
+            distractor_contexts=["London is in England.", "Berlin is in Germany."],
+            cot_answer="The capital is Paris.",
+            doctype="pdf",
+        )
 
-    @pytest.mark.unit
-    def test_qa_datapoint_from_dict(self):
-        """Test QA data point deserialization."""
-        data = {
-            "id": "test-qa-1",
-            "type": "cot",
-            "question": "What is AI?",
-            "context": "Context about AI",
-            "oracle_context": "Oracle context about AI",
-            "cot_answer": "AI is artificial intelligence.",
-            "instruction": "Answer the question.",
-        }
+        all_contexts = qa_point.get_all_contexts()
 
-        qa_point = QADataPoint.from_dict(data)
+        assert len(all_contexts) == 3
+        assert "Paris is the capital of France." in all_contexts
+        assert "London is in England." in all_contexts
+        assert "Berlin is in Germany." in all_contexts
 
-        assert qa_point.id == "test-qa-1"
-        assert qa_point.type == "cot"
-        assert qa_point.question == "What is AI?"
-        assert qa_point.context == "Context about AI"
+
+@pytest.mark.unit
+class TestProcessingJob:
+    """Test ProcessingJob model."""
+
+    def test_create_basic(self):
+        """Test basic processing job creation."""
+        chunk = DocumentChunk.create("Test content", "test.pdf")
+        job = ProcessingJob.create(chunk=chunk, num_questions=5, num_distractors=3, include_oracle_probability=0.8)
+
+        assert job.chunk == chunk
+        assert job.num_questions == 5
+        assert job.num_distractors == 3
+        assert job.include_oracle_probability == 0.8
+        assert job.id is not None
+
+    def test_create_with_metadata(self):
+        """Test processing job creation with metadata."""
+        chunk = DocumentChunk.create("Test content", "test.pdf")
+        metadata = {"priority": "high"}
+        job = ProcessingJob.create(
+            chunk=chunk, num_questions=5, num_distractors=3, include_oracle_probability=0.8, metadata=metadata
+        )
+
+        assert job.metadata == metadata
 
 
 @pytest.mark.unit
 class TestProcessingResult:
     """Test ProcessingResult model."""
 
-    @pytest.mark.unit
-    def test_processing_result_success(self):
+    def test_create_success(self):
         """Test successful processing result."""
-        qa_points = [
-            QADataPoint(
-                id="qa-1",
-                type="cot",
-                question="Test question",
-                context="Test context",
-                oracle_context="Test oracle",
-                cot_answer="Test answer",
-                instruction="Test instruction",
-            )
-        ]
-
-        result = ProcessingResult(
-            job_id="job-1",
-            success=True,
-            qa_data_points=qa_points,
-            processing_time=1.5,
-            token_usage={"total_tokens": 100, "prompt_tokens": 50, "completion_tokens": 50},
+        qa_point = QADataPoint.create(
+            question="What is the capital?",
+            oracle_context="Paris is the capital of France.",
+            distractor_contexts=[],
+            cot_answer="The capital is Paris.",
+            doctype="pdf",
         )
 
-        assert result.job_id == "job-1"
+        result = ProcessingResult(
+            job_id="job_123",
+            success=True,
+            qa_data_points=[qa_point],
+            processing_time=1.5,
+            token_usage={"total_tokens": 100},
+        )
+
+        assert result.job_id == "job_123"
         assert result.success is True
         assert len(result.qa_data_points) == 1
-        assert result.qa_data_points[0].id == "qa-1"
         assert result.processing_time == 1.5
-        assert result.token_usage["total_tokens"] == 100
+        assert result.token_usage == {"total_tokens": 100}
         assert result.error is None
 
-    @pytest.mark.unit
-    def test_processing_result_failure(self):
+    def test_create_failure(self):
         """Test failed processing result."""
         result = ProcessingResult(
-            job_id="job-2", success=False, error="Processing failed due to API error", processing_time=0.5
+            job_id="job_123",
+            success=False,
+            qa_data_points=[],
+            processing_time=0.5,
+            token_usage={},
+            error="Processing failed",
         )
 
-        assert result.job_id == "job-2"
+        assert result.job_id == "job_123"
         assert result.success is False
-        assert result.error == "Processing failed due to API error"
-        assert result.qa_data_points == []
-        assert result.processing_time == 0.5
-        assert result.token_usage == {}
-
-    @pytest.mark.unit
-    def test_processing_result_serialization(self):
-        """Test processing result serialization."""
-        result = ProcessingResult(job_id="job-1", success=True, processing_time=1.5, token_usage={"total_tokens": 100})
-
-        data = result.to_dict()
-
-        assert data["job_id"] == "job-1"
-        assert data["success"] is True
-        assert data["processing_time"] == 1.5
-        assert data["token_usage"]["total_tokens"] == 100
-        assert "qa_data_points" in data
-
-
-@pytest.mark.unit
-class TestEnums:
-    """Test enum types."""
-
-    @pytest.mark.unit
-    def test_doc_type_enum(self):
-        """Test DocType enum."""
-        assert DocType.PDF.value == "pdf"
-        assert DocType.TXT.value == "txt"
-        assert DocType.JSON.value == "json"
-        assert DocType.API.value == "api"
-        assert DocType.PPTX.value == "pptx"
-
-    @pytest.mark.unit
-    def test_chunking_strategy_enum(self):
-        """Test ChunkingStrategy enum."""
-        assert ChunkingStrategy.SEMANTIC.value == "semantic"
-        assert ChunkingStrategy.FIXED.value == "fixed"
-        assert ChunkingStrategy.SENTENCE.value == "sentence"
-
-    @pytest.mark.unit
-    def test_output_format_enum(self):
-        """Test OutputFormat enum."""
-        assert OutputFormat.HF.value == "hf"
-        assert OutputFormat.COMPLETION.value == "completion"
-        assert OutputFormat.CHAT.value == "chat"
-        assert OutputFormat.EVAL.value == "eval"
-
-    @pytest.mark.unit
-    def test_job_status_enum(self):
-        """Test JobStatus enum."""
-        assert JobStatus.PENDING.value == "pending"
-        assert JobStatus.PROCESSING.value == "processing"
-        assert JobStatus.COMPLETED.value == "completed"
-        assert JobStatus.FAILED.value == "failed"
+        assert len(result.qa_data_points) == 0
+        assert result.error == "Processing failed"
