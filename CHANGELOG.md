@@ -61,6 +61,7 @@
 - Updated all imports to use absolute imports with new package structure
 - Moved templates directory into package structure
 - Updated pytest configuration and documentation to reference new package paths
+- **Simplified containerization strategy**: Disabled Windows Docker builds in CI pipeline due to complexity, focusing on Linux containers while maintaining cross-platform Python package support for Windows, macOS, and Linux
 - **MAJOR: Optimized dependency structure for 70-80% faster CI builds**:
   - Reduced core dependencies from ~45 to ~15 packages
   - Moved heavy ML libraries (transformers, sentence-transformers, scikit-learn) to optional 'ai' group

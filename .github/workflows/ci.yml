@@ -142,7 +142,7 @@ jobs:
 
   build-package:
     name: Build Python Package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Pure Python package - builds are platform-independent
     timeout-minutes: 15
     needs: test
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
@@ -281,21 +281,22 @@ jobs:
           BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
           VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
-    - name: Build and push Docker image (CLI Windows)
-      if: github.ref == 'refs/heads/main'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.windows
-        target: cli
-        platforms: windows/amd64
-        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        tags: ${{ steps.meta.outputs.tags }}-cli-windows
-        labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+    # Windows Docker builds disabled due to complexity - use Python packages instead
+    # - name: Build and push Docker image (CLI Windows)
+    #   if: github.ref == 'refs/heads/main'
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     file: ./Dockerfile.windows
+    #     target: cli
+    #     platforms: windows/amd64
+    #     push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    #     tags: ${{ steps.meta.outputs.tags }}-cli-windows
+    #     labels: ${{ steps.meta.outputs.labels }}
+    #     build-args: |
+    #       BUILDKIT_INLINE_CACHE=1
+    #       BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+    #       VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
     - name: Build and push Docker image (Web Linux)
       uses: docker/build-push-action@v5
@@ -318,21 +319,22 @@ jobs:
           BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
           VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
-    - name: Build and push Docker image (Web Windows)
-      if: github.ref == 'refs/heads/main'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.windows
-        target: production
-        platforms: windows/amd64
-        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        tags: ${{ steps.meta.outputs.tags }}-web-windows
-        labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+    # Windows Docker builds disabled due to complexity - use Python packages instead
+    # - name: Build and push Docker image (Web Windows)
+    #   if: github.ref == 'refs/heads/main'
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     file: ./Dockerfile.windows
+    #     target: production
+    #     platforms: windows/amd64
+    #     push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    #     tags: ${{ steps.meta.outputs.tags }}-web-windows
+    #     labels: ${{ steps.meta.outputs.labels }}
+    #     build-args: |
+    #       BUILDKIT_INLINE_CACHE=1
+    #       BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+    #       VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
     - name: Upload Docker artifacts
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
