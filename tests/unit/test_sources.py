@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from core.config import RaftConfig
 from core.sources.base import InputSourceConfig
 from core.sources.factory import InputSourceFactory

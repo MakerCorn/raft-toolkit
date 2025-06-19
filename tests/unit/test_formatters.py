@@ -7,6 +7,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from datasets import Dataset
+
 from core.formatters.dataset_converter import (
     DatasetConverter,
     EvalDatasetFormatter,
@@ -20,7 +22,6 @@ from core.formatters.dataset_converter import (
     extract_final_answer,
 )
 from core.models import QADataPoint
-from datasets import Dataset
 
 
 class TestDatasetConverter:

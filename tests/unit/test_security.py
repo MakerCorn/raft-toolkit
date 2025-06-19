@@ -3,6 +3,7 @@ Unit tests for security utilities.
 """
 
 import pytest
+
 from core.security import SecurityConfig
 
 

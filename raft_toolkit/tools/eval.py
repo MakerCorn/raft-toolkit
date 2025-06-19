@@ -8,12 +8,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, Optional
 
-from core.clients import StatsCompleter, UsageStats, build_openai_client
-from core.logging import log_setup
 from dotenv import load_dotenv
 from openai import RateLimitError
 from tenacity import before_sleep_log, retry, retry_if_exception_type, wait_exponential
 from tqdm import tqdm
+
+from core.clients import StatsCompleter, UsageStats, build_openai_client
+from core.logging import log_setup
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

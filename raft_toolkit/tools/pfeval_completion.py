@@ -5,12 +5,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-from azure.ai.evaluation import (
-    AzureOpenAIModelConfiguration,
-    GroundednessEvaluator,
-    SimilarityEvaluator,
-    evaluate,
-)
+from azure.ai.evaluation import AzureOpenAIModelConfiguration, GroundednessEvaluator, SimilarityEvaluator, evaluate
 from client_utils import build_openai_client
 from dotenv import load_dotenv
 from logconf import log_setup
