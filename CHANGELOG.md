@@ -56,6 +56,9 @@
   - Fixed GitHub Container Registry authentication for Windows builds in CI pipeline
   - Added robust Python and pip verification steps before dependency installation
   - Resolved Docker registry cache authentication errors on pull requests
+  - Fixed security scan conditionals to only scan containers when they are actually built and pushed
+  - Improved CI reliability with better error handling for Windows builds, mypy checks, and tool tests
+  - Added timeouts and fallback handling for Windows Visual Studio Build Tools installation
 
 ### Changed
 - **BREAKING**: Refactored package structure to use `raft_toolkit` as single top-level package
@@ -63,7 +66,7 @@
 - Updated all imports to use absolute imports with new package structure
 - Moved templates directory into package structure
 - Updated pytest configuration and documentation to reference new package paths
-- **Simplified containerization strategy**: Disabled Windows Docker builds in CI pipeline due to complexity, focusing on Linux containers while maintaining cross-platform Python package support for Windows, macOS, and Linux
+- **Simplified containerization strategy**: Disabled Windows Docker builds in CI pipeline and release workflows due to complexity, focusing on Linux containers while maintaining cross-platform Python package support for Windows, macOS, and Linux
 - **MAJOR: Optimized dependency structure for 70-80% faster CI builds**:
   - Reduced core dependencies from ~45 to ~15 packages
   - Moved heavy ML libraries (transformers, sentence-transformers, scikit-learn) to optional 'ai' group

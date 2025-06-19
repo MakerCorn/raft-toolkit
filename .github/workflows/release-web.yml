@@ -287,28 +287,29 @@ jobs:
           type=gha,mode=max
           type=registry,ref=ghcr.io/${{ steps.repo.outputs.name }}:buildcache-web-release,mode=max
 
-    - name: Build and push Docker image (Web release Windows)
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.windows
-        target: production
-        platforms: windows/amd64
-        push: true
-        tags: |
-          ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}-windows
-          ghcr.io/${{ steps.repo.outputs.name }}:web-latest-windows
-        labels: |
-          org.opencontainers.image.title=RAFT Toolkit Web (Windows)
-          org.opencontainers.image.description=RAFT Web Application - Full-featured web interface with API for Windows
-          org.opencontainers.image.version=web-v${{ needs.version-bump.outputs.new_version }}
-          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          org.opencontainers.image.revision=${{ github.sha }}
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-          BUILD_DATE=${{ github.event.head_commit.timestamp }}
-          VERSION=web-v${{ needs.version-bump.outputs.new_version }}
-          VCS_REF=${{ github.sha }}
+    # Windows Docker builds disabled due to complexity - use Python packages instead
+    # - name: Build and push Docker image (Web release Windows)
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     file: ./Dockerfile.windows
+    #     target: production
+    #     platforms: windows/amd64
+    #     push: true
+    #     tags: |
+    #       ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}-windows
+    #       ghcr.io/${{ steps.repo.outputs.name }}:web-latest-windows
+    #     labels: |
+    #       org.opencontainers.image.title=RAFT Toolkit Web (Windows)
+    #       org.opencontainers.image.description=RAFT Web Application - Full-featured web interface with API for Windows
+    #       org.opencontainers.image.version=web-v${{ needs.version-bump.outputs.new_version }}
+    #       org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+    #       org.opencontainers.image.revision=${{ github.sha }}
+    #     build-args: |
+    #       BUILDKIT_INLINE_CACHE=1
+    #       BUILD_DATE=${{ github.event.head_commit.timestamp }}
+    #       VERSION=web-v${{ needs.version-bump.outputs.new_version }}
+    #       VCS_REF=${{ github.sha }}
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
@@ -331,21 +332,20 @@ jobs:
           
           **Docker Container (Web Application):**
           ```bash
-          # Full-featured web application container (Linux/macOS)
+          # Full-featured web application container (Linux only)
           docker pull ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}
           
-          # Full-featured web application container (Windows)
-          docker pull ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}-windows
-          
-          # Run web application (Linux/macOS)
+          # Run web application
           docker run -d -p 8000:8000 \
             -e OPENAI_API_KEY=your_api_key \
             ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}
+          ```
           
-          # Run web application (Windows)
-          docker run -d -p 8000:8000 \
-            -e OPENAI_API_KEY=your_api_key \
-            ghcr.io/${{ steps.repo.outputs.name }}:web-v${{ needs.version-bump.outputs.new_version }}-windows
+          **Windows Users:**
+          ```bash
+          # Use Python package for Windows (recommended)
+          pip install raft-toolkit[web]==${{ needs.version-bump.outputs.new_version }}
+          raft-web --port 8000 --host 0.0.0.0
           ```
           
           **Kubernetes Deployment:**
