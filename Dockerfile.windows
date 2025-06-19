@@ -30,13 +30,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=C:\\app
 
 # Install system dependencies (Windows)
-# Note: Windows containers often include these tools by default
-RUN powershell -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; \
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; \
-    iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
-
-# Install required tools
-RUN choco install git -y --no-progress
+# Skip chocolatey installation as it's not needed for basic functionality
+RUN echo "Skipping additional system dependencies for Windows container"
 
 # Set working directory
 WORKDIR C:\\app
@@ -83,7 +78,7 @@ ENV RAFT_ENVIRONMENT=development \
     RAFT_LOG_LEVEL=DEBUG
 
 # Development command
-CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["python", "-m", "raft_toolkit.web.app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # Stage 4: Testing (Windows)
 FROM development AS testing
@@ -94,7 +89,7 @@ ENV RAFT_TESTING=true \
     PYTHONPATH=C:\\app
 
 # Run tests by default
-CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=core", "--cov=cli", "--cov=web", "--cov-report=xml", "--cov-report=term-missing"]
+CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=raft_toolkit", "--cov-report=xml", "--cov-report=term-missing"]
 
 # Stage 5: Production Web Application (Windows)
 FROM dependencies AS production
@@ -106,7 +101,7 @@ RUN pip install --no-cache-dir -e .[web]
 COPY . .
 
 # Remove unnecessary files for production
-RUN powershell -Command "Remove-Item -Recurse -Force tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
+RUN powershell -Command "Remove-Item -Recurse -Force raft_toolkit\\web, tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
 
 # Create necessary directories
 RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs C:\\app\\uploads
@@ -126,7 +121,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 8000
 
 # Production command using the web entry point
-CMD ["python", "-m", "web.app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "raft_toolkit.web.app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Stage 6: CLI-only (lightweight Windows)
 FROM base AS cli
@@ -143,7 +138,7 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY . .
 
 # Remove unnecessary files for CLI-only image
-RUN powershell -Command "Remove-Item -Recurse -Force web, tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
+RUN powershell -Command "Remove-Item -Recurse -Force raft_toolkit\\web, tests, docs, examples, .git, .github, notebooks, scripts -ErrorAction SilentlyContinue"
 
 # Create necessary directories
 RUN mkdir C:\\app\\data C:\\app\\outputs C:\\app\\logs
@@ -157,5 +152,5 @@ ENV RAFT_ENVIRONMENT=cli \
 WORKDIR C:\\app
 
 # CLI entry point using the CLI module
-ENTRYPOINT ["python", "-m", "cli.main"]
+ENTRYPOINT ["python", "-m", "raft_toolkit.cli.main"]
 CMD ["--help"]
