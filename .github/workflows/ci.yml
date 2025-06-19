@@ -75,12 +75,18 @@ jobs:
 
     - name: Run type checking
       run: |
-        if command -v mypy &> /dev/null; then
-          echo "Running MyPy type checking..."
-          mypy raft_toolkit/ --ignore-missing-imports || echo "⚠️ MyPy found type issues (continuing build)"
-        else
-          echo "MyPy not available, skipping type check"
-        fi
+        python -c "
+        try:
+            import mypy
+            print('Running MyPy type checking...')
+            import subprocess
+            import sys
+            result = subprocess.run([sys.executable, '-m', 'mypy', 'raft_toolkit/', '--ignore-missing-imports'], capture_output=True)
+            if result.returncode != 0:
+                print('⚠️ MyPy found type issues (continuing build)')
+        except ImportError:
+            print('MyPy not available, skipping type check')
+        "
 
     - name: Run security checks (Unix)
       if: runner.os != 'Windows'
