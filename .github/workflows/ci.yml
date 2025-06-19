@@ -127,8 +127,8 @@ jobs:
         raft-eval --help
         raft-answer --help
         # Test tools can be imported
-        python -c "from raft_toolkit.tools.eval import main; print('✅ eval tool works')"
-        python -c "from raft_toolkit.tools.answer import main; print('✅ answer tool works')"
+        python -c "from raft_toolkit.tools.eval import main; print('eval tool works')"
+        python -c "from raft_toolkit.tools.answer import main; print('answer tool works')"
 
     - name: Upload coverage reports
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
