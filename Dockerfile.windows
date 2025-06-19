@@ -29,6 +29,9 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=C:\\app
 
+# Use CMD instead of PowerShell for RUN commands
+SHELL ["cmd", "/S", "/C"]
+
 # Install system dependencies (Windows)
 # Skip additional dependencies for basic functionality
 
@@ -42,20 +45,20 @@ FROM base AS dependencies
 COPY pyproject.toml .
 
 # Install Python dependencies with enhanced error handling
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -e . && \
-    echo "Core dependencies installed successfully"
+RUN pip install --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -e .
+RUN echo "Core dependencies installed successfully"
 
 # Verify critical imports work
-RUN python -c "import pypdf; print('PyPDF OK')" && \
-    python -c "import openai; print('OpenAI OK')" && \
-    python -c "import transformers; print('Transformers OK')" && \
-    python -c "import pandas; print('Pandas OK')" && \
-    python -c "import pydantic; print('Pydantic OK')" && \
-    python -c "import langchain_core; print('LangChain Core OK')" && \
-    python -c "import langchain_community; print('LangChain Community OK')" && \
-    pip check && \
-    echo "All dependency verification completed successfully"
+RUN python -c "import pypdf; print('PyPDF OK')"
+RUN python -c "import openai; print('OpenAI OK')"
+RUN python -c "import transformers; print('Transformers OK')"
+RUN python -c "import pandas; print('Pandas OK')"
+RUN python -c "import pydantic; print('Pydantic OK')"
+RUN python -c "import langchain_core; print('LangChain Core OK')"
+RUN python -c "import langchain_community; print('LangChain Community OK')"
+RUN pip check
+RUN echo "All dependency verification completed successfully"
 
 # Stage 3: Development (Windows)
 FROM dependencies AS development
@@ -136,9 +139,9 @@ FROM base AS cli
 COPY pyproject.toml .
 
 # Install only core dependencies (no web, no dev)
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -e . && \
-    echo "CLI dependencies installed successfully"
+RUN pip install --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -e .
+RUN echo "CLI dependencies installed successfully"
 
 # Copy source files
 COPY . .
