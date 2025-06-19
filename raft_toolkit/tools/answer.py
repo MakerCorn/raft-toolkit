@@ -1,8 +1,8 @@
 import argparse
 import json
 import logging
-import random
 import re
+import secrets
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from dotenv import load_dotenv
@@ -157,7 +157,8 @@ def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt
 
         # Filter out rows where 'questions' start with the pattern
         filtered_questions = [q for q in data if not re.match(pattern, q["question"])]
-        data = random.sample(filtered_questions, total_records)
+        # Use secrets for cryptographically secure sampling
+        data = secrets.SystemRandom().sample(filtered_questions, min(total_records, len(filtered_questions)))
 
     with tqdm(total=len(data)) as pbar:
         with ThreadPoolExecutor(max_workers=workers) as executor:
