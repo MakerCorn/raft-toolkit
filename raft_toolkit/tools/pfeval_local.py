@@ -15,7 +15,12 @@ from azure.ai.evaluation import (
     evaluate,
 )
 from dotenv import load_dotenv
-from logconf import log_setup
+
+try:
+    from logconf import log_setup
+except ImportError:
+    # Fallback to core toolkit imports
+    from raft_toolkit.core.logging import log_setup
 from openai import RateLimitError
 from tenacity import retry, retry_if_exception_type, wait_exponential
 from tqdm import tqdm
@@ -155,7 +160,7 @@ def evaluate_local(model_config, project_scope, project_scope_report, data_path,
     return results
 
 
-if __name__ == "__main__":
+def main():
     import time
 
     import jsonlines
@@ -233,3 +238,7 @@ if __name__ == "__main__":
     if args.mode == "local":
         with jsonlines.open(args.output, "w") as writer:
             writer.write_all(eval_result)
+
+
+if __name__ == "__main__":
+    main()

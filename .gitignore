@@ -200,3 +200,5 @@ cython_debug/
 .claude/
 CLAUDE.MD
 claude.md
+
+.amazonq/

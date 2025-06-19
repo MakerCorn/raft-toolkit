@@ -5,9 +5,16 @@ import random
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from client_utils import ChatCompleter, build_openai_client
 from dotenv import load_dotenv
-from logconf import log_setup
+
+try:
+    from client_utils import ChatCompleter, build_openai_client
+    from logconf import log_setup
+except ImportError:
+    # Fallback to core toolkit imports
+    from raft_toolkit.core.clients import build_openai_client
+    from raft_toolkit.core.clients.stats import ChatCompleter
+    from raft_toolkit.core.logging import log_setup
 from openai import RateLimitError
 from tenacity import retry, retry_if_exception_type, wait_exponential
 from tqdm import tqdm
@@ -165,7 +172,7 @@ def answer_local(chat_completer, model, data_path, workers=1, system_prompt="gpt
     return results
 
 
-if __name__ == "__main__":
+def main():
     import time
 
     import jsonlines
@@ -200,3 +207,7 @@ if __name__ == "__main__":
     # Save evaluation results to a JSONL file
     with jsonlines.open(args.output, "w") as writer:
         writer.write_all(answer_result)
+
+
+if __name__ == "__main__":
+    main()

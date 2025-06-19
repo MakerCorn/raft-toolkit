@@ -14,9 +14,16 @@ from azure.ai.evaluation import (
     SimilarityEvaluator,
     evaluate,
 )
-from client_utils import ChatCompleter, build_openai_client
 from dotenv import load_dotenv
-from logconf import log_setup
+
+try:
+    from client_utils import ChatCompleter, build_openai_client
+    from logconf import log_setup
+except ImportError:
+    # Fallback to core toolkit imports
+    from raft_toolkit.core.clients import build_openai_client
+    from raft_toolkit.core.clients.stats import ChatCompleter
+    from raft_toolkit.core.logging import log_setup
 from openai import RateLimitError
 from tenacity import retry, retry_if_exception_type, wait_exponential
 from tqdm import tqdm
@@ -249,7 +256,7 @@ def evaluate_local(chat_completer, model_config, project_scope, project_scope_re
     return results
 
 
-if __name__ == "__main__":
+def main():
     import time
 
     import jsonlines
@@ -272,7 +279,6 @@ if __name__ == "__main__":
         args.templates + args.system_prompt_key + "_template.txt"
     )
 
-    target_model = args.model
     client = build_openai_client("EVAL", azure_deployment=args.deployment)
 
     chat_completer = ChatCompleter(client)
@@ -348,3 +354,7 @@ if __name__ == "__main__":
     if args.mode == "local":
         with jsonlines.open(args.output, "w") as writer:
             writer.write_all(eval_result)
+
+
+if __name__ == "__main__":
+    main()

@@ -52,8 +52,8 @@ class TestRaftEngineIntegration:
         """Create RAFT engine instance."""
         return RaftEngine(config)
 
-    @patch("core.services.llm_service.build_openai_client")
-    @patch("core.clients.openai_client.build_langchain_embeddings")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.clients.openai_client.build_langchain_embeddings")
     def test_end_to_end_processing(self, mock_embed_client, mock_llm_client, raft_engine, test_file):
         """Test end-to-end dataset generation."""
         # Mock LLM client
@@ -91,8 +91,8 @@ class TestRaftEngineIntegration:
                 assert hasattr(raft_engine, "document_service")
                 assert hasattr(raft_engine, "llm_service")
 
-    @patch("core.services.llm_service.build_openai_client")
-    @patch("core.clients.openai_client.build_langchain_embeddings")
+    @patch("raft_toolkit.core.services.llm_service.build_openai_client")
+    @patch("raft_toolkit.core.clients.openai_client.build_langchain_embeddings")
     def test_processing_with_failures(self, mock_embed_client, mock_llm_client, raft_engine, test_file):
         """Test processing with simulated failures."""
         # Mock clients that fail
@@ -249,7 +249,8 @@ class TestRaftEngineIntegration:
                 qa_data_points=[
                     QADataPoint(
                         id="qa1",
-                        type="pdf",
+                        type="cot",
+                        doctype="pdf",
                         question="Q1",
                         context="Context 1",
                         oracle_context="Oracle 1",
@@ -266,7 +267,8 @@ class TestRaftEngineIntegration:
                 qa_data_points=[
                     QADataPoint(
                         id="qa2",
-                        type="pdf",
+                        type="cot",
+                        doctype="pdf",
                         question="Q2",
                         context="Context 2",
                         oracle_context="Oracle 2",

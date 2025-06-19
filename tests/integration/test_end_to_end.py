@@ -102,7 +102,7 @@ class TestEndToEnd:
             engine.validate_inputs(pdf_file)
 
             # Test dataset generation
-            stats = engine.generate_dataset(pdf_file, str(output_dir / "dataset.jsonl"))
+            stats = engine.generate_dataset(pdf_file, config.output)
 
             assert "total_qa_points" in stats
             assert "successful_chunks" in stats
@@ -146,7 +146,7 @@ class TestEndToEnd:
             mock_completer.return_value = mock_completer_instance
 
             engine = RaftEngine(config)
-            stats = engine.generate_dataset(json_file, str(output_dir / "dataset.jsonl"))
+            stats = engine.generate_dataset(json_file, config.output)
 
             assert stats["total_qa_points"] >= 0
 
@@ -186,7 +186,7 @@ class TestEndToEnd:
             mock_completer.return_value = mock_completer_instance
 
             engine = RaftEngine(config)
-            stats = engine.generate_dataset(api_file, str(output_dir / "dataset.jsonl"))
+            stats = engine.generate_dataset(api_file, config.output)
 
             assert stats["total_qa_points"] >= 0
 

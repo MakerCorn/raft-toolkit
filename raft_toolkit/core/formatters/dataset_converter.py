@@ -298,10 +298,19 @@ def append_extension(path: str, extension: str) -> str:
     Returns:
         str: The file path with the appended extension
     """
+    from pathlib import Path
+
+    path_obj = Path(path)
+
+    # If path is a directory, create a default filename
+    if path_obj.is_dir():
+        path_obj = path_obj / f"dataset.{extension}"
+        return str(path_obj)
+
     suffix = "." + extension
-    if not path.endswith(suffix):
-        path = path + suffix
-    return path
+    if not str(path_obj).endswith(suffix):
+        path_obj = path_obj.with_suffix(suffix)
+    return str(path_obj)
 
 
 class JsonlDatasetExporter(DatasetExporter):

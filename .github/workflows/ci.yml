@@ -74,14 +74,14 @@ jobs:
 
     - name: Run type checking
       run: |
-        mypy core/ cli/ web/ --ignore-missing-imports || echo "MyPy not available, skipping type check"
+        mypy raft_toolkit/ --ignore-missing-imports || echo "MyPy not available, skipping type check"
 
     - name: Run security checks (Unix)
       if: runner.os != 'Windows'
       run: |
         pip install bandit safety
-        bandit -r core/ cli/ web/ -f json -o bandit-report.json || true
-        bandit -r core/ cli/ web/
+        bandit -r raft_toolkit/ -f json -o bandit-report.json || true
+        bandit -r raft_toolkit/
         safety check
 
     - name: Run security checks (Windows)
@@ -89,9 +89,9 @@ jobs:
       shell: pwsh
       run: |
         pip install bandit safety
-        bandit -r core/ cli/ web/ -f json -o bandit-report.json
+        bandit -r raft_toolkit/ -f json -o bandit-report.json
         if ($LASTEXITCODE -ne 0) { Write-Host "Bandit found issues but continuing..." }
-        bandit -r core/ cli/ web/
+        bandit -r raft_toolkit/
         safety check
 
 
@@ -99,25 +99,36 @@ jobs:
       env:
         RAFT_TESTING: "true"
       run: |
-        pytest tests/unit/ -v --cov=core --cov=cli --cov=web --cov-report=xml --cov-report=term-missing --tb=short --timeout=300
+        pytest tests/unit/ -v --cov=raft_toolkit --cov-report=xml --cov-report=term-missing --tb=short --timeout=300
 
     - name: Run integration tests
       env:
         RAFT_TESTING: "true"
       run: |
-        pytest tests/integration/ -v --cov-append --cov=core --cov=cli --cov=web --cov-report=xml --tb=short --timeout=300
+        pytest tests/integration/ -v --cov-append --cov=raft_toolkit --cov-report=xml --tb=short --timeout=300
 
     - name: Run API tests
       env:
         RAFT_TESTING: "true"
       run: |
-        pytest tests/api/ -v --cov-append --cov=core --cov=cli --cov=web --cov-report=xml --tb=short --timeout=300
+        pytest tests/api/ -v --cov-append --cov=raft_toolkit --cov-report=xml --tb=short --timeout=300
 
     - name: Run CLI tests
       env:
         RAFT_TESTING: "true"
       run: |
-        pytest tests/cli/ -v --cov-append --cov=core --cov=cli --cov=web --cov-report=xml --tb=short --timeout=300
+        pytest tests/cli/ -v --cov-append --cov=raft_toolkit --cov-report=xml --tb=short --timeout=300
+
+    - name: Run Tools tests
+      env:
+        RAFT_TESTING: "true"
+      run: |
+        # Test console script availability
+        raft-eval --help
+        raft-answer --help
+        # Test tools can be imported
+        python -c "from raft_toolkit.tools.eval import main; print('✅ eval tool works')"
+        python -c "from raft_toolkit.tools.answer import main; print('✅ answer tool works')"
 
     - name: Upload coverage reports
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'

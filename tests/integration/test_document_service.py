@@ -39,8 +39,8 @@ class TestDocumentServiceIntegration:
     def document_service(self, config, llm_service):
         """Create document service instance."""
         with (
-            patch("core.services.document_service.create_embedding_service") as mock_embedding_service,
-            patch("core.clients.openai_client.build_langchain_embeddings") as mock_build_embeddings,
+            patch("raft_toolkit.core.services.document_service.create_embedding_service") as mock_embedding_service,
+            patch("raft_toolkit.core.clients.openai_client.build_langchain_embeddings") as mock_build_embeddings,
         ):
             # Mock the embedding service to avoid real API calls
             mock_service = Mock()
@@ -236,7 +236,7 @@ class TestDocumentServiceIntegration:
             error_msg = str(e).lower()
             assert "not found" in error_msg or "does not exist" in error_msg or "no such file" in error_msg
 
-    @patch("core.clients.openai_client.build_langchain_embeddings")
+    @patch("raft_toolkit.core.clients.openai_client.build_langchain_embeddings")
     def test_parallel_processing(self, mock_embeddings_builder, document_service):
         """Test parallel processing capabilities."""
         # Mock langchain embeddings

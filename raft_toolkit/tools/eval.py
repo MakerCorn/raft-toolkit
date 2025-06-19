@@ -40,10 +40,9 @@ def get_args() -> argparse.Namespace:
     return args
 
 
-if __name__ == "__main__":
-
+def main():
     log_setup()
-    client = build_openai_client(env_prefix="EVAL", azure_deployment="gpt-4-0613-ft-88d65450f4204c35b7857e330659e247")
+    client = build_openai_client(env_prefix="EVAL")
 
     logger = logging.getLogger("eval")
 
@@ -177,3 +176,7 @@ if __name__ == "__main__":
 
     end_time = time.time()
     logger.info(f"total time used: {end_time - start_time}")
+
+
+if __name__ == "__main__":
+    main()

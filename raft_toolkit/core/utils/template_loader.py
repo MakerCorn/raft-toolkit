@@ -274,7 +274,7 @@ Answer:""",
             except Exception as e:
                 logger.warning(f"Failed to load custom embedding template from {custom_path}: {e}")
 
-        return self.load_template("embedding", "embedding")
+        return self.load_template("embedding", "embedding") or self.DEFAULT_TEMPLATES["embedding"]
 
     def load_qa_template(self, model_type: str, custom_path: Optional[str] = None) -> str:
         """
@@ -296,7 +296,7 @@ Answer:""",
             except Exception as e:
                 logger.warning(f"Failed to load custom Q&A template from {custom_path}: {e}")
 
-        return self.load_template(model_type, "qa")
+        return self.load_template(model_type, "qa") or self.DEFAULT_TEMPLATES["gpt_qa"]
 
     def load_answer_template(self, model_type: str, custom_path: Optional[str] = None) -> str:
         """
@@ -318,7 +318,7 @@ Answer:""",
             except Exception as e:
                 logger.warning(f"Failed to load custom answer template from {custom_path}: {e}")
 
-        return self.load_template(model_type, "prompt")
+        return self.load_template(model_type, "prompt") or self.DEFAULT_TEMPLATES["gpt"]
 
     def format_template(self, template: str, **kwargs) -> str:
         """

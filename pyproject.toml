@@ -151,6 +151,11 @@ all = ["raft-toolkit[ai,langchain,embeddings,documents,web,kubernetes,cloud,trac
 raft = "raft_toolkit.cli.main:main"
 raft-cli = "raft_toolkit.cli.main:main"
 raft-web = "raft_toolkit.web.app:run_server"
+raft-eval = "raft_toolkit.tools.eval:main"
+raft-answer = "raft_toolkit.tools.answer:main"
+raft-pfeval-chat = "raft_toolkit.tools.pfeval_chat:main"
+raft-pfeval-completion = "raft_toolkit.tools.pfeval_completion:main"
+raft-pfeval-local = "raft_toolkit.tools.pfeval_local:main"
 
 [project.urls]
 "Homepage" = "https://github.com/microsoft/raft-toolkit"

@@ -196,6 +196,7 @@ class QADataPoint:
             oracle_context=data["oracle_context"],
             cot_answer=data["cot_answer"],
             instruction=data["instruction"],
+            doctype=data.get("doctype", "unknown"),
         )
 
 

@@ -64,7 +64,7 @@ class DatasetService:
 
         if not all_qa_points:
             # Return empty dataset instead of raising error
-            empty_records = []
+            empty_records: List[Dict[str, Any]] = []
             if pa is None or Dataset is None:
                 # Mock empty dataset
                 class EmptyDataset:

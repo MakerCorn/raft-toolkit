@@ -6,9 +6,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 from azure.ai.evaluation import AzureOpenAIModelConfiguration, GroundednessEvaluator, SimilarityEvaluator, evaluate
-from client_utils import build_openai_client
 from dotenv import load_dotenv
-from logconf import log_setup
+
+try:
+    from client_utils import build_openai_client
+    from logconf import log_setup
+except ImportError:
+    # Fallback to core toolkit imports
+    from raft_toolkit.core.clients import build_openai_client
+    from raft_toolkit.core.logging import log_setup
 from openai import RateLimitError
 from tenacity import retry, retry_if_exception_type, wait_exponential
 from tqdm import tqdm
@@ -208,7 +214,7 @@ class PfevalCompletion:
         # Result parsing code here
 
 
-if __name__ == "__main__":
+def main():
     import time
 
     import jsonlines
@@ -284,3 +290,7 @@ if __name__ == "__main__":
     if args.mode == "local":
         with jsonlines.open(args.output, "w") as writer:
             writer.write_all(eval_result)
+
+
+if __name__ == "__main__":
+    main()

@@ -1001,6 +1001,51 @@ safety scan -r requirements.txt
 
 See [TESTING.md](docs/TESTING.md) for detailed testing documentation.
 
+## 🛠️ Command Line Tools
+
+The RAFT Toolkit includes powerful command-line tools for evaluating and analyzing datasets. These tools are automatically installed as console commands when you install the package.
+
+### Available Tools
+
+After installation, the following tools are available from anywhere in your terminal:
+
+- **`raft-eval`** - Dataset evaluation with parallel processing
+- **`raft-answer`** - Answer generation for evaluation datasets  
+- **`raft-pfeval-chat`** - PromptFlow chat format evaluation
+- **`raft-pfeval-completion`** - PromptFlow completion evaluation
+- **`raft-pfeval-local`** - Local evaluation without API calls
+
+### Quick Examples
+
+```bash
+# Evaluate model performance on a dataset
+raft-eval --question-file questions.jsonl --workers 8
+
+# Generate answers using different models
+raft-answer --input questions.jsonl --output answers.jsonl --model gpt-4
+
+# Advanced PromptFlow evaluation
+raft-pfeval-chat --input dataset.jsonl --output detailed_results.json
+```
+
+### Complete Workflow
+
+```bash
+# 1. Generate dataset with main RAFT toolkit
+raft --datapath document.pdf --output evaluation_data
+
+# 2. Generate answers using the tools
+raft-answer --input evaluation_data/questions.jsonl --output generated_answers.jsonl --workers 8
+
+# 3. Evaluate performance
+raft-eval --question-file evaluation_data/questions.jsonl --answer-file generated_answers.jsonl
+
+# 4. Advanced PromptFlow evaluation
+raft-pfeval-chat --input generated_answers.jsonl --output detailed_evaluation.json
+```
+
+> **📚 Complete Tools Documentation:** For detailed usage instructions, configuration options, and advanced workflows, see [docs/TOOLS.md](docs/TOOLS.md).
+
 ## 🛠️ Fine-tuning & Evaluation
 
 ### Model Fine-tuning
@@ -1012,39 +1057,24 @@ See [TESTING.md](docs/TESTING.md) for detailed testing documentation.
   - Azure AI Studio
   - Local training with LoRA/QLoRA
 
-### Evaluation Tools
+### Legacy Tool Usage
 
-The toolkit provides multiple evaluation approaches:
+The original Python scripts are still available in the `tools/` directory:
 
-**1. Basic Evaluation:**
 ```bash
-python tools/eval.py --question-file YOUR_EVAL_FILE.jsonl --answer-file YOUR_ANSWER_FILE
-```
+# Navigate to tools directory
+cd tools/
 
-**2. PromptFlow Multi-dimensional Evaluation:**
-```bash
-# Chat format evaluation
-python tools/pfeval_chat.py --input dataset.jsonl --output results.json
+# Basic evaluation
+python eval.py --question-file YOUR_EVAL_FILE.jsonl --answer-file YOUR_ANSWER_FILE
 
-# Completion format evaluation  
-python tools/pfeval_completion.py --input dataset.jsonl --output results.json
+# PromptFlow evaluations
+python pfeval_chat.py --input dataset.jsonl --output results.json
+python pfeval_completion.py --input dataset.jsonl --output results.json
+python pfeval_local.py --input dataset.jsonl --output results.json --mode local
 
-# Local evaluation (no API calls)
-python tools/pfeval_local.py --input dataset.jsonl --output results.json --mode local
-```
-
-**3. Web Interface Evaluation:**
-- Use the Analysis Tools tab in the web interface
-- Upload datasets and configure evaluation parameters
-- Download comprehensive evaluation reports
-
-**4. Model Comparison:**
-```bash
-# Generate answers from different models
-python tools/answer.py --input questions.jsonl --output gpt4_answers.jsonl --model gpt-4
-python tools/answer.py --input questions.jsonl --output gpt35_answers.jsonl --model gpt-3.5-turbo
-
-# Compare results using web interface Model Comparison tool
+# Answer generation
+python answer.py --input questions.jsonl --output answers.jsonl --model gpt-4
 ```
 
 **Evaluation Metrics:**
