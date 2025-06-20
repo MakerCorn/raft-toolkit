@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # Enable Dependabot for Python dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -18,19 +17,8 @@ updates:
     commit-message:
       prefix: "deps"
       include: "scope"
-    # Group patch updates to reduce PR noise
-    groups:
-      minor-patch-updates:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
-    # Security updates get separate PRs
-    security-updates:
-      enabled: true
-    
-  # Enable Dependabot for GitHub Actions
+    # Remove deprecated security-updates field
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -48,8 +36,7 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
-    
-  # Enable Dependabot for Docker
+
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
@@ -67,3 +54,24 @@ updates:
     commit-message:
       prefix: "docker"
       include: "scope"
+
+# Use top-level groups for grouping PRs across update types
+groups:
+  pip-minor-patch-updates:
+    patterns:
+      - "*"
+    update-types:
+      - "minor"
+      - "patch"
+  github-actions-minor-patch-updates:
+    patterns:
+      - "*"
+    update-types:
+      - "minor"
+      - "patch"
+  docker-minor-patch-updates:
+    patterns:
+      - "*"
+    update-types:
+      - "minor"
+      - "patch"
