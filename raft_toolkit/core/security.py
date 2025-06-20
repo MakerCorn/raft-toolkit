@@ -73,7 +73,9 @@ class SecurityConfig:
 
             # Special handling for Windows temp directories
             # Windows temp paths often look like C:\Users\...\AppData\Local\Temp\
-            if os.name == "nt" or "\\" in path_str or "\\" in file_path:  # Windows paths or Windows-style paths in tests
+            if (
+                os.name == "nt" or "\\" in path_str or "\\" in file_path
+            ):  # Windows paths or Windows-style paths in tests
                 # Common Windows temp directory patterns
                 windows_temp_patterns = [
                     "\\AppData\\Local\\Temp\\",
