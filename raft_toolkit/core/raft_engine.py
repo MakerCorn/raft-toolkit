@@ -188,6 +188,7 @@ class RaftEngine:
         logger.info("Input validation completed successfully")
 
     def get_processing_preview(self, data_path: Optional[Path] = None) -> Dict[str, Any]:
+        safe_root = Path("/safe/root/directory")
         """
         Get a preview of what would be processed without actually processing.
 
@@ -205,8 +206,9 @@ class RaftEngine:
                 raise ValueError("No data path specified")
             data_path = Path(config_datapath) if isinstance(config_datapath, str) else config_datapath
 
-        if not data_path.exists():
-            raise FileNotFoundError(f"Input data path does not exist: {data_path}")
+        normalized_path = Path(os.path.normpath(data_path))
+        if not normalized_path.exists() or not str(normalized_path).startswith(str(safe_root)):
+            raise FileNotFoundError(f"Invalid or unsafe input data path: {normalized_path}")
 
         preview = {
             "input_path": str(data_path),

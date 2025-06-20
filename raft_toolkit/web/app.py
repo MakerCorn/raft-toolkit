@@ -286,12 +286,14 @@ async def get_preview(
     request: PreviewRequest,
     file_path: str,
     config: RaftConfig = Depends(get_raft_config),
+    safe_root: Path = Path("/safe/root/directory"),
 ):
     """Get a preview of what would be processed."""
     try:
         # Validate file exists
-        if not Path(file_path).exists():
-            raise HTTPException(status_code=400, detail="File not found")
+        normalized_path = Path(os.path.normpath(file_path))
+        if not normalized_path.exists() or not str(normalized_path).startswith(str(safe_root)):
+            raise HTTPException(status_code=400, detail="Invalid or unsafe file path")
         # Override config with request parameters
         config.doctype = request.doctype  # String will be used directly
         config.chunk_size = request.chunk_size
