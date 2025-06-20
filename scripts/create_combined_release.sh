@@ -50,14 +50,17 @@ OPTIONS:
     -t, --type TYPE     Release type: patch|minor|major (optional, auto-detected)
     -n, --notes TEXT    Custom release notes (optional, uses changelog)
     -s, --skip-tests    Skip test execution (emergency releases only)
+    --draft             Create as draft release (not published to PyPI)
+    --prerelease        Create as pre-release (not published to PyPI)
     -d, --dry-run       Show what would be done without executing
     -h, --help          Show this help message
 
 EXAMPLES:
     $0 0.2.3                    # Create patch release 0.2.3
     $0 0.3.0 --type minor       # Create minor release 0.3.0
-    $0 1.0.0-beta.1 --skip-tests # Create beta release, skip tests
-    $0 0.2.4 --dry-run          # Preview release 0.2.4 without executing
+    $0 1.0.0-beta.1 --prerelease # Create pre-release 1.0.0-beta.1
+    $0 0.2.4 --draft            # Create draft release 0.2.4
+    $0 0.2.5 --dry-run          # Preview release 0.2.5 without executing
 
 WORKFLOW:
     1. Validates version format and checks for conflicts
@@ -184,6 +187,8 @@ check_prerequisites() {
 preview_changes() {
     local version="$1"
     local release_type="$2"
+    local draft="${3:-false}"
+    local prerelease="${4:-false}"
     local current_version
     current_version=$(get_current_version)
     
@@ -207,7 +212,7 @@ ${BLUE}Docker Images:${NC}
   • ghcr.io/${GITHUB_REPOSITORY:-owner/repo}:web-latest
 
 ${BLUE}PyPI Package:${NC}
-  • raft-toolkit==${version}
+  • raft-toolkit==${version}$([ "$draft" = "true" ] && echo " (not published - draft)" || [ "$prerelease" = "true" ] && echo " (not published - pre-release)" || echo "")
 
 ${BLUE}Files to be updated:${NC}
   • pyproject.toml (version bump)
@@ -218,8 +223,8 @@ ${BLUE}Workflow steps:${NC}
   2. Build CLI Docker image (linux/amd64, linux/arm64)
   3. Build Web Docker image (linux/amd64, linux/arm64)  
   4. Update version in code and commit
-  5. Publish to PyPI
-  6. Create GitHub release with all tags
+  5. $([ "$draft" = "true" ] || [ "$prerelease" = "true" ] && echo "Skip PyPI publishing (draft/pre-release)" || echo "Publish to PyPI")
+  6. Create GitHub release with all tags$([ "$draft" = "true" ] && echo " (draft)" || [ "$prerelease" = "true" ] && echo " (pre-release)" || echo "")
   7. Post-release verification
 
 EOF
@@ -230,6 +235,8 @@ trigger_release() {
     local release_type="$2"
     local skip_tests="${3:-false}"
     local release_notes="${4:-}"
+    local draft="${5:-false}"
+    local prerelease="${6:-false}"
     
     log "Triggering combined release workflow..."
     
@@ -239,6 +246,8 @@ trigger_release() {
         --field "version=$version"
         --field "release_type=$release_type"
         --field "skip_tests=$skip_tests"
+        --field "draft=$draft"
+        --field "prerelease=$prerelease"
     )
     
     if [ -n "$release_notes" ]; then
@@ -276,6 +285,8 @@ main() {
     local skip_tests="false"
     local release_notes=""
     local dry_run="false"
+    local draft="false"
+    local prerelease="false"
     
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -290,6 +301,14 @@ main() {
                 ;;
             -s|--skip-tests)
                 skip_tests="true"
+                shift
+                ;;
+            --draft)
+                draft="true"
+                shift
+                ;;
+            --prerelease)
+                prerelease="true"
                 shift
                 ;;
             -d|--dry-run)
@@ -361,7 +380,7 @@ main() {
     fi
     
     # Show preview
-    preview_changes "$version" "$release_type"
+    preview_changes "$version" "$release_type" "$draft" "$prerelease"
     
     # Confirm or execute
     if [ "$dry_run" = "true" ]; then
@@ -378,7 +397,7 @@ main() {
     fi
     
     # Execute release
-    if trigger_release "$version" "$release_type" "$skip_tests" "$release_notes"; then
+    if trigger_release "$version" "$release_type" "$skip_tests" "$release_notes" "$draft" "$prerelease"; then
         success "Combined release initiated successfully!"
         
         cat << EOF
