@@ -43,8 +43,8 @@ class SecurityConfig:
                     return False
 
             # Must be within allowed directories
-            import tempfile
             import os
+            import tempfile
 
             temp_dir = Path(tempfile.gettempdir()).resolve()
             current_dir = Path.cwd().resolve()
