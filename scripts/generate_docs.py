@@ -11,14 +11,14 @@ def get_docs_structure():
     """Get the current documentation structure."""
     docs_dir = Path("docs")
     root_dir = Path(".")
-    
+
     docs = []
-    
+
     # Get docs from docs/ directory
     if docs_dir.exists():
         for doc_file in sorted(docs_dir.glob("*.md")):
             docs.append(f"docs/{doc_file.name}")
-    
+
     # Get specific documentation files from root directory
     root_docs = ["COMBINED_RELEASES.md"]
     for doc_name in root_docs:
@@ -42,7 +42,7 @@ def generate_docs_section():
         "Architecture & Design": ["docs/ARCHITECTURE.md", "docs/PROJECT_STRUCTURE.md", "docs/CONFIGURATION.md"],
         "Usage & Reference": [
             "docs/CLI-Reference.md",
-            "docs/CLI-Quick-Reference.md", 
+            "docs/CLI-Quick-Reference.md",
             "docs/INPUT_SOURCES.md",
             "docs/TOOLS.md",
             "docs/WEB_INTERFACE.md",
@@ -53,7 +53,12 @@ def generate_docs_section():
             "docs/TEST_DIRECTORIES.md",
             "docs/DEPENDENCY_TROUBLESHOOTING.md",
         ],
-        "Deployment & Operations": ["docs/DEPLOYMENT.md", "docs/KUBERNETES.md", "docs/BUILD_OPTIMIZATION.md", "docs/CI_OPTIMIZATION.md"],
+        "Deployment & Operations": [
+            "docs/DEPLOYMENT.md",
+            "docs/KUBERNETES.md",
+            "docs/BUILD_OPTIMIZATION.md",
+            "docs/CI_OPTIMIZATION.md",
+        ],
         "Releases & Changes": ["docs/RELEASES.md", "COMBINED_RELEASES.md", "docs/QUALITY_TRANSITION.md"],
         "Technical Guides": ["docs/NOMIC_EMBEDDINGS.md"],
         "Troubleshooting & Fixes": [
