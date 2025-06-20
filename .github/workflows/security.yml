@@ -68,7 +68,15 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Run TruffleHog secret scanner
+    - name: Run TruffleHog secret scanner (full scan)
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        extra_args: --debug --only-verified
+
+    - name: Run TruffleHog secret scanner (diff scan)
+      if: github.event_name == 'pull_request' || github.event_name == 'push'
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
