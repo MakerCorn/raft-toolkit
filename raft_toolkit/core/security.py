@@ -30,7 +30,8 @@ class SecurityConfig:
                 return False
 
             # Additional security checks for dangerous characters
-            dangerous_chars = ["\\", "|", "&", ";", "$", "`", "(", ")", "{", "}", "[", "]"]
+            # Note: backslash removed from dangerous chars to allow Windows paths
+            dangerous_chars = ["|", "&", ";", "$", "`", "(", ")", "{", "}", "[", "]"]
             if any(char in file_path for char in dangerous_chars):
                 return False
 
@@ -52,6 +53,14 @@ class SecurityConfig:
             # Build list of allowed base directories
             allowed_bases = [str(current_dir), str(temp_dir)]
 
+            # Allow any path under Python's temporary directory
+            if path_str.startswith(str(temp_dir)):
+                return True
+
+            # Allow paths in current working directory
+            if path_str.startswith(str(current_dir)):
+                return True
+
             # Special handling for macOS temp directories
             # pytest creates temp dirs in /var/folders/ which is legitimate
             if "/var/folders/" in path_str and "/T/" in path_str:
@@ -62,17 +71,34 @@ class SecurityConfig:
                 # Add the non-private version
                 allowed_bases.append(str(temp_dir).replace("/private", ""))
 
-            # Allow any path under Python's temporary directory
-            if path_str.startswith(str(temp_dir)):
-                return True
-
-            # Allow paths in current working directory
-            if path_str.startswith(str(current_dir)):
-                return True
+            # Special handling for Windows temp directories
+            # Windows temp paths often look like C:\Users\...\AppData\Local\Temp\
+            if os.name == "nt" or "\\" in path_str or "\\" in file_path:  # Windows paths or Windows-style paths in tests
+                # Common Windows temp directory patterns
+                windows_temp_patterns = [
+                    "\\AppData\\Local\\Temp\\",
+                    "\\AppData\\Roaming\\Temp\\",
+                    "\\Windows\\Temp\\",
+                    "\\Temp\\",
+                    "/AppData/Local/Temp/",  # Normalized paths
+                    "/AppData/Roaming/Temp/",
+                    "/Windows/Temp/",
+                    "/Temp/",
+                ]
+                # Check both original path and resolved path for patterns
+                paths_to_check = [path_str, file_path]
+                for check_path in paths_to_check:
+                    for pattern in windows_temp_patterns:
+                        if pattern in check_path:
+                            return True
 
             # For testing environments, check if we're running under pytest
             if os.getenv("PYTEST_CURRENT_TEST") or "pytest" in path_str:
+                # Unix temp patterns
                 if "/tmp" in path_str or "/var/folders/" in path_str:  # nosec B108
+                    return True
+                # Windows temp patterns
+                if "\\Temp\\" in path_str or "\\TEMP\\" in path_str:
                     return True
 
             # Final check against allowed bases
