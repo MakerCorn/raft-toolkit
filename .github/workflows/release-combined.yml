@@ -293,10 +293,7 @@ jobs:
           
           if [ -f "CHANGELOG.md" ]; then
             # Replace [Unreleased] with version and date, add new [Unreleased] section
-            sed -i "/## \[Unreleased\]/c\\
-## [Unreleased]\\
-\\
-## [$VERSION] - $DATE" CHANGELOG.md
+            sed -i "s/## \[Unreleased\]/## [Unreleased]\n\n## [$VERSION] - $DATE/" CHANGELOG.md
             
             echo "✅ Updated CHANGELOG.md with version $VERSION"
           else
@@ -308,11 +305,14 @@ jobs:
           VERSION="${{ needs.validate-and-prepare.outputs.version }}"
           
           git add pyproject.toml CHANGELOG.md
-          git commit -m "chore: bump version to $VERSION for combined release
-
-🚀 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+          git commit -m "$(cat <<EOF
+          chore: bump version to $VERSION for combined release
+          
+          🚀 Generated with [Claude Code](https://claude.ai/code)
+          
+          Co-Authored-By: Claude <noreply@anthropic.com>
+          EOF
+          )"
           
           git push origin main
 
