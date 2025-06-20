@@ -214,6 +214,7 @@ jobs:
       packages: write
     outputs:
       repo-name: ${{ steps.repo.outputs.name }}
+      image-tags: ${{ steps.meta.outputs.tags }}
 
     steps:
     - name: Checkout code
@@ -364,11 +365,19 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: build-docker
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Login to GitHub Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Download Python dependencies for scanning
       run: |
@@ -395,6 +404,7 @@ jobs:
     - name: Run container scan (CLI)
       if: needs.build-docker.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: aquasecurity/trivy-action@master
+      continue-on-error: true
       with:
         image-ref: ghcr.io/${{ needs.build-docker.outputs.repo-name }}:latest-cli
         format: 'sarif'
@@ -405,6 +415,7 @@ jobs:
     - name: Run container scan (Web)
       if: needs.build-docker.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: aquasecurity/trivy-action@master
+      continue-on-error: true
       with:
         image-ref: ghcr.io/${{ needs.build-docker.outputs.repo-name }}:latest-web
         format: 'sarif'
@@ -428,14 +439,14 @@ jobs:
 
     - name: Upload CLI container scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: needs.build-docker.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: needs.build-docker.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('trivy-cli-results.sarif') != ''
       with:
         sarif_file: 'trivy-cli-results.sarif'
         category: container-cli
 
     - name: Upload Web container scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: needs.build-docker.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: needs.build-docker.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('trivy-web-results.sarif') != ''
       with:
         sarif_file: 'trivy-web-results.sarif'
         category: container-web

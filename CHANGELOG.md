@@ -61,6 +61,10 @@
   - Added timeouts and fallback handling for Windows Visual Studio Build Tools installation
   - Fixed cross-platform mypy command compatibility (Unix shell vs PowerShell syntax)
   - Fixed Unicode encoding errors in Windows CI workflow steps by replacing emoji characters with plain text for Windows cp1252 compatibility
+  - Fixed Trivy security scan failures by adding continue-on-error and improving conditions to only scan when Docker images are actually pushed
+  - Enhanced SARIF upload conditions to check for file existence before attempting upload
+  - Added GitHub Container Registry authentication to security scan job for accessing private images
+  - Restricted security scan job to only run on main branch where latest tags are guaranteed to exist
 
 ### Changed
 - **BREAKING**: Refactored package structure to use `raft_toolkit` as single top-level package
