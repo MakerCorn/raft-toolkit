@@ -275,6 +275,7 @@ async def upload_file(file: UploadFile = File(...)):
 class PreviewRequest(BaseModel):
     """Request model for processing preview."""
 
+    file_path: str = Field(..., description="Path to the file within the safe root directory")
     doctype: str
     chunking_strategy: str = "semantic"
     chunk_size: int = 512
@@ -284,16 +285,23 @@ class PreviewRequest(BaseModel):
 @app.post("/api/preview", response_model=PreviewResponse)
 async def get_preview(
     request: PreviewRequest,
-    file_path: str = Field(..., description="Path to the file within the safe root directory"),
     config: RaftConfig = Depends(get_raft_config),
-    safe_root: Path = Path("/safe/root/directory"),
 ):
     """Get a preview of what would be processed."""
     try:
-        # Validate file exists
-        normalized_path = Path(file_path).resolve()
-        if not normalized_path.exists() or not normalized_path.is_relative_to(safe_root):
+        # Validate file path using security config
+        if not SecurityConfig.validate_file_path(request.file_path):
             raise HTTPException(status_code=400, detail="Invalid or unsafe file path")
+
+        # Normalize and validate the path exists
+        normalized_path = Path(request.file_path).resolve()
+        if not normalized_path.exists():
+            raise HTTPException(status_code=400, detail="File not found")
+
+        # Additional security check - ensure path is still safe after resolution
+        if not SecurityConfig.validate_file_path(str(normalized_path)):
+            raise HTTPException(status_code=400, detail="Resolved path is unsafe")
+
         # Override config with request parameters
         config.doctype = request.doctype  # String will be used directly
         config.chunk_size = request.chunk_size
@@ -301,7 +309,8 @@ async def get_preview(
         config.chunking_strategy = request.chunking_strategy
 
         engine = RaftEngine(config)
-        preview = engine.get_processing_preview(Path(file_path))
+        # Use the validated normalized path
+        preview = engine.get_processing_preview(normalized_path)
 
         return PreviewResponse(
             files_to_process=preview["files_to_process"],

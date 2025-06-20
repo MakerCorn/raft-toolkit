@@ -267,9 +267,29 @@ Answer:""",
         """
         if custom_path:
             try:
-                with open(custom_path, "r", encoding="utf-8") as f:
+                # Security validation for custom path
+                from ..security import SecurityConfig
+
+                if not SecurityConfig.validate_file_path(custom_path):
+                    logger.error(f"Custom embedding template path is unsafe: {custom_path}")
+                    return self.load_template("embedding", "embedding") or self.DEFAULT_TEMPLATES["embedding"]
+
+                # Normalize and validate path exists
+                from pathlib import Path
+
+                normalized_path = Path(custom_path).resolve()
+                if not normalized_path.exists():
+                    logger.warning(f"Custom embedding template file not found: {custom_path}")
+                    return self.load_template("embedding", "embedding") or self.DEFAULT_TEMPLATES["embedding"]
+
+                # Re-validate after normalization
+                if not SecurityConfig.validate_file_path(str(normalized_path)):
+                    logger.error(f"Resolved embedding template path is unsafe: {normalized_path}")
+                    return self.load_template("embedding", "embedding") or self.DEFAULT_TEMPLATES["embedding"]
+
+                with open(normalized_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
-                    logger.info(f"Loaded custom embedding template from {custom_path}")
+                    logger.info(f"Loaded custom embedding template from {normalized_path}")
                     return content
             except Exception as e:
                 logger.warning(f"Failed to load custom embedding template from {custom_path}: {e}")
@@ -289,9 +309,29 @@ Answer:""",
         """
         if custom_path:
             try:
-                with open(custom_path, "r", encoding="utf-8") as f:
+                # Security validation for custom path
+                from ..security import SecurityConfig
+
+                if not SecurityConfig.validate_file_path(custom_path):
+                    logger.error(f"Custom Q&A template path is unsafe: {custom_path}")
+                    return self.load_template(model_type, "qa") or self.DEFAULT_TEMPLATES["gpt_qa"]
+
+                # Normalize and validate path exists
+                from pathlib import Path
+
+                normalized_path = Path(custom_path).resolve()
+                if not normalized_path.exists():
+                    logger.warning(f"Custom Q&A template file not found: {custom_path}")
+                    return self.load_template(model_type, "qa") or self.DEFAULT_TEMPLATES["gpt_qa"]
+
+                # Re-validate after normalization
+                if not SecurityConfig.validate_file_path(str(normalized_path)):
+                    logger.error(f"Resolved Q&A template path is unsafe: {normalized_path}")
+                    return self.load_template(model_type, "qa") or self.DEFAULT_TEMPLATES["gpt_qa"]
+
+                with open(normalized_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
-                    logger.info(f"Loaded custom Q&A template from {custom_path}")
+                    logger.info(f"Loaded custom Q&A template from {normalized_path}")
                     return content
             except Exception as e:
                 logger.warning(f"Failed to load custom Q&A template from {custom_path}: {e}")
@@ -311,9 +351,29 @@ Answer:""",
         """
         if custom_path:
             try:
-                with open(custom_path, "r", encoding="utf-8") as f:
+                # Security validation for custom path
+                from ..security import SecurityConfig
+
+                if not SecurityConfig.validate_file_path(custom_path):
+                    logger.error(f"Custom answer template path is unsafe: {custom_path}")
+                    return self.load_template(model_type, "prompt") or self.DEFAULT_TEMPLATES["gpt"]
+
+                # Normalize and validate path exists
+                from pathlib import Path
+
+                normalized_path = Path(custom_path).resolve()
+                if not normalized_path.exists():
+                    logger.warning(f"Custom answer template file not found: {custom_path}")
+                    return self.load_template(model_type, "prompt") or self.DEFAULT_TEMPLATES["gpt"]
+
+                # Re-validate after normalization
+                if not SecurityConfig.validate_file_path(str(normalized_path)):
+                    logger.error(f"Resolved answer template path is unsafe: {normalized_path}")
+                    return self.load_template(model_type, "prompt") or self.DEFAULT_TEMPLATES["gpt"]
+
+                with open(normalized_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
-                    logger.info(f"Loaded custom answer template from {custom_path}")
+                    logger.info(f"Loaded custom answer template from {normalized_path}")
                     return content
             except Exception as e:
                 logger.warning(f"Failed to load custom answer template from {custom_path}: {e}")

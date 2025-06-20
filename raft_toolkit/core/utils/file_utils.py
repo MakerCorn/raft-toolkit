@@ -1,5 +1,8 @@
 import os
 import random
+from pathlib import Path
+
+from ..security import SecurityConfig
 
 
 def split_jsonl_file(file_path, max_size=199_000_000):
@@ -12,8 +15,20 @@ def split_jsonl_file(file_path, max_size=199_000_000):
     Returns:
         list: List of created part file paths.
     """
-    if not os.path.isfile(file_path):
+    # Security validation for input file path
+    if not SecurityConfig.validate_file_path(file_path):
+        raise ValueError(f"File path is unsafe: {file_path}")
+
+    # Normalize and validate path
+    normalized_path = Path(file_path).resolve()
+    if not normalized_path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
+
+    # Re-validate after normalization
+    if not SecurityConfig.validate_file_path(str(normalized_path)):
+        raise ValueError(f"Resolved file path is unsafe: {normalized_path}")
+
+    file_path = str(normalized_path)
 
     filename = os.path.splitext(os.path.basename(file_path))[0]
     file_number = 1
@@ -49,8 +64,30 @@ def extract_random_jsonl_rows(file_path, num_rows, output_file):
         num_rows (int): Number of random rows to extract.
         output_file (str): Path to the output file to save the sampled rows.
     """
-    if not os.path.isfile(file_path):
+    # Security validation for input file path
+    if not SecurityConfig.validate_file_path(file_path):
+        raise ValueError(f"Input file path is unsafe: {file_path}")
+
+    # Security validation for output file path
+    if not SecurityConfig.validate_file_path(output_file):
+        raise ValueError(f"Output file path is unsafe: {output_file}")
+
+    # Normalize and validate input path
+    normalized_input_path = Path(file_path).resolve()
+    if not normalized_input_path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
+
+    # Re-validate after normalization
+    if not SecurityConfig.validate_file_path(str(normalized_input_path)):
+        raise ValueError(f"Resolved input file path is unsafe: {normalized_input_path}")
+
+    # Normalize output path and validate its directory exists
+    normalized_output_path = Path(output_file).resolve()
+    if not SecurityConfig.validate_file_path(str(normalized_output_path)):
+        raise ValueError(f"Resolved output file path is unsafe: {normalized_output_path}")
+
+    file_path = str(normalized_input_path)
+    output_file = str(normalized_output_path)
     with open(file_path, "r", encoding="utf-8") as infile:
         lines = infile.readlines()
     if num_rows > len(lines):

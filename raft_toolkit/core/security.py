@@ -22,22 +22,45 @@ class SecurityConfig:
     def validate_file_path(cls, file_path: str) -> bool:
         """Validate that file path is safe."""
         try:
-            path = Path(file_path).resolve()
+            if not file_path or not isinstance(file_path, str):
+                return False
 
-            # Check for forbidden paths
+            # Check for obvious path traversal attempts
+            if ".." in file_path or file_path.startswith("/"):
+                return False
+
+            # Additional security checks for dangerous characters
+            dangerous_chars = ["\\", "|", "&", ";", "$", "`", "(", ")", "{", "}", "[", "]"]
+            if any(char in file_path for char in dangerous_chars):
+                return False
+
+            path = Path(file_path).resolve()
+            path_str = str(path)
+
+            # Check for forbidden paths (case-insensitive on some systems)
             for forbidden in cls.FORBIDDEN_PATHS:
-                if str(path).startswith(forbidden):
+                if path_str.lower().startswith(forbidden.lower()):
+                    return False
+
+            # Additional forbidden patterns
+            forbidden_patterns = ["/var/", "/opt/", "/usr/bin/", "/bin/", "/sbin/"]
+            for pattern in forbidden_patterns:
+                if pattern in path_str.lower():
                     return False
 
             # Must be within allowed directories
             import tempfile
 
-            temp_dir = Path(tempfile.gettempdir()).resolve()  # Use system temp dir
+            temp_dir = Path(tempfile.gettempdir()).resolve()
             current_dir = Path.cwd().resolve()
 
-            return str(path).startswith(str(temp_dir)) or str(path).startswith(str(current_dir))
+            # Allow relative paths within current directory or temp directory
+            allowed_bases = [str(temp_dir), str(current_dir)]
 
-        except (OSError, ValueError):
+            # Check if path is within any allowed base directory
+            return any(path_str.startswith(base) for base in allowed_bases)
+
+        except (OSError, ValueError, RuntimeError):
             return False
 
     @classmethod

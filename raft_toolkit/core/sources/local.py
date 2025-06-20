@@ -15,7 +15,17 @@ class LocalInputSource(BaseInputSource):
 
     async def validate(self) -> None:
         """Validate local path exists and is accessible."""
-        path = Path(self.config.source_uri)
+        from ..security import SecurityConfig
+
+        # Security validation first
+        if not SecurityConfig.validate_file_path(self.config.source_uri):
+            raise SourceValidationError(f"Path is unsafe: {self.config.source_uri}")
+
+        path = Path(self.config.source_uri).resolve()
+
+        # Re-validate after normalization
+        if not SecurityConfig.validate_file_path(str(path)):
+            raise SourceValidationError(f"Resolved path is unsafe: {path}")
 
         if not path.exists():
             raise SourceValidationError(f"Path does not exist: {path}")
@@ -34,7 +44,7 @@ class LocalInputSource(BaseInputSource):
         if not self._validated:
             await self.validate()
 
-        path = Path(self.config.source_uri)
+        path = Path(self.config.source_uri).resolve()
         documents = []
 
         if path.is_file():
