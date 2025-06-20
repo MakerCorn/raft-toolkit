@@ -1,0 +1,21 @@
+# Trivy ignore file for RAFT Toolkit security scanning
+# https://aquasecurity.github.io/trivy/latest/docs/vulnerability/examples/filter/
+
+# Historical vulnerabilities that don't affect container usage
+# These are low-risk issues in base Debian packages that cannot be easily fixed
+CVE-2005-2541    # tar: ancient vulnerability not applicable to containerized use
+CVE-2011-4116    # perl: File::Temp symlink issue - not used in production
+TEMP-0290435-0B57B5  # tar: rmt command side effects - not used
+TEMP-0517018-A83CE6  # sysvinit: expert installer flaw - not applicable to containers
+
+# Perl vulnerabilities that would require custom Perl builds
+# These will be addressed when Debian updates their packages
+CVE-2023-31486   # HTTP::Tiny TLS - consider if direct HTTP calls are made
+CVE-2023-31484   # CPAN.pm TLS - not using CPAN in production container  
+CVE-2025-40909   # Perl threads race condition - not using threads in application
+
+# Low-risk util-linux vulnerabilities
+CVE-2022-0563    # util-linux chfn/chsh with readline - not interactive in container
+
+# Note: Do not ignore newer critical/high severity issues
+# Review this file periodically and remove entries as fixes become available

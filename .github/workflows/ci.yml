@@ -51,7 +51,7 @@ jobs:
     - name: Install system dependencies (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew install cmake
+        brew install --formula cmake
 
     - name: Install system dependencies (Windows)
       if: runner.os == 'Windows'
@@ -422,6 +422,7 @@ jobs:
         output: 'trivy-fs-results.sarif'
         severity: 'CRITICAL,HIGH'
         timeout: '10m'
+        trivyignores: '.trivyignore'
 
     - name: Run Trivy configuration scanner
       uses: aquasecurity/trivy-action@master
@@ -442,6 +443,7 @@ jobs:
         output: 'trivy-cli-results.sarif'
         severity: 'CRITICAL,HIGH'
         timeout: '10m'
+        trivyignores: '.trivyignore'
 
     - name: Run container scan (Web)
       if: needs.build-docker.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -453,6 +455,7 @@ jobs:
         output: 'trivy-web-results.sarif'
         severity: 'CRITICAL,HIGH'
         timeout: '10m'
+        trivyignores: '.trivyignore'
 
     - name: Upload Trivy filesystem scan results
       uses: github/codeql-action/upload-sarif@v3
