@@ -209,9 +209,17 @@ class RaftEngine:
         normalized_path = Path(os.path.normpath(data_path))
         if not normalized_path.exists() or not str(normalized_path).startswith(str(safe_root)):
             raise FileNotFoundError(f"Invalid or unsafe input data path: {normalized_path}")
+        # Normalize and validate the path
+        safe_root = Path("/safe/root/directory").resolve()
+        normalized_path = data_path.resolve()
+        if not str(normalized_path).startswith(str(safe_root)):
+            raise ValueError(f"Access to path {data_path} is not allowed")
+
+        if not normalized_path.exists():
+            raise FileNotFoundError(f"Input data path does not exist: {normalized_path}")
 
         preview = {
-            "input_path": str(data_path),
+            "input_path": str(normalized_path),
             "doctype": self.config.doctype,
             "files_to_process": [],
             "estimated_chunks": 0,
@@ -219,10 +227,10 @@ class RaftEngine:
         }
 
         # Get files that would be processed
-        if data_path.is_dir():
-            files = list(data_path.rglob(f"**/*.{self.config.doctype}"))
+        if normalized_path.is_dir():
+            files = list(normalized_path.rglob(f"**/*.{self.config.doctype}"))
         else:
-            files = [data_path]
+            files = [normalized_path]
 
         preview["files_to_process"] = [str(f) for f in files]
 
