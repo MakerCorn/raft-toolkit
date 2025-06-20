@@ -79,7 +79,7 @@ jobs:
           # Extract unreleased section from CHANGELOG.md
           if [ -f "CHANGELOG.md" ]; then
             # Get content between [Unreleased] and next version header
-            CHANGELOG_CONTENT=$(awk '/## \[Unreleased\]/{flag=1; next} /## \[/{if(flag) exit} flag' CHANGELOG.md | sed '/^$/d' | head -50)
+            CHANGELOG_CONTENT=$(awk "/## \\[Unreleased\\]/{flag=1; next} /## \\[/{if(flag) exit} flag" CHANGELOG.md | sed '/^$/d' | head -50)
             
             if [ -n "$CHANGELOG_CONTENT" ]; then
               echo "Found changelog content for release"
@@ -383,6 +383,9 @@ jobs:
         id: release_notes
         run: |
           VERSION="${{ needs.validate-and-prepare.outputs.version }}"
+          CLI_TAG="${{ needs.validate-and-prepare.outputs.cli_tag }}"
+          WEB_TAG="${{ needs.validate-and-prepare.outputs.web_tag }}"
+          GITHUB_REPOSITORY="${{ github.repository }}"
           
           # Use provided notes or changelog content
           if [ -n "${{ github.event.inputs.release_notes }}" ]; then
@@ -393,72 +396,72 @@ jobs:
             RELEASE_NOTES="Combined release of RAFT Toolkit CLI and Web components."
           fi
           
-          # Create comprehensive release notes
-          cat > release_notes.md << EOF
-# RAFT Toolkit v$VERSION - Combined Release 🚀
-
-This is a combined release that includes both CLI and Web components of RAFT Toolkit.
-
-## What's Included
-
-### 📱 CLI Component
-- **Tag**: \`${{ needs.validate-and-prepare.outputs.cli_tag }}\`
-- **Docker Image**: \`ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.cli_tag }}\`
-- **PyPI Package**: \`pip install raft-toolkit==$VERSION\`
-
-### 🌐 Web Component  
-- **Tag**: \`${{ needs.validate-and-prepare.outputs.web_tag }}\`
-- **Docker Image**: \`ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.web_tag }}\`
-- **PyPI Package**: \`pip install raft-toolkit[web]==$VERSION\`
-
-## Release Notes
-
-$RELEASE_NOTES
-
-## Installation Options
-
-### CLI Usage
-\`\`\`bash
-# Install from PyPI
-pip install raft-toolkit==$VERSION
-
-# Run with Docker
-docker run ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.cli_tag }} --help
-\`\`\`
-
-### Web Application  
-\`\`\`bash
-# Install with web dependencies
-pip install raft-toolkit[web]==$VERSION
-
-# Run web server
-python -m raft_toolkit.web.app
-
-# Run with Docker
-docker run -p 8000:8000 ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.web_tag }}
-\`\`\`
-
-## Docker Images
-
-| Component | Image | Size | Platforms |
-|-----------|-------|------|-----------|
-| CLI | \`ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.cli_tag }}\` | Lightweight | linux/amd64, linux/arm64 |
-| Web | \`ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.web_tag }}\` | Full-featured | linux/amd64, linux/arm64 |
-
-## Security
-
-All images are built with security best practices:
-- 🔒 Non-root user
-- 🛡️ Minimal attack surface  
-- 🔍 Regular security scanning
-- 📋 SBOM included
-
----
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-EOF
+          # Create comprehensive release notes using cat with proper escaping
+          {
+            echo "# RAFT Toolkit v${VERSION} - Combined Release 🚀"
+            echo ""
+            echo "This is a combined release that includes both CLI and Web components of RAFT Toolkit."
+            echo ""
+            echo "## What is Included"
+            echo ""
+            echo "### 📱 CLI Component"
+            echo "- **Tag**: \\\`${CLI_TAG}\\\`"
+            echo "- **Docker Image**: \\\`ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG}\\\`"
+            echo "- **PyPI Package**: \\\`pip install raft-toolkit==${VERSION}\\\`"
+            echo ""
+            echo "### 🌐 Web Component"
+            echo "- **Tag**: \\\`${WEB_TAG}\\\`"
+            echo "- **Docker Image**: \\\`ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}\\\`"
+            echo "- **PyPI Package**: \\\`pip install raft-toolkit[web]==${VERSION}\\\`"
+            echo ""
+            echo "## Release Notes"
+            echo ""
+            echo "${RELEASE_NOTES}"
+            echo ""
+            echo "## Installation Options"
+            echo ""
+            echo "### CLI Usage"
+            echo "\\\`\\\`\\\`bash"
+            echo "# Install from PyPI"
+            echo "pip install raft-toolkit==${VERSION}"
+            echo ""
+            echo "# Run with Docker"
+            echo "docker run ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG} --help"
+            echo "\\\`\\\`\\\`"
+            echo ""
+            echo "### Web Application"
+            echo "\\\`\\\`\\\`bash"
+            echo "# Install with web dependencies"
+            echo "pip install raft-toolkit[web]==${VERSION}"
+            echo ""
+            echo "# Run web server"
+            echo "python -m raft_toolkit.web.app"
+            echo ""
+            echo "# Run with Docker"
+            echo "docker run -p 8000:8000 ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}"
+            echo "\\\`\\\`\\\`"
+            echo ""
+            echo "## Docker Images"
+            echo ""
+            echo "| Component | Image | Size | Platforms |"
+            echo "|-----------|-------|------|-----------|"
+            echo "| CLI | \\\`ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG}\\\` | Lightweight | linux/amd64, linux/arm64 |"
+            echo "| Web | \\\`ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}\\\` | Full-featured | linux/amd64, linux/arm64 |"
+            echo ""
+            echo "## Security"
+            echo ""
+            echo "All images are built with security best practices:"
+            echo "- 🔒 Non-root user"
+            echo "- 🛡️ Minimal attack surface"
+            echo "- 🔍 Regular security scanning"
+            echo "- 📋 SBOM included"
+            echo ""
+            echo "---"
+            echo ""
+            echo "🤖 Generated with [Claude Code](https://claude.ai/code)"
+            echo ""
+            echo "Co-Authored-By: Claude <noreply@anthropic.com>"
+          } > release_notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
