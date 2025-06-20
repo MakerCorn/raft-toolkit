@@ -69,19 +69,19 @@ jobs:
         fetch-depth: 0
 
     - name: Run TruffleHog secret scanner (full scan)
-      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
         extra_args: --debug --only-verified
 
     - name: Run TruffleHog secret scanner (diff scan)
-      if: github.event_name == 'pull_request' || github.event_name == 'push'
+      if: github.event_name == 'pull_request'
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: main
-        head: HEAD
+        base: ${{ github.event.pull_request.base.sha }}
+        head: ${{ github.event.pull_request.head.sha }}
         extra_args: --debug --only-verified
 
   bandit-scan:
