@@ -65,6 +65,8 @@
   - Enhanced SARIF upload conditions to check for file existence before attempting upload
   - Added GitHub Container Registry authentication to security scan job for accessing private images
   - Restricted security scan job to only run on main branch where latest tags are guaranteed to exist
+  - Fixed Docker image tagging by using separate metadata actions for CLI and Web with proper suffix handling
+  - Added debug output for Docker metadata to help troubleshoot tagging issues
 
 ### Changed
 - **BREAKING**: Refactored package structure to use `raft_toolkit` as single top-level package

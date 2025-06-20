@@ -259,11 +259,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
+    - name: Extract metadata for CLI
+      id: meta-cli
       uses: docker/metadata-action@v5
       with:
         images: ghcr.io/${{ steps.repo.outputs.name }}
+        flavor: |
+          suffix=-cli
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -272,9 +274,35 @@ jobs:
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
         labels: |
-          org.opencontainers.image.title=RAFT Toolkit
-          org.opencontainers.image.description=Retrieval Augmented Fine-Tuning Toolkit
+          org.opencontainers.image.title=RAFT Toolkit CLI
+          org.opencontainers.image.description=Retrieval Augmented Fine-Tuning Toolkit CLI
           org.opencontainers.image.vendor=${{ github.repository_owner }}
+
+    - name: Extract metadata for Web
+      id: meta-web
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ steps.repo.outputs.name }}
+        flavor: |
+          suffix=-web
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+        labels: |
+          org.opencontainers.image.title=RAFT Toolkit Web
+          org.opencontainers.image.description=Retrieval Augmented Fine-Tuning Toolkit Web Interface
+          org.opencontainers.image.vendor=${{ github.repository_owner }}
+
+    - name: Debug metadata outputs
+      run: |
+        echo "CLI tags:"
+        echo "${{ steps.meta-cli.outputs.tags }}"
+        echo "Web tags:"
+        echo "${{ steps.meta-web.outputs.tags }}"
 
     - name: Build and push Docker image (CLI Linux)
       uses: docker/build-push-action@v5
@@ -284,8 +312,8 @@ jobs:
         target: cli
         platforms: ${{ github.ref == 'refs/heads/main' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
         push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        tags: ${{ steps.meta.outputs.tags }}-cli
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ steps.meta-cli.outputs.tags }}
+        labels: ${{ steps.meta-cli.outputs.labels }}
         cache-from: |
           type=gha
           ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && format('type=registry,ref=ghcr.io/{0}:buildcache-cli', steps.repo.outputs.name) || '' }}
@@ -294,8 +322,8 @@ jobs:
           ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && format('type=registry,ref=ghcr.io/{0}:buildcache-cli,mode=max', steps.repo.outputs.name) || '' }}
         build-args: |
           BUILDKIT_INLINE_CACHE=1
-          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          BUILDTIME=${{ fromJSON(steps.meta-cli.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta-cli.outputs.json).labels['org.opencontainers.image.version'] }}
 
     # Windows Docker builds disabled due to complexity - use Python packages instead
     # - name: Build and push Docker image (CLI Windows)
@@ -322,8 +350,8 @@ jobs:
         target: production
         platforms: ${{ github.ref == 'refs/heads/main' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
         push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        tags: ${{ steps.meta.outputs.tags }}-web
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ steps.meta-web.outputs.tags }}
+        labels: ${{ steps.meta-web.outputs.labels }}
         cache-from: |
           type=gha
           ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && format('type=registry,ref=ghcr.io/{0}:buildcache-web', steps.repo.outputs.name) || '' }}
@@ -332,8 +360,8 @@ jobs:
           ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && format('type=registry,ref=ghcr.io/{0}:buildcache-web,mode=max', steps.repo.outputs.name) || '' }}
         build-args: |
           BUILDKIT_INLINE_CACHE=1
-          BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
-          VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          BUILDTIME=${{ fromJSON(steps.meta-web.outputs.json).labels['org.opencontainers.image.created'] }}
+          VERSION=${{ fromJSON(steps.meta-web.outputs.json).labels['org.opencontainers.image.version'] }}
 
     # Windows Docker builds disabled due to complexity - use Python packages instead
     # - name: Build and push Docker image (Web Windows)
