@@ -291,8 +291,8 @@ async def get_preview(
     """Get a preview of what would be processed."""
     try:
         # Validate file exists
-        normalized_path = Path(os.path.normpath(file_path))
-        if not normalized_path.exists() or not str(normalized_path).startswith(str(safe_root)):
+        normalized_path = Path(file_path).resolve()
+        if not normalized_path.exists() or not normalized_path.is_relative_to(safe_root):
             raise HTTPException(status_code=400, detail="Invalid or unsafe file path")
         # Override config with request parameters
         config.doctype = request.doctype  # String will be used directly
