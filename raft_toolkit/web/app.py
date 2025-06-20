@@ -284,7 +284,7 @@ class PreviewRequest(BaseModel):
 @app.post("/api/preview", response_model=PreviewResponse)
 async def get_preview(
     request: PreviewRequest,
-    file_path: str,
+    file_path: str = Field(..., description="Path to the file within the safe root directory"),
     config: RaftConfig = Depends(get_raft_config),
 ):
     """Get a preview of what would be processed."""
