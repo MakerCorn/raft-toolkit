@@ -84,7 +84,8 @@ try:
 except ImportError:
     HAS_TQDM = False
 
-    def tqdm(iterable: Any, *args: Any, **kwargs: Any) -> Any:
+    # Create a fallback tqdm function if not available
+    def tqdm(iterable: Any, *args: Any, **kwargs: Any) -> Any:  # type: ignore[no-redef]
         return iterable
 
 

@@ -32,6 +32,15 @@ spec:
       - name: raft-cli
         image: ${CLI_IMAGE:-ghcr.io/microsoft/raft-toolkit:cli-latest}
         imagePullPolicy: Always
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         command: ["sleep"]
         args: ["infinity"]  # Keep container running for exec commands
         env:

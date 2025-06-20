@@ -8,7 +8,7 @@ ARG VERSION=0.2.0
 ARG VCS_REF
 
 # Stage 1: Base dependencies
-FROM python:${PYTHON_VERSION:-3.11}-slim-bookworm AS base
+FROM python:3.11-slim-bookworm AS base
 
 # Add metadata labels
 LABEL maintainer="RAFT Toolkit Team" \
@@ -30,7 +30,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
 # Install system dependencies with security updates
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     gcc \

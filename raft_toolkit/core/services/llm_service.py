@@ -12,8 +12,8 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol, Type
 try:
     from tqdm import tqdm
 except ImportError:
-
-    def tqdm(iterable: Iterator, *args: Any, **kwargs: Any) -> Iterator:
+    # Create a fallback tqdm function if not available
+    def tqdm(iterable: Iterator, *args: Any, **kwargs: Any) -> Iterator:  # type: ignore[no-redef]
         return iterable
 
 

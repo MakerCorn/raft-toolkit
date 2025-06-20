@@ -75,7 +75,7 @@ def evaluate_aistudio(model_config, project_scope, project_scope_report, data_pa
             "groundedness": GroundednessEvaluator(model_config=model_config, project_scope=project_scope),
         },
         evaluator_config={
-            "defaults": {
+            "defaults": {  # type: ignore[typeddict-unknown-key]
                 "query": "${data.question}",
                 "response": "${data.final_answer}",
                 "ground_truth": "${data.gold_final_answer}",

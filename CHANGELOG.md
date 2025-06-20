@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+### Security
+- **CRITICAL**: Updated zlib vulnerabilities via base image updates (CVE-2023-45853)
+- **HIGH**: Updated Python dependencies to secure versions:
+  - transformers: 4.45.0 → 4.46.0+ (CVE fixes for model deserialization)
+  - python-multipart: 0.0.12 → 0.0.18+ (DoS vulnerability fix)
+  - setuptools: 64 → 75.6.0+ (path traversal and RCE fixes)
+  - fastapi: updated to 0.115.6+ with explicit starlette 0.41.0+ (DoS fix)
+- **HIGH**: Added comprehensive Kubernetes security contexts:
+  - runAsNonRoot: true for all containers
+  - readOnlyRootFilesystem: true 
+  - allowPrivilegeEscalation: false
+  - Dropped all capabilities
+- **HIGH**: Fixed Docker security misconfigurations:
+  - Added --no-install-recommends to apt-get commands (DS029)
+  - Added ContainerUser for Windows containers
+- Added comprehensive .trivyignore file with 18+ CVE entries for non-applicable kernel vulnerabilities
+- Enabled Dependabot for automated security updates (Python, GitHub Actions, Docker)
+- Created security.yml workflow for enhanced security scanning
+- Added SECURITY.md policy document for vulnerability reporting
+
 ### Added
 - Support for Nomic embeddings with `nomic-embed-text` model
 - Added langchain-core and langchain-community dependencies

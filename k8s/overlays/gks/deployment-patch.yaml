@@ -26,6 +26,15 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: raft-toolkit-web
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         env:
         # GCP-specific environment variables
         - name: GOOGLE_CLOUD_PROJECT

@@ -24,6 +24,15 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: raft-toolkit-web
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         env:
         # Azure-specific environment variables
         - name: AZURE_CLIENT_ID

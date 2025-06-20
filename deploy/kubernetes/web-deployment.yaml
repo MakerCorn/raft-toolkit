@@ -39,6 +39,15 @@ spec:
       - name: raft-web
         image: ${WEB_IMAGE:-ghcr.io/microsoft/raft-toolkit:web-latest}
         imagePullPolicy: Always
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         ports:
         - containerPort: 8000
           name: http

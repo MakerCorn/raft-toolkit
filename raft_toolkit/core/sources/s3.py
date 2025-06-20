@@ -57,7 +57,7 @@ class S3InputSource(BaseInputSource):
 
         # Check pattern: lowercase letters, numbers, dots, hyphens
         if not re.match(r"^[a-z0-9.-]+$", bucket_name):
-            return False
+            return False  # type: ignore[unreachable]
 
         # Cannot start/end with dot or hyphen
         if bucket_name.startswith(".") or bucket_name.startswith("-"):
