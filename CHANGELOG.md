@@ -108,7 +108,7 @@
 - Reorganized import statements across modules for better code organization
 - Cleaned up unused imports and variables for improved code quality
 
-## [0.2.1] - 2025-06-20
+## [0.2.2] - 2025-06-20
 
 ### Added
 - Web interface for dataset generation and analysis
