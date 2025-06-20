@@ -72,7 +72,7 @@ class SecurityConfig:
 
             # For testing environments, check if we're running under pytest
             if os.getenv("PYTEST_CURRENT_TEST") or "pytest" in path_str:
-                if "/tmp" in path_str or "/var/folders/" in path_str:
+                if "/tmp" in path_str or "/var/folders/" in path_str:  # nosec B108
                     return True
 
             # Final check against allowed bases
