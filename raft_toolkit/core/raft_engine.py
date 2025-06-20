@@ -205,11 +205,17 @@ class RaftEngine:
                 raise ValueError("No data path specified")
             data_path = Path(config_datapath) if isinstance(config_datapath, str) else config_datapath
 
-        if not data_path.exists():
-            raise FileNotFoundError(f"Input data path does not exist: {data_path}")
+        # Normalize and validate the path
+        safe_root = Path("/safe/root/directory").resolve()
+        normalized_path = data_path.resolve()
+        if not str(normalized_path).startswith(str(safe_root)):
+            raise ValueError(f"Access to path {data_path} is not allowed")
+
+        if not normalized_path.exists():
+            raise FileNotFoundError(f"Input data path does not exist: {normalized_path}")
 
         preview = {
-            "input_path": str(data_path),
+            "input_path": str(normalized_path),
             "doctype": self.config.doctype,
             "files_to_process": [],
             "estimated_chunks": 0,
@@ -217,10 +223,10 @@ class RaftEngine:
         }
 
         # Get files that would be processed
-        if data_path.is_dir():
-            files = list(data_path.rglob(f"**/*.{self.config.doctype}"))
+        if normalized_path.is_dir():
+            files = list(normalized_path.rglob(f"**/*.{self.config.doctype}"))
         else:
-            files = [data_path]
+            files = [normalized_path]
 
         preview["files_to_process"] = [str(f) for f in files]
 
