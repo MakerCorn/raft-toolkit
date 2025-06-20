@@ -17,7 +17,7 @@ on:
   
   # Trigger after successful release workflows
   workflow_run:
-    workflows: ["Release CLI", "Release Web"]
+    workflows: ["Release CLI", "Release Web", "Combined Release (CLI + Web)"]
     types: [completed]
     branches: [main]
 
@@ -190,6 +190,7 @@ jobs:
         
         ### Releases & Changes
         - [Releases](Releases)
+        - [Combined Releases](Combined-Releases)
         - [Quality Transition](Quality-Transition)
         
         ### Technical Guides
@@ -611,6 +612,95 @@ jobs:
         | `RAFT_HOST` | Host to bind to | `0.0.0.0` |
         | `RAFT_PORT` | Port to bind to | `8000` |
         EOF
+        
+        # Generate release documentation pages
+        echo "📋 Generating release documentation pages..."
+        
+        # Generate Releases page from docs/RELEASES.md
+        if [ -f "docs/RELEASES.md" ]; then
+          echo "📝 Converting docs/RELEASES.md to Releases wiki page"
+          cp docs/RELEASES.md wiki/Releases.md
+        else
+          echo "⚠️  docs/RELEASES.md not found, creating basic Releases page"
+          cat > wiki/Releases.md << 'EOF'
+        # Release Process
+        
+        This page documents the release process for RAFT Toolkit.
+        
+        ## Quick Start
+        
+        Create a release using the automated workflow:
+        
+        ```bash
+        # Create combined CLI + Web release
+        ./scripts/create_combined_release.sh 0.2.3
+        
+        # Create individual releases
+        ./scripts/create_release.sh cli-v0.2.3
+        ./scripts/create_release.sh web-v0.2.3
+        ```
+        
+        ## Release Types
+        
+        - **Combined Release**: Coordinates both CLI and Web components
+        - **Individual Release**: Component-specific releases
+        - **Legacy Release**: Unified release process (deprecated)
+        
+        For detailed documentation, see the main repository documentation.
+        EOF
+        fi
+        
+        # Generate Combined Releases page from COMBINED_RELEASES.md
+        if [ -f "COMBINED_RELEASES.md" ]; then
+          echo "📝 Converting COMBINED_RELEASES.md to Combined-Releases wiki page"
+          cp COMBINED_RELEASES.md wiki/Combined-Releases.md
+        else
+          echo "⚠️  COMBINED_RELEASES.md not found, creating basic Combined-Releases page"
+          cat > wiki/Combined-Releases.md << 'EOF'
+        # Combined Release Process 🚀
+        
+        This page documents the combined release process for RAFT Toolkit.
+        
+        ## Quick Start
+        
+        Create a combined CLI + Web release with a single command:
+        
+        ```bash
+        ./scripts/create_combined_release.sh 0.2.3
+        ```
+        
+        ## What You Get
+        
+        Each combined release creates:
+        
+        - **🏷️ Three Tags**: `cli-v0.2.3`, `web-v0.2.3`, `v0.2.3`
+        - **🐳 Docker Images**: CLI and Web containers (multi-platform)
+        - **📦 PyPI Package**: `raft-toolkit==0.2.3` with optional dependencies
+        - **📝 GitHub Release**: Comprehensive release notes and installation guides
+        
+        ## Installation Options
+        
+        ### CLI Usage
+        ```bash
+        # Install from PyPI
+        pip install raft-toolkit==0.2.3
+        
+        # Run with Docker
+        docker run ghcr.io/${{ github.repository }}:cli-v0.2.3 --help
+        ```
+        
+        ### Web Application
+        ```bash
+        # Install with web dependencies
+        pip install raft-toolkit[web]==0.2.3
+        
+        # Run with Docker
+        docker run -p 8000:8000 ghcr.io/${{ github.repository }}:web-v0.2.3
+        ```
+        
+        For complete documentation, see the main repository.
+        EOF
+        fi
         
         # Generate additional pages if force update
         if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then

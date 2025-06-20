@@ -1,6 +1,19 @@
 # Changelog
 
+All notable changes to the RAFT Toolkit project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [Unreleased]
+
+### Added
+- **Combined Release Process**: New unified release workflow that coordinates both CLI and Web components
+  - Single command to release both components: `./scripts/create_combined_release.sh <version>`
+  - Creates three tags: `cli-v{version}`, `web-v{version}`, and `v{version}`
+  - Builds both CLI and Web Docker images in parallel
+  - Publishes unified PyPI package with optional web dependencies
+  - Comprehensive release documentation and troubleshooting guides
 
 ### Security
 - **CRITICAL**: Updated zlib vulnerabilities via base image updates (CVE-2023-45853)
@@ -31,6 +44,10 @@
 - Added convenience dependency groups for faster installations (minimal, standard, complete)
 
 ### Fixed
+- **Windows Path Security**: Fixed SecurityConfig validation to properly handle Windows temp directory paths
+  - Removed backslash from dangerous characters list to allow legitimate Windows paths
+  - Enhanced Windows temp directory pattern matching for cross-platform testing
+  - Fixed file utility tests failing on Windows with temp directory validation errors
 - Fixed embedding service to properly handle Nomic embeddings
 - Improved error handling in semantic chunking with fallback to fixed chunking
 - Fixed type hints in OpenAI client implementation

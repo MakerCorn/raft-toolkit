@@ -1106,3 +1106,62 @@ python run_web.py --host 0.0.0.0 --port 8000
 ```
 
 See the [Deployment Guide](docs/DEPLOYMENT.md) for comprehensive deployment instructions.
+
+
+## 📚 Documentation
+
+### Getting Started
+
+- [Installation Guide](docs/INSTALLATION_GUIDE.md)
+- [Requirements](docs/REQUIREMENTS.md)
+- [Python 311 Setup](docs/PYTHON_311_SETUP.md)
+
+### Architecture & Design
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Project Structure](docs/PROJECT_STRUCTURE.md)
+- [Configuration](docs/CONFIGURATION.md)
+
+### Usage & Reference
+
+- [Cli Reference](docs/CLI-Reference.md)
+- [Cli Quick Reference](docs/CLI-Quick-Reference.md)
+- [Input Sources](docs/INPUT_SOURCES.md)
+- [Tools](docs/TOOLS.md)
+- [Web Interface](docs/WEB_INTERFACE.md)
+
+### Development & Testing
+
+- [Testing](docs/TESTING.md)
+- [Test Coverage Improvements](docs/TEST_COVERAGE_IMPROVEMENTS.md)
+- [Test Directories](docs/TEST_DIRECTORIES.md)
+- [Dependency Troubleshooting](docs/DEPENDENCY_TROUBLESHOOTING.md)
+
+### Deployment & Operations
+
+- [Deployment](docs/DEPLOYMENT.md)
+- [Kubernetes](docs/KUBERNETES.md)
+- [Build Optimization](docs/BUILD_OPTIMIZATION.md)
+- [Ci Optimization](docs/CI_OPTIMIZATION.md)
+
+### Releases & Changes
+
+- [Releases](docs/RELEASES.md)
+- [Combined Releases](COMBINED_RELEASES.md)
+- [Quality Transition](docs/QUALITY_TRANSITION.md)
+
+### Technical Guides
+
+- [Nomic Embeddings](docs/NOMIC_EMBEDDINGS.md)
+
+### Troubleshooting & Fixes
+
+- [All Tests Fix](docs/ALL_TESTS_FIX.md)
+- [Api Tests Fix](docs/API_TESTS_FIX.md)
+- [Flake8 Fix](docs/FLAKE8_FIX.md)
+- [Test Fixes Summary](docs/TEST_FIXES_SUMMARY.md)
+- [Testing Fixes](docs/TESTING_FIXES.md)
+
+### Other Documentation
+
+- [Test Coverage Summary](docs/TEST_COVERAGE_SUMMARY.md)

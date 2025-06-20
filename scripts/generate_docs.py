@@ -10,12 +10,21 @@ from pathlib import Path
 def get_docs_structure():
     """Get the current documentation structure."""
     docs_dir = Path("docs")
-    if not docs_dir.exists():
-        return []
-
+    root_dir = Path(".")
+    
     docs = []
-    for doc_file in sorted(docs_dir.glob("*.md")):
-        docs.append(doc_file.name)
+    
+    # Get docs from docs/ directory
+    if docs_dir.exists():
+        for doc_file in sorted(docs_dir.glob("*.md")):
+            docs.append(f"docs/{doc_file.name}")
+    
+    # Get specific documentation files from root directory
+    root_docs = ["COMBINED_RELEASES.md"]
+    for doc_name in root_docs:
+        doc_path = root_dir / doc_name
+        if doc_path.exists():
+            docs.append(doc_name)
 
     return docs
 
@@ -27,32 +36,32 @@ def generate_docs_section():
     if not docs:
         return "No documentation files found."
 
-    # Group docs by category
+    # Group docs by category (include full paths)
     categories = {
-        "Getting Started": ["INSTALLATION_GUIDE.md", "REQUIREMENTS.md", "PYTHON_311_SETUP.md"],
-        "Architecture & Design": ["ARCHITECTURE.md", "PROJECT_STRUCTURE.md", "CONFIGURATION.md"],
+        "Getting Started": ["docs/INSTALLATION_GUIDE.md", "docs/REQUIREMENTS.md", "docs/PYTHON_311_SETUP.md"],
+        "Architecture & Design": ["docs/ARCHITECTURE.md", "docs/PROJECT_STRUCTURE.md", "docs/CONFIGURATION.md"],
         "Usage & Reference": [
-            "CLI-Reference.md",
-            "CLI-Quick-Reference.md",
-            "INPUT_SOURCES.md",
-            "TOOLS.md",
-            "WEB_INTERFACE.md",
+            "docs/CLI-Reference.md",
+            "docs/CLI-Quick-Reference.md", 
+            "docs/INPUT_SOURCES.md",
+            "docs/TOOLS.md",
+            "docs/WEB_INTERFACE.md",
         ],
         "Development & Testing": [
-            "TESTING.md",
-            "TEST_COVERAGE_IMPROVEMENTS.md",
-            "TEST_DIRECTORIES.md",
-            "DEPENDENCY_TROUBLESHOOTING.md",
+            "docs/TESTING.md",
+            "docs/TEST_COVERAGE_IMPROVEMENTS.md",
+            "docs/TEST_DIRECTORIES.md",
+            "docs/DEPENDENCY_TROUBLESHOOTING.md",
         ],
-        "Deployment & Operations": ["DEPLOYMENT.md", "KUBERNETES.md", "BUILD_OPTIMIZATION.md", "CI_OPTIMIZATION.md"],
-        "Releases & Changes": ["RELEASES.md", "QUALITY_TRANSITION.md"],
-        "Technical Guides": ["NOMIC_EMBEDDINGS.md"],
+        "Deployment & Operations": ["docs/DEPLOYMENT.md", "docs/KUBERNETES.md", "docs/BUILD_OPTIMIZATION.md", "docs/CI_OPTIMIZATION.md"],
+        "Releases & Changes": ["docs/RELEASES.md", "COMBINED_RELEASES.md", "docs/QUALITY_TRANSITION.md"],
+        "Technical Guides": ["docs/NOMIC_EMBEDDINGS.md"],
         "Troubleshooting & Fixes": [
-            "ALL_TESTS_FIX.md",
-            "API_TESTS_FIX.md",
-            "FLAKE8_FIX.md",
-            "TEST_FIXES_SUMMARY.md",
-            "TESTING_FIXES.md",
+            "docs/ALL_TESTS_FIX.md",
+            "docs/API_TESTS_FIX.md",
+            "docs/FLAKE8_FIX.md",
+            "docs/TEST_FIXES_SUMMARY.md",
+            "docs/TESTING_FIXES.md",
         ],
     }
 
@@ -65,8 +74,10 @@ def generate_docs_section():
         if existing_docs:
             section += f"### {category}\n\n"
             for doc in existing_docs:
-                title = doc.replace(".md", "").replace("_", " ").replace("-", " ").title()
-                section += f"- [{title}](docs/{doc})\n"
+                # Extract just the filename for title, handle both docs/ and root paths
+                filename = doc.split("/")[-1]
+                title = filename.replace(".md", "").replace("_", " ").replace("-", " ").title()
+                section += f"- [{title}]({doc})\n"
             section += "\n"
 
     # Add any uncategorized docs
@@ -78,8 +89,10 @@ def generate_docs_section():
     if uncategorized:
         section += "### Other Documentation\n\n"
         for doc in uncategorized:
-            title = doc.replace(".md", "").replace("_", " ").replace("-", " ").title()
-            section += f"- [{title}](docs/{doc})\n"
+            # Extract just the filename for title, handle both docs/ and root paths
+            filename = doc.split("/")[-1]
+            title = filename.replace(".md", "").replace("_", " ").replace("-", " ").title()
+            section += f"- [{title}]({doc})\n"
         section += "\n"
 
     return section
