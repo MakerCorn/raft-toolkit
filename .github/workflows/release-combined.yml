@@ -101,21 +101,24 @@ jobs:
           
           # Extract unreleased section from CHANGELOG.md
           if [ -f "CHANGELOG.md" ]; then
-            # Get content between [Unreleased] and next version header
-            CHANGELOG_CONTENT=$(awk "/## \\[Unreleased\\]/{flag=1; next} /## \\[/{if(flag) exit} flag" CHANGELOG.md | sed '/^$/d' | head -50)
+            # Get content between [Unreleased] and next version header and save to temp file
+            awk "/## \\[Unreleased\\]/{flag=1; next} /## \\[/{if(flag) exit} flag" CHANGELOG.md | sed '/^$/d' | head -50 > changelog_temp.txt
             
-            if [ -n "$CHANGELOG_CONTENT" ]; then
+            if [ -s changelog_temp.txt ]; then
               echo "Found changelog content for release"
-              # Store in multiline output
+              # Store in multiline output using cat to avoid command substitution issues
               {
                 echo "content<<EOF"
-                echo "$CHANGELOG_CONTENT"
+                cat changelog_temp.txt
                 echo "EOF"
               } >> $GITHUB_OUTPUT
             else
               echo "No unreleased content found in CHANGELOG.md"
               echo "content=" >> $GITHUB_OUTPUT
             fi
+            
+            # Cleanup temp file
+            rm -f changelog_temp.txt
           else
             echo "CHANGELOG.md not found"
             echo "content=" >> $GITHUB_OUTPUT
