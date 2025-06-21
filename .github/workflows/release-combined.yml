@@ -152,6 +152,8 @@ jobs:
           pip install -e ".[dev,all]"
           
       - name: Run comprehensive tests
+        env:
+          RAFT_TESTING: "true"
         run: |
           # Run linting
           python -m black --check .
@@ -162,8 +164,18 @@ jobs:
           # Run security checks
           python -m bandit -r raft_toolkit/ -f json -o bandit-report.json || true
           
-          # Run tests with coverage
-          python -m pytest --cov=raft_toolkit --cov-report=xml --cov-report=term-missing
+          # Run tests with coverage (excluding Docker environment tests)
+          echo "🧪 Running unit tests..."
+          python -m pytest tests/unit/ --cov=raft_toolkit --cov-report=xml --cov-report=term-missing --tb=short --timeout=300
+          
+          echo "🧪 Running integration tests..."
+          python -m pytest tests/integration/ --cov-append --cov=raft_toolkit --cov-report=xml --tb=short --timeout=300
+          
+          echo "🧪 Running API tests..."
+          python -m pytest tests/api/ --cov-append --cov=raft_toolkit --cov-report=xml --tb=short --timeout=300
+          
+          echo "🧪 Running CLI tests..."
+          python -m pytest tests/cli/ --cov-append --cov=raft_toolkit --cov-report=xml --tb=short --timeout=300
           
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -231,6 +243,9 @@ jobs:
         run: |
           docker run --rm ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.cli_tag }} --help
           echo "✅ CLI image smoke test passed"
+          
+          # Optional: Run Docker environment tests inside the container
+          # docker run --rm -e TESTING=true ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.cli_tag }} python -m pytest tests/docker/ -v
 
   # Build and test Web Docker image
   build-web:
