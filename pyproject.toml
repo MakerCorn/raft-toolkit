@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "raft-toolkit"
-version = "0.2.2"
+version = "0.2.15"
 description = "RAFT (Retrieval Augmented Fine Tuning) toolkit for generating synthetic Q&A datasets"
 readme = "README.md"
 license = "MIT"

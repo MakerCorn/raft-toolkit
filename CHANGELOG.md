@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.15] - 2025-06-21
+
 ### Added
 - **Combined Release Process**: New unified release workflow that coordinates both CLI and Web components
   - Single command to release both components: `./scripts/create_combined_release.sh <version>`
