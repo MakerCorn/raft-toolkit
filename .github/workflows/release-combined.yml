@@ -42,7 +42,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # Validation job to ensure version format and prepare release
@@ -167,6 +166,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -181,7 +184,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}
           tags: |
             type=raw,value=${{ needs.validate-and-prepare.outputs.cli_tag }}
             type=raw,value=cli-latest
@@ -202,7 +205,7 @@ jobs:
 
       - name: Test CLI image
         run: |
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate-and-prepare.outputs.cli_tag }} --help
+          docker run --rm ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.cli_tag }} --help
           echo "✅ CLI image smoke test passed"
 
   # Build and test Web Docker image
@@ -216,6 +219,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -231,7 +238,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}
           tags: |
             type=raw,value=${{ needs.validate-and-prepare.outputs.web_tag }}
             type=raw,value=web-latest
@@ -254,7 +261,7 @@ jobs:
         run: |
           # Start web container in background
           docker run -d --name test-web -p 8000:8000 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate-and-prepare.outputs.web_tag }}
+            ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.web_tag }}
           
           # Wait for startup
           sleep 10
@@ -328,6 +335,10 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Create release tags
         run: |
           CLI_TAG="${{ needs.validate-and-prepare.outputs.cli_tag }}"
@@ -351,7 +362,7 @@ jobs:
           VERSION="${{ needs.validate-and-prepare.outputs.version }}"
           CLI_TAG="${{ needs.validate-and-prepare.outputs.cli_tag }}"
           WEB_TAG="${{ needs.validate-and-prepare.outputs.web_tag }}"
-          GITHUB_REPOSITORY="${{ github.repository }}"
+          GITHUB_REPOSITORY="${{ steps.repo.outputs.name }}"
           
           # Use provided notes or changelog content
           if [ -n "${{ github.event.inputs.release_notes }}" ]; then
@@ -458,6 +469,10 @@ jobs:
     needs: [validate-and-prepare, create-release, publish-pypi, finalize-version]
     if: always() && needs.create-release.result == 'success'
     steps:
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Success notification
         run: |
           VERSION="${{ needs.validate-and-prepare.outputs.version }}"
@@ -478,8 +493,8 @@ jobs:
           echo "  • GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.validate-and-prepare.outputs.combined_tag }}"
           echo ""
           echo "🐳 Docker Images:"
-          echo "  • CLI: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.cli_tag }}"
-          echo "  • Web: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.web_tag }}"
+          echo "  • CLI: ghcr.io/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.cli_tag }}"
+          echo "  • Web: ghcr.io/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.web_tag }}"
           echo ""
           if [ "${{ needs.finalize-version.result }}" == "success" ]; then
             echo "✅ Version v$VERSION has been finalized in the repository"
@@ -507,6 +522,10 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Update version in pyproject.toml
         run: |
@@ -541,8 +560,8 @@ jobs:
           
           Release completed successfully:
           - GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.validate-and-prepare.outputs.combined_tag }}
-          - CLI Docker: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.cli_tag }}
-          - Web Docker: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.web_tag }}
+          - CLI Docker: ghcr.io/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.cli_tag }}
+          - Web Docker: ghcr.io/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.web_tag }}
           
           🚀 Generated with [Claude Code](https://claude.ai/code)
           
