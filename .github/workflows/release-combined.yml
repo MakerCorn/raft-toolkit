@@ -446,64 +446,57 @@ jobs:
           WEB_TAG="${{ needs.validate-and-prepare.outputs.web_tag }}"
           GITHUB_REPOSITORY="${{ steps.repo.outputs.name }}"
           
-          # Use provided notes or changelog content
-          if [ -n "${{ github.event.inputs.release_notes }}" ]; then
-            RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
-          elif [ -n "${{ needs.validate-and-prepare.outputs.changelog_content }}" ]; then
-            RELEASE_NOTES="${{ needs.validate-and-prepare.outputs.changelog_content }}"
-          else
-            RELEASE_NOTES="Combined release of RAFT Toolkit CLI and Web components."
-          fi
+          # Create basic release notes without changelog content for now to avoid shell interpretation issues
+          echo "# RAFT Toolkit v${VERSION} - Combined Release" > release_notes.md
+          echo "" >> release_notes.md
+          echo "This is a combined release that includes both CLI and Web components of RAFT Toolkit." >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## What is Included" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### CLI Component" >> release_notes.md
+          echo "- **Tag**: \`${CLI_TAG}\`" >> release_notes.md
+          echo "- **Docker Image**: \`ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG}\`" >> release_notes.md
+          echo "- **PyPI Package**: \`pip install raft-toolkit==${VERSION}\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Web Component" >> release_notes.md
+          echo "- **Tag**: \`${WEB_TAG}\`" >> release_notes.md
+          echo "- **Docker Image**: \`ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}\`" >> release_notes.md
+          echo "- **PyPI Package**: \`pip install raft-toolkit[web]==${VERSION}\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## Installation Options" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### CLI Usage" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "# Install from PyPI" >> release_notes.md
+          echo "pip install raft-toolkit==${VERSION}" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Run with Docker" >> release_notes.md
+          echo "docker run ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG} --help" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Web Application" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "# Install with web dependencies" >> release_notes.md
+          echo "pip install raft-toolkit[web]==${VERSION}" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Run web server" >> release_notes.md
+          echo "python -m raft_toolkit.web.app" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Run with Docker" >> release_notes.md
+          echo "docker run -p 8000:8000 ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "Generated with Claude Code" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "Co-Authored-By: Claude <noreply@anthropic.com>" >> release_notes.md
           
-          # Create comprehensive release notes
-          {
-            echo "# RAFT Toolkit v${VERSION} - Combined Release"
-            echo ""
-            echo "This is a combined release that includes both CLI and Web components of RAFT Toolkit."
-            echo ""
-            echo "## What is Included"
-            echo ""
-            echo "### CLI Component"
-            echo "- **Tag**: \`${CLI_TAG}\`"
-            echo "- **Docker Image**: \`ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG}\`"
-            echo "- **PyPI Package**: \`pip install raft-toolkit==${VERSION}\`"
-            echo ""
-            echo "### Web Component"
-            echo "- **Tag**: \`${WEB_TAG}\`"
-            echo "- **Docker Image**: \`ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}\`"
-            echo "- **PyPI Package**: \`pip install raft-toolkit[web]==${VERSION}\`"
-            echo ""
-            echo "## Release Notes"
-            echo ""
-            echo "${RELEASE_NOTES}"
-            echo ""
-            echo "## Installation Options"
-            echo ""
-            echo "### CLI Usage"
-            echo "\`\`\`bash"
-            echo "# Install from PyPI"
-            echo "pip install raft-toolkit==${VERSION}"
-            echo ""
-            echo "# Run with Docker"
-            echo "docker run ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG} --help"
-            echo "\`\`\`"
-            echo ""
-            echo "### Web Application"
-            echo "\`\`\`bash"
-            echo "# Install with web dependencies"
-            echo "pip install raft-toolkit[web]==${VERSION}"
-            echo ""
-            echo "# Run web server"
-            echo "python -m raft_toolkit.web.app"
-            echo ""
-            echo "# Run with Docker"
-            echo "docker run -p 8000:8000 ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}"
-            echo "\`\`\`"
-            echo ""
-            echo "Generated with Claude Code"
-            echo ""
-            echo "Co-Authored-By: Claude <noreply@anthropic.com>"
-          } > release_notes.md
+          # Add custom release notes or changelog content if provided
+          if [ -n "${{ github.event.inputs.release_notes }}" ]; then
+            echo "" >> release_notes.md
+            echo "## Release Notes" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "${{ github.event.inputs.release_notes }}" >> release_notes.md
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

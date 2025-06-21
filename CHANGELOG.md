@@ -87,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact**: Release workflow failed with "syntax error near unexpected token newline" during shell script generation
   - **Solution**: Replaced complex shell HEREDOC constructs with simpler `cat > file << 'EOL'` syntax and removed problematic environment reference
   - **Additional Fix**: Fixed changelog content extraction to use temporary files instead of command substitution to prevent shell interpretation of special characters (`<version>`, angle brackets, etc.)
+  - **Final Fix**: Completely rewrote release notes generation to use simple `echo` commands instead of complex shell constructs to eliminate all YAML/shell parsing conflicts
   - **Result**: Release workflow YAML now parses correctly without shell script generation errors
 - **LocalInputSource Path Resolution**: Fixed critical macOS path resolution issue causing test failures
   - **Root Cause**: macOS temp directories resolve inconsistently between `/var/folders/` and `/private/var/folders/` prefixes
