@@ -22,7 +22,7 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
 ]
-requires-python = ">=3.9, <3.14"
+requires-python = ">=3.11, <3.14"
 dependencies = [
     # Essential runtime core
     "pydantic>=2.8.0,<3.0.0",

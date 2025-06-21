@@ -60,6 +60,15 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug inputs
+        run: |
+          echo "🔍 Workflow inputs:"
+          echo "  Version: '${{ github.event.inputs.version }}'"
+          echo "  Release type: '${{ github.event.inputs.release_type }}'"
+          echo "  Skip tests: '${{ github.event.inputs.skip_tests }}' (parsed: ${{ fromJSON(github.event.inputs.skip_tests || 'false') }})"
+          echo "  Draft: '${{ github.event.inputs.draft }}' (parsed: ${{ fromJSON(github.event.inputs.draft || 'false') }})"
+          echo "  Prerelease: '${{ github.event.inputs.prerelease }}' (parsed: ${{ fromJSON(github.event.inputs.prerelease || 'false') }})"
+
       - name: Validate version format
         id: validate
         run: |
@@ -116,11 +125,19 @@ jobs:
   test-suite:
     runs-on: ubuntu-latest
     needs: validate-and-prepare
-    if: ${{ !github.event.inputs.skip_tests }}
+    if: ${{ !fromJSON(github.event.inputs.skip_tests || 'false') }}
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
     steps:
+      - name: Debug test execution
+        run: |
+          echo "🧪 Test suite starting..."
+          echo "  Skip tests input: '${{ github.event.inputs.skip_tests }}'"
+          echo "  Skip tests parsed: ${{ fromJSON(github.event.inputs.skip_tests || 'false') }}"
+          echo "  Should run tests: ${{ !fromJSON(github.event.inputs.skip_tests || 'false') }}"
+          echo "  Python version: ${{ matrix.python-version }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         
@@ -163,6 +180,13 @@ jobs:
       cli-image: ${{ steps.meta.outputs.tags }}
       cli-digest: ${{ steps.build.outputs.digest }}
     steps:
+      - name: Debug build decision
+        run: |
+          echo "🔨 CLI Build job starting..."
+          echo "  Test suite result: '${{ needs.test-suite.result }}'"
+          echo "  Skip tests input: '${{ github.event.inputs.skip_tests }}' (parsed: ${{ fromJSON(github.event.inputs.skip_tests || 'false') }})"
+          echo "  Should build: ${{ needs.test-suite.result == 'success' || needs.test-suite.result == 'skipped' }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -260,22 +284,74 @@ jobs:
       - name: Test Web image
         run: |
           # Start web container in background
+          echo "🚀 Starting web container..."
           docker run -d --name test-web -p 8000:8000 \
             ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ needs.validate-and-prepare.outputs.web_tag }}
           
-          # Wait for startup
-          sleep 10
+          # Wait for container to be running
+          echo "⏳ Waiting for container to start..."
+          sleep 5
           
-          # Test health endpoint
-          if curl -f http://localhost:8000/health; then
-            echo "✅ Web image smoke test passed"
-          else
-            echo "❌ Web image smoke test failed"
+          # Check container status
+          if ! docker ps | grep -q test-web; then
+            echo "❌ Container failed to start"
             docker logs test-web
             exit 1
           fi
           
+          # Wait for web server to be ready
+          echo "🔍 Waiting for web server to be ready..."
+          
+          # Give it more time to fully start
+          sleep 15
+          
+          # Check if container is still running
+          if ! docker ps | grep -q test-web; then
+            echo "❌ Container stopped running"
+            docker logs test-web
+            exit 1
+          fi
+          
+          # Try health check with retries
+          echo "🩺 Testing health endpoint..."
+          success=false
+          
+          for i in {1..6}; do
+            echo "Health check attempt $i/6..."
+            
+            # Use wget as alternative to curl, sometimes more reliable
+            if wget --quiet --timeout=10 --tries=1 -O- http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ Web image smoke test passed with wget"
+              success=true
+              break
+            fi
+            
+            # Also try with curl as backup
+            if curl -f --connect-timeout 3 --max-time 8 --silent --show-error http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ Web image smoke test passed with curl"
+              success=true
+              break
+            fi
+            
+            echo "⏳ Attempt $i failed, waiting 10s..."
+            sleep 10
+          done
+          
+          if [ "$success" = false ]; then
+            echo "❌ Web image smoke test failed after all attempts"
+            echo "📋 Container logs:"
+            docker logs test-web
+            echo "🔍 Container status:"
+            docker ps -a | grep test-web
+            echo "🌐 Network connections:"
+            ss -tlnp | grep :8000 || echo "No process listening on port 8000"
+            echo "📡 Testing direct connection:"
+            timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/8000' && echo "Port 8000 is reachable" || echo "Port 8000 is not reachable"
+            exit 1
+          fi
+          
           # Cleanup
+          echo "🧹 Cleaning up..."
           docker stop test-web
           docker rm test-web
 
@@ -285,7 +361,7 @@ jobs:
   publish-pypi:
     runs-on: ubuntu-latest
     needs: [validate-and-prepare, build-cli, build-web]
-    if: ${{ !github.event.inputs.draft && !github.event.inputs.prerelease }}
+    if: ${{ !fromJSON(github.event.inputs.draft || 'false') && !fromJSON(github.event.inputs.prerelease || 'false') }}
     environment: release
     steps:
       - name: Checkout repository
@@ -384,7 +460,7 @@ jobs:
             echo "### 📱 CLI Component"
             echo "- **Tag**: \\\`${CLI_TAG}\\\`"
             echo "- **Docker Image**: \\\`ghcr.io/${GITHUB_REPOSITORY}:${CLI_TAG}\\\`"
-            if [ "${{ github.event.inputs.draft }}" != "true" ] && [ "${{ github.event.inputs.prerelease }}" != "true" ]; then
+            if [ "${{ fromJSON(github.event.inputs.draft || 'false') }}" != "true" ] && [ "${{ fromJSON(github.event.inputs.prerelease || 'false') }}" != "true" ]; then
               echo "- **PyPI Package**: \\\`pip install raft-toolkit==${VERSION}\\\`"
             else
               echo "- **PyPI Package**: Not published (draft/pre-release)"
@@ -393,7 +469,7 @@ jobs:
             echo "### 🌐 Web Component"
             echo "- **Tag**: \\\`${WEB_TAG}\\\`"
             echo "- **Docker Image**: \\\`ghcr.io/${GITHUB_REPOSITORY}:${WEB_TAG}\\\`"
-            if [ "${{ github.event.inputs.draft }}" != "true" ] && [ "${{ github.event.inputs.prerelease }}" != "true" ]; then
+            if [ "${{ fromJSON(github.event.inputs.draft || 'false') }}" != "true" ] && [ "${{ fromJSON(github.event.inputs.prerelease || 'false') }}" != "true" ]; then
               echo "- **PyPI Package**: \\\`pip install raft-toolkit[web]==${VERSION}\\\`"
             else
               echo "- **PyPI Package**: Not published (draft/pre-release)"
@@ -407,7 +483,7 @@ jobs:
             echo ""
             echo "### CLI Usage"
             echo "\\\`\\\`\\\`bash"
-            if [ "${{ github.event.inputs.draft }}" != "true" ] && [ "${{ github.event.inputs.prerelease }}" != "true" ]; then
+            if [ "${{ fromJSON(github.event.inputs.draft || 'false') }}" != "true" ] && [ "${{ fromJSON(github.event.inputs.prerelease || 'false') }}" != "true" ]; then
               echo "# Install from PyPI"
               echo "pip install raft-toolkit==${VERSION}"
               echo ""
@@ -418,7 +494,7 @@ jobs:
             echo ""
             echo "### Web Application"
             echo "\\\`\\\`\\\`bash"
-            if [ "${{ github.event.inputs.draft }}" != "true" ] && [ "${{ github.event.inputs.prerelease }}" != "true" ]; then
+            if [ "${{ fromJSON(github.event.inputs.draft || 'false') }}" != "true" ] && [ "${{ fromJSON(github.event.inputs.prerelease || 'false') }}" != "true" ]; then
               echo "# Install with web dependencies"
               echo "pip install raft-toolkit[web]==${VERSION}"
               echo ""
@@ -458,10 +534,10 @@ jobs:
           tag_name: ${{ needs.validate-and-prepare.outputs.combined_tag }}
           name: "RAFT Toolkit v${{ needs.validate-and-prepare.outputs.version }}"
           body_path: release_notes.md
-          draft: ${{ github.event.inputs.draft }}
-          prerelease: ${{ github.event.inputs.prerelease || contains(needs.validate-and-prepare.outputs.version, '-') }}
+          draft: ${{ fromJSON(github.event.inputs.draft || 'false') }}
+          prerelease: ${{ fromJSON(github.event.inputs.prerelease || 'false') || contains(needs.validate-and-prepare.outputs.version, '-') }}
           generate_release_notes: true
-          make_latest: ${{ !github.event.inputs.draft && !github.event.inputs.prerelease }}
+          make_latest: ${{ !fromJSON(github.event.inputs.draft || 'false') && !fromJSON(github.event.inputs.prerelease || 'false') }}
 
   # Notify on completion
   notify-success:
@@ -483,9 +559,9 @@ jobs:
           echo "  • CLI Tag: ${{ needs.validate-and-prepare.outputs.cli_tag }}"
           echo "  • Web Tag: ${{ needs.validate-and-prepare.outputs.web_tag }}"
           echo "  • Combined Tag: ${{ needs.validate-and-prepare.outputs.combined_tag }}"
-          if [ "${{ github.event.inputs.draft }}" == "true" ]; then
+          if [ "${{ fromJSON(github.event.inputs.draft || 'false') }}" == "true" ]; then
             echo "  • Type: Draft Release (not published to PyPI)"
-          elif [ "${{ github.event.inputs.prerelease }}" == "true" ]; then
+          elif [ "${{ fromJSON(github.event.inputs.prerelease || 'false') }}" == "true" ]; then
             echo "  • Type: Pre-release (not published to PyPI)"
           else
             echo "  • PyPI: https://pypi.org/project/raft-toolkit/$VERSION/"

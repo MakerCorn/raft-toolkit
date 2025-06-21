@@ -247,7 +247,7 @@ The CI pipeline runs automatically on:
 - Pull requests to `main`
 
 **Pipeline stages:**
-1. **Test**: Run all test categories across Python 3.9-3.11
+1. **Test**: Run all test categories across Python 3.11-3.12
 2. **Lint**: Code style and quality checks
 3. **Security**: Security vulnerability scanning
 
