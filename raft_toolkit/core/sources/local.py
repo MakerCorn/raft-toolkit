@@ -105,9 +105,38 @@ class LocalInputSource(BaseInputSource):
                 last_modified=datetime.fromtimestamp(stat.st_mtime),
                 metadata={
                     "full_path": str(file_path.absolute()),
-                    "relative_path": str(file_path.relative_to(Path(self.config.source_uri).parent)),
+                    "relative_path": self._get_safe_relative_path(file_path),
                     "permissions": oct(stat.st_mode)[-3:],
                 },
             )
         except Exception as e:
             raise SourceValidationError(f"Failed to get file info for {file_path}: {e}")
+
+    def _get_safe_relative_path(self, file_path: Path) -> str:
+        """Get relative path safely, handling path resolution issues."""
+        try:
+            # Try the normal approach first
+            source_path = Path(self.config.source_uri).resolve()
+            file_path_resolved = file_path.resolve()
+            return str(file_path_resolved.relative_to(source_path))
+        except ValueError:
+            # Fallback: try with both paths normalized to handle /private prefix on macOS
+            try:
+                source_str = str(Path(self.config.source_uri).resolve())
+                file_str = str(file_path.resolve())
+
+                # Handle macOS /private prefix inconsistency
+                if source_str.startswith("/var/") and file_str.startswith("/private/var/"):
+                    file_str = file_str.replace("/private", "", 1)
+                elif source_str.startswith("/private/var/") and file_str.startswith("/var/"):
+                    source_str = source_str.replace("/private", "", 1)
+
+                # Calculate relative path manually
+                if file_str.startswith(source_str):
+                    return file_str[len(source_str) :].lstrip("/")
+                else:
+                    # Final fallback: just use the filename
+                    return file_path.name
+            except Exception:
+                # Ultimate fallback
+                return file_path.name
