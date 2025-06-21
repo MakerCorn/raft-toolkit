@@ -15,6 +15,11 @@ spec:
     spec:
       # GCP-specific configuration
       serviceAccountName: raft-toolkit-gcp-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       nodeSelector:
         kubernetes.io/os: linux
         kubernetes.io/arch: amd64

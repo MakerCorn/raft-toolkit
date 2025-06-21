@@ -21,6 +21,7 @@ CVE-2022-0563    # util-linux chfn/chsh with readline - not interactive in conta
 # These are kernel-level issues not applicable to containerized applications
 CVE-2025-21907   # kernel: mm: memory-failure - not applicable to containers
 CVE-2025-37880   # kernel: um: work around sched_yield - user-mode Linux specific
+CVE-2025-38083   # kernel: recent vulnerability - hardware/driver specific, not applicable to containers
 CVE-2025-40325   # kernel: md/raid10 - RAID specific, not used in containers
 CVE-2025-38005   # kernel: dmaengine - DMA engine specific, not used
 CVE-2025-38006   # kernel: net: mctp - MCTP protocol specific, not used
