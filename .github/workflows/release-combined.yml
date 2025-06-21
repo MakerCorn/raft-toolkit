@@ -318,30 +318,28 @@ jobs:
             exit 1
           fi
           
-          # Try health check with retries
+          # Simple health check - the logs show it's already working
           echo "🩺 Testing health endpoint..."
           success=false
           
-          for i in {1..6}; do
-            echo "Health check attempt $i/6..."
-            
-            # Use wget as alternative to curl, sometimes more reliable
-            if wget --quiet --timeout=10 --tries=1 -O- http://localhost:8000/health > /dev/null 2>&1; then
-              echo "✅ Web image smoke test passed with wget"
+          # Give the server a moment to be fully ready
+          sleep 5
+          
+          # Test health endpoint with curl
+          echo "🔍 Testing health endpoint..."
+          if response_code=$(curl -o /dev/null -s -w "%{http_code}" --connect-timeout 5 --max-time 10 http://localhost:8000/health); then
+            echo "Response code: $response_code"
+            if [ "$response_code" = "200" ]; then
+              echo "✅ Web image smoke test passed - health endpoint returned HTTP $response_code"
               success=true
-              break
+            else
+              echo "❌ Health endpoint returned HTTP $response_code (expected 200)"
+              success=false
             fi
-            
-            # Also try with curl as backup
-            if curl -f --connect-timeout 3 --max-time 8 --silent --show-error http://localhost:8000/health > /dev/null 2>&1; then
-              echo "✅ Web image smoke test passed with curl"
-              success=true
-              break
-            fi
-            
-            echo "⏳ Attempt $i failed, waiting 10s..."
-            sleep 10
-          done
+          else
+            echo "❌ Failed to connect to health endpoint"
+            success=false
+          fi
           
           if [ "$success" = false ]; then
             echo "❌ Web image smoke test failed after all attempts"
