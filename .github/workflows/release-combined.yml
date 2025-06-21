@@ -1,5 +1,10 @@
 name: Combined Release (CLI + Web)
 
+permissions:
+  contents: write  # Required for creating releases and pushing tags
+  packages: write  # Required for publishing Docker images
+  id-token: write  # Required for trusted publishing (if used)
+
 on:
   workflow_dispatch:
     inputs:
@@ -110,9 +115,9 @@ jobs:
 
   # Run comprehensive tests before release (unless skipped)
   test-suite:
-    if: ${{ !github.event.inputs.skip_tests }}
     runs-on: ubuntu-latest
     needs: validate-and-prepare
+    if: ${{ !github.event.inputs.skip_tests }}
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
@@ -150,38 +155,11 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  # Gate job to control flow based on test results
-  test-gate:
-    runs-on: ubuntu-latest
-    needs: [validate-and-prepare, test-suite]
-    if: always()
-    outputs:
-      should_continue: ${{ steps.gate.outputs.should_continue }}
-    steps:
-      - name: Determine if builds should continue
-        id: gate
-        run: |
-          echo "Test suite result: ${{ needs.test-suite.result }}"
-          echo "Skip tests input: ${{ github.event.inputs.skip_tests }}"
-          
-          # Continue if tests passed OR if tests were explicitly skipped
-          if [[ "${{ needs.test-suite.result }}" == "success" ]] || [[ "${{ github.event.inputs.skip_tests }}" == "true" ]] || [[ "${{ needs.test-suite.result }}" == "skipped" ]]; then
-            echo "should_continue=true" >> $GITHUB_OUTPUT
-            echo "✅ Proceeding with builds"
-            if [[ "${{ github.event.inputs.skip_tests }}" == "true" ]]; then
-              echo "Tests were skipped as requested"
-            fi
-          else
-            echo "should_continue=false" >> $GITHUB_OUTPUT
-            echo "❌ Tests failed or were cancelled - stopping pipeline"
-            echo "Test result was: ${{ needs.test-suite.result }}"
-          fi
-
   # Build and test CLI Docker image
   build-cli:
     runs-on: ubuntu-latest
-    needs: [validate-and-prepare, test-gate]
-    if: needs.test-gate.outputs.should_continue == 'true'
+    needs: [validate-and-prepare, test-suite]
+    if: always() && (needs.test-suite.result == 'success' || needs.test-suite.result == 'skipped')
     outputs:
       cli-image: ${{ steps.meta.outputs.tags }}
       cli-digest: ${{ steps.build.outputs.digest }}
@@ -230,8 +208,8 @@ jobs:
   # Build and test Web Docker image
   build-web:
     runs-on: ubuntu-latest
-    needs: [validate-and-prepare, test-gate]
-    if: needs.test-gate.outputs.should_continue == 'true'
+    needs: [validate-and-prepare, test-suite]
+    if: always() && (needs.test-suite.result == 'success' || needs.test-suite.result == 'skipped')
     outputs:
       web-image: ${{ steps.meta.outputs.tags }}
       web-digest: ${{ steps.build.outputs.digest }}
@@ -294,71 +272,14 @@ jobs:
           docker stop test-web
           docker rm test-web
 
-  # Update version in code and create changelog entry
-  update-version:
-    runs-on: ubuntu-latest
-    needs: [validate-and-prepare, test-gate, build-cli, build-web]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Configure Git
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: Update version in pyproject.toml
-        run: |
-          VERSION="${{ needs.validate-and-prepare.outputs.version }}"
-          
-          # Update version in pyproject.toml
-          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
-          
-          echo "✅ Updated version to $VERSION in pyproject.toml"
-
-      - name: Update CHANGELOG.md
-        run: |
-          VERSION="${{ needs.validate-and-prepare.outputs.version }}"
-          DATE=$(date +%Y-%m-%d)
-          
-          if [ -f "CHANGELOG.md" ]; then
-            # Replace [Unreleased] with version and date, add new [Unreleased] section
-            sed -i "s/## \[Unreleased\]/## [Unreleased]\n\n## [$VERSION] - $DATE/" CHANGELOG.md
-            
-            echo "✅ Updated CHANGELOG.md with version $VERSION"
-          else
-            echo "⚠️  CHANGELOG.md not found, skipping changelog update"
-          fi
-
-      - name: Commit version changes
-        run: |
-          VERSION="${{ needs.validate-and-prepare.outputs.version }}"
-          
-          git add pyproject.toml CHANGELOG.md
-          git commit -m "$(cat <<EOF
-          chore: bump version to $VERSION for combined release
-          
-          🚀 Generated with [Claude Code](https://claude.ai/code)
-          
-          Co-Authored-By: Claude <noreply@anthropic.com>
-          EOF
-          )"
-          
-          git push origin main
+  # Temporary placeholder - version will be updated after successful completion
 
   # Publish to PyPI (skip for draft and pre-release builds)
   publish-pypi:
     runs-on: ubuntu-latest
-    needs: [validate-and-prepare, update-version]
+    needs: [validate-and-prepare, build-cli, build-web]
     if: ${{ !github.event.inputs.draft && !github.event.inputs.prerelease }}
-    environment: pypi
+    environment: release
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -393,13 +314,19 @@ jobs:
   # Create combined GitHub release
   create-release:
     runs-on: ubuntu-latest
-    needs: [validate-and-prepare, test-gate, build-cli, build-web]
-    if: always() && needs.test-gate.outputs.should_continue == 'true' && needs.build-cli.result == 'success' && needs.build-web.result == 'success'
+    needs: [validate-and-prepare, build-cli, build-web]
+    if: always() && needs.build-cli.result == 'success' && needs.build-web.result == 'success'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: main  # Get latest with version updates
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
 
       - name: Create release tags
         run: |
@@ -528,7 +455,7 @@ jobs:
   # Notify on completion
   notify-success:
     runs-on: ubuntu-latest
-    needs: [validate-and-prepare, create-release, publish-pypi]
+    needs: [validate-and-prepare, create-release, publish-pypi, finalize-version]
     if: always() && needs.create-release.result == 'success'
     steps:
       - name: Success notification
@@ -553,11 +480,83 @@ jobs:
           echo "🐳 Docker Images:"
           echo "  • CLI: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.cli_tag }}"
           echo "  • Web: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.web_tag }}"
+          echo ""
+          if [ "${{ needs.finalize-version.result }}" == "success" ]; then
+            echo "✅ Version v$VERSION has been finalized in the repository"
+          else
+            echo "⚠️  Version finalization may have failed - check finalize-version job"
+          fi
+
+  # Update version in code after successful release completion
+  finalize-version:
+    runs-on: ubuntu-latest
+    needs: [validate-and-prepare, create-release, publish-pypi]
+    if: always() && needs.create-release.result == 'success' && (needs.publish-pypi.result == 'success' || needs.publish-pypi.result == 'skipped')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Update version in pyproject.toml
+        run: |
+          VERSION="${{ needs.validate-and-prepare.outputs.version }}"
+          
+          # Update version in pyproject.toml
+          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+          
+          echo "✅ Updated version to $VERSION in pyproject.toml"
+
+      - name: Update CHANGELOG.md
+        run: |
+          VERSION="${{ needs.validate-and-prepare.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+          
+          if [ -f "CHANGELOG.md" ]; then
+            # Replace [Unreleased] with version and date, add new [Unreleased] section
+            sed -i "s/## \[Unreleased\]/## [Unreleased]\n\n## [$VERSION] - $DATE/" CHANGELOG.md
+            
+            echo "✅ Updated CHANGELOG.md with version $VERSION"
+          else
+            echo "⚠️  CHANGELOG.md not found, skipping changelog update"
+          fi
+
+      - name: Commit version changes
+        run: |
+          VERSION="${{ needs.validate-and-prepare.outputs.version }}"
+          
+          git add pyproject.toml CHANGELOG.md
+          git commit -m "$(cat <<EOF
+          chore: bump version to $VERSION after successful release
+          
+          Release completed successfully:
+          - GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.validate-and-prepare.outputs.combined_tag }}
+          - CLI Docker: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.cli_tag }}
+          - Web Docker: ghcr.io/${{ github.repository }}:${{ needs.validate-and-prepare.outputs.web_tag }}
+          
+          🚀 Generated with [Claude Code](https://claude.ai/code)
+          
+          Co-Authored-By: Claude <noreply@anthropic.com>
+          EOF
+          )"
+          
+          git push origin main
+          echo "✅ Version bump committed and pushed to main branch"
 
   # Handle failures and cleanup
   notify-failure:
     runs-on: ubuntu-latest
-    needs: [validate-and-prepare, test-gate, build-cli, build-web, update-version, publish-pypi, create-release]
+    needs: [validate-and-prepare, test-suite, build-cli, build-web, publish-pypi, create-release, finalize-version]
     if: failure()
     steps:
       - name: Failure notification

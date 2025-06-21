@@ -11,9 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Combined Release Process**: New unified release workflow that coordinates both CLI and Web components
   - Single command to release both components: `./scripts/create_combined_release.sh <version>`
   - Creates three tags: `cli-v{version}`, `web-v{version}`, and `v{version}`
-  - Builds both CLI and Web Docker images in parallel
+  - Builds both CLI and Web Docker images in parallel (linux/amd64, linux/arm64)
   - Publishes unified PyPI package with optional web dependencies
+  - Supports draft and pre-release modes with conditional PyPI publishing
   - Comprehensive release documentation and troubleshooting guides
+  - **Enhanced Wiki Integration**: Automatic wiki updates with release documentation
+    - Combined release process documentation automatically added to project wiki
+    - Wiki generator updated to include both docs/ and root-level documentation files
+    - Auto-triggers after successful releases for up-to-date documentation
 
 ### Security
 - **CRITICAL**: Updated zlib vulnerabilities via base image updates (CVE-2023-45853)
@@ -42,8 +47,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `.safety-policy.yml` to document and ignore false positive security vulnerabilities
 - Added comprehensive CI optimization documentation (`docs/CI_OPTIMIZATION.md`)
 - Added convenience dependency groups for faster installations (minimal, standard, complete)
+- **Enhanced Release Documentation**: Comprehensive documentation for combined release process
+  - `docs/RELEASES.md`: Complete guide covering combined, individual, and legacy release processes
+  - `COMBINED_RELEASES.md`: Quick reference guide for combined releases with examples
+  - Troubleshooting guides with specific error scenarios and recovery procedures
+  - Cross-platform installation and usage instructions
+
+### Changed
+- **Release Strategy**: Transitioned from individual component releases to unified combined release approach
+  - Combined releases now recommended for most scenarios
+  - Individual CLI/Web releases reserved for component-specific hotfixes
+  - Improved coordination between CLI and Web component versioning
+- **Documentation Generator**: Enhanced to support mixed directory structures (docs/ + root files)
+  - Updated README.md generation to include `COMBINED_RELEASES.md` from root directory
+  - Improved categorization and link generation for cross-directory documentation
 
 ### Fixed
+- **Combined Release Workflow**: Fixed critical issues preventing successful release completion
+  - **Job Dependency Logic**: Removed flawed gate pattern that caused jobs to be skipped
+  - **Version Bump Timing**: Restructured workflow to bump version only after successful completion
+    - Prevents orphaned version bumps when releases fail
+    - Ensures atomic release process with proper rollback state
+    - Version finalization now occurs after all critical steps (builds, PyPI, GitHub release)
+  - **YAML Syntax**: Fixed multiple YAML parsing errors in release workflow
+    - Resolved unbalanced quotes and improper escape sequences
+    - Fixed HEREDOC content formatting issues
+    - Corrected backtick escaping for proper markdown rendering
+  - **Permissions & Configuration**: Added missing workflow permissions and Git configuration
+    - Added comprehensive permissions for contents, packages, and id-token
+    - Fixed missing Git configuration for tag creation and commits
+    - Updated job conditionals to handle test skipping and PyPI conditional publishing
 - **Windows Path Security**: Fixed SecurityConfig validation to properly handle Windows temp directory paths
   - Removed backslash from dangerous characters list to allow legitimate Windows paths
   - Enhanced Windows temp directory pattern matching for cross-platform testing
