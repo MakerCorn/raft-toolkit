@@ -82,6 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Impact**: Docker health checks and external connections failed despite the app running correctly inside the container
   - **Solution**: Added command-line argument parsing to `raft_toolkit.web.app` to accept `--host`, `--port`, and `--reload` arguments
   - **Result**: Docker containers now properly bind to `0.0.0.0:8000` and pass health checks, fixing CI/CD pipeline issues
+- **GitHub Actions YAML Syntax**: Fixed shell script generation errors in combined release workflow
+  - **Root Cause**: HEREDOC syntax with command substitution and triple backslash escaping causing YAML parsing failures
+  - **Impact**: Release workflow failed with "syntax error near unexpected token newline" during shell script generation
+  - **Solution**: Replaced complex shell HEREDOC constructs with simpler `cat > file << 'EOL'` syntax and removed problematic environment reference
+  - **Result**: Release workflow YAML now parses correctly without shell script generation errors
 - **LocalInputSource Path Resolution**: Fixed critical macOS path resolution issue causing test failures
   - **Root Cause**: macOS temp directories resolve inconsistently between `/var/folders/` and `/private/var/folders/` prefixes
   - **Impact**: `LocalInputSource.list_documents()` returned 0 documents instead of expected files, causing test failures
