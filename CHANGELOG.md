@@ -77,6 +77,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Snyk Security Actions**: Fixed CI workflow failures caused by invalid Snyk action reference (`snyk/actions/python-3.11@master` → `snyk/actions/python-3.10@master`)
   - **MyPy Configuration**: Fixed invalid Python version configuration in pyproject.toml (`python_version = "0.2.2"` → `python_version = "3.11"`)
   - **Test Execution Strategy**: Consolidated test execution from separate directory-based commands to single marker-based exclusion for better reliability
+- **Web Application Docker Binding**: Fixed critical Docker networking issue causing health check failures
+  - **Root Cause**: Web app was binding to `127.0.0.1:8000` instead of `0.0.0.0:8000`, making it inaccessible from outside the container
+  - **Impact**: Docker health checks and external connections failed despite the app running correctly inside the container
+  - **Solution**: Added command-line argument parsing to `raft_toolkit.web.app` to accept `--host`, `--port`, and `--reload` arguments
+  - **Result**: Docker containers now properly bind to `0.0.0.0:8000` and pass health checks, fixing CI/CD pipeline issues
 - **LocalInputSource Path Resolution**: Fixed critical macOS path resolution issue causing test failures
   - **Root Cause**: macOS temp directories resolve inconsistently between `/var/folders/` and `/private/var/folders/` prefixes
   - **Impact**: `LocalInputSource.list_documents()` returned 0 documents instead of expected files, causing test failures
