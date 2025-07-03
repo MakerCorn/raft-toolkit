@@ -12,6 +12,12 @@
   - [📦 Installation](#-installation)
     - [Quick Start](#quick-start)
     - [Installation Options](#installation-options)
+      - [🚀 **Core Installation** (Fastest - ~30-60 seconds)](#-core-installation-fastest---30-60-seconds)
+      - [📊 **Standard Installation** (Recommended)](#-standard-installation-recommended)
+      - [🌐 **Complete Installation**](#-complete-installation)
+      - [🛠️ **Development Installation**](#️-development-installation)
+      - [🎯 **Custom Combinations**](#-custom-combinations)
+      - [🐳 **Docker Installation**](#-docker-installation)
   - [🌐 Usage](#-usage)
     - [Web Interface](#web-interface)
     - [Command Line Interface](#command-line-interface)
@@ -64,10 +70,24 @@
     - [Docker Testing](#docker-testing)
     - [Code Quality](#code-quality)
     - [Security Scanning](#security-scanning)
+  - [🛠️ Command Line Tools](#️-command-line-tools)
+    - [Available Tools](#available-tools)
+    - [Quick Examples](#quick-examples)
+    - [Complete Workflow](#complete-workflow)
   - [🛠️ Fine-tuning \& Evaluation](#️-fine-tuning--evaluation)
     - [Model Fine-tuning](#model-fine-tuning)
-    - [Evaluation Tools](#evaluation-tools)
+    - [Legacy Tool Usage](#legacy-tool-usage)
   - [🚀 Deployment](#-deployment)
+  - [📚 Documentation](#-documentation)
+    - [Getting Started](#getting-started)
+    - [Architecture \& Design](#architecture--design)
+    - [Usage \& Reference](#usage--reference)
+    - [Development \& Testing](#development--testing)
+    - [Deployment \& Operations](#deployment--operations)
+    - [Releases \& Changes](#releases--changes)
+    - [Technical Guides](#technical-guides)
+    - [Troubleshooting \& Fixes](#troubleshooting--fixes)
+    - [Other Documentation](#other-documentation)
 
 ## 🚀 Overview
 
@@ -149,6 +169,7 @@ graph TD
 **When to Use RAFT vs Traditional RAG:**
 
 **Use RAFT Fine-Tuning When:**
+
 - You have consistent document types/formats
 - Performance on document reasoning is critical
 - You can invest time in data generation and training
@@ -156,6 +177,7 @@ graph TD
 - Latency optimization is important
 
 **Use Traditional RAG When:**
+
 - Working with diverse, changing document types
 - Quick prototyping or proof-of-concept needed
 - Limited resources for training data generation
@@ -192,34 +214,43 @@ python -m cli.main --datapath sample_data/sample.pdf --output ./output --preview
 Choose the installation that best fits your needs:
 
 #### 🚀 **Core Installation** (Fastest - ~30-60 seconds)
+
 ```bash
 pip install .
 ```
+
 **Includes:** Basic CLI, document processing, OpenAI integration  
 **Use cases:** Quick testing, lightweight deployments, basic CI
 
 #### 📊 **Standard Installation** (Recommended)
+
 ```bash
 pip install .[standard]
 ```
+
 **Includes:** Full AI/ML functionality, embeddings, LangChain ecosystem  
 **Use cases:** Production deployments, full RAFT functionality
 
 #### 🌐 **Complete Installation**
+
 ```bash
 pip install .[complete]
 ```
+
 **Includes:** Standard + cloud services + observability  
 **Use cases:** Enterprise deployments, cloud integration
 
 #### 🛠️ **Development Installation**
+
 ```bash
 pip install .[all]
 ```
+
 **Includes:** Everything + development tools  
 **Use cases:** Contributing, local development, full testing
 
 #### 🎯 **Custom Combinations**
+
 ```bash
 # Web interface with AI
 pip install .[standard,web]
@@ -232,6 +263,7 @@ pip install .[standard,dev]
 ```
 
 #### 🐳 **Docker Installation**
+
 ```bash
 docker compose up -d
 ```
@@ -239,10 +271,12 @@ docker compose up -d
 **🚀 Performance Note:** The optimized dependency structure provides **70-80% faster CI builds** compared to previous versions. See [CI Optimization Guide](docs/CI_OPTIMIZATION.md) for details.
 
 **📚 Installation Resources:**
+
 - [Complete Installation Guide](docs/INSTALLATION_GUIDE.md) - Detailed setup instructions
 - [Requirements Management](docs/REQUIREMENTS.md) - Dependency structure and installation patterns
 
 **📚 CLI Documentation:**
+
 - [CLI Reference Guide](docs/CLI-Reference.md) - Comprehensive CLI parameter documentation
 - [CLI Quick Reference](docs/CLI-Quick-Reference.md) - Quick reference card for CLI parameters
 
@@ -263,6 +297,7 @@ python run_web.py --host 0.0.0.0 --port 8080 --debug
 ```
 
 **Web UI Features:**
+
 - 📤 **Dataset Generation**: Drag & drop file upload with visual configuration
 - 🛠️ **Analysis Tools**: Six powerful evaluation and analysis tools
 - ⚙️ **Visual Configuration**: Interactive forms for all settings
@@ -272,6 +307,7 @@ python run_web.py --host 0.0.0.0 --port 8080 --debug
 - 📈 **Results Visualization**: Comprehensive display of metrics and statistics
 
 **Analysis Tools Available:**
+
 - **Dataset Evaluation**: Evaluate model performance with configurable metrics
 - **Answer Generation**: Generate high-quality answers using various LLMs
 - **PromptFlow Analysis**: Multi-dimensional evaluation (relevance, groundedness, fluency, coherence)
@@ -314,6 +350,7 @@ See the [tools/README.md](tools/README.md) for comprehensive documentation on al
 4. **Dataset Export**: Data is saved in the specified format for fine-tuning
 
 **Tips:**
+
 - Use a `.env` file for OpenAI/Azure keys
 - For Azure, set deployment names with `--completion-model` and `--embedding-model`
 - Use `--chunking-strategy` and `--chunking-params` for best results on your data
@@ -551,6 +588,7 @@ RAFT Toolkit includes a comprehensive template system for customizing prompts us
 ### Default Template Behavior
 
 **No Configuration Required**: RAFT Toolkit works out of the box with intelligent defaults:
+
 - Automatically selects appropriate templates based on model type (GPT, Llama, etc.)
 - Provides robust fallback mechanisms if custom templates are not found
 - Includes multiple layers of default templates for different complexity levels
@@ -564,12 +602,14 @@ python raft.py --datapath docs/ --output training_data/
 ### Available Templates
 
 #### Embedding Templates
+
 - **`embedding_prompt_template.txt`**: Default template for embedding generation
   - Provides context and instructions for generating document embeddings
   - Supports variables: `{content}`, `{document_type}`, `{metadata}`
   - Customizable for domain-specific embedding optimization
 
 #### Question-Answer Generation Templates
+
 - **`gpt_template.txt`**: GPT-style question-answering template with reasoning and citations
 - **`gpt_qa_template.txt`**: GPT question generation template with content filtering
 - **`llama_template.txt`**: Llama-style question-answering template optimized for Llama models
@@ -578,6 +618,7 @@ python raft.py --datapath docs/ --output training_data/
 ### Template Configuration
 
 **Environment Variables:**
+
 ```bash
 # Custom prompt templates
 export RAFT_EMBEDDING_PROMPT_TEMPLATE="/path/to/templates/my_embedding_template.txt"
@@ -589,6 +630,7 @@ export RAFT_TEMPLATES="/path/to/templates/"
 ```
 
 **CLI Arguments:**
+
 ```bash
 # Use custom templates
 python raft.py --datapath docs/ --output training_data/ \
@@ -602,6 +644,7 @@ python raft.py --datapath docs/ --output training_data/ \
 ```
 
 **Programmatic Configuration:**
+
 ```python
 config = RAFTConfig(
     templates="./templates",
@@ -614,6 +657,7 @@ config = RAFTConfig(
 ### Template Variables
 
 #### Embedding Templates
+
 - `{content}`: The document content to be embedded
 - `{document_type}`: File type (pdf, txt, json, pptx, etc.)
 - `{metadata}`: Additional document metadata
@@ -621,6 +665,7 @@ config = RAFTConfig(
 - `{chunking_strategy}`: The chunking method used
 
 #### QA Generation Templates
+
 - `{question}`: The question to be answered (for answer templates)
 - `{context}`: The context/chunk for question generation
 - `%s`: Placeholder for number of questions to generate
@@ -628,7 +673,8 @@ config = RAFTConfig(
 ### Domain-Specific Examples
 
 #### Medical Documents
-```
+
+```text
 Generate embeddings for medical literature that capture:
 - Clinical terminology and procedures
 - Drug names and dosages
@@ -639,7 +685,8 @@ Content: {content}
 ```
 
 #### Legal Documents
-```
+
+```text
 Generate embeddings for legal documents focusing on:
 - Legal terminology and concepts
 - Case citations and precedents
@@ -651,7 +698,8 @@ Content: {content}
 ```
 
 #### Technical Documentation
-```
+
+```text
 Generate embeddings for technical documentation emphasizing:
 - API endpoints and parameters
 - Code examples and syntax
@@ -673,12 +721,14 @@ The RAFT Toolkit includes comprehensive rate limiting to handle the constraints 
 #### Why Rate Limiting Matters
 
 **Common Issues Without Rate Limiting:**
+
 - API rate limit errors (HTTP 429) causing processing failures
 - Unexpected costs from burst API usage
 - Inconsistent processing times due to throttling
 - Failed batches requiring expensive reprocessing
 
 **Benefits of Rate Limiting:**
+
 - **Predictable Costs**: Control API spending with token and request limits
 - **Reliable Processing**: Avoid rate limit errors through intelligent throttling
 - **Optimized Performance**: Adaptive strategies adjust to service response times
@@ -687,6 +737,7 @@ The RAFT Toolkit includes comprehensive rate limiting to handle the constraints 
 #### Quick Start Examples
 
 **Using Preset Configurations:**
+
 ```bash
 # OpenAI GPT-4 with recommended limits
 python raft.py --datapath docs/ --output training_data/ \
@@ -702,6 +753,7 @@ python raft.py --datapath docs/ --output training_data/ \
 ```
 
 **Custom Rate Limiting:**
+
 ```bash
 # Custom limits for your specific API tier
 python raft.py --datapath docs/ --output training_data/ \
@@ -757,6 +809,7 @@ The RAFT Toolkit features a comprehensive logging system designed for production
 #### 🚀 **Production Deployment**
 
 **Docker with Enhanced Logging:**
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -772,6 +825,7 @@ services:
 ```
 
 **Kubernetes ConfigMap:**
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -783,7 +837,6 @@ data:
   RAFT_LOG_OUTPUT: "both"
   RAFT_LOG_STRUCTURED: "true"
 ```
-
 
 ### File Utilities
 
@@ -861,7 +914,7 @@ raft-toolkit/
 
 This toolkit follows **12-factor app principles** with a modular architecture:
 
-```
+``` text
 raft-toolkit/
 ├── raft_toolkit/           # Main package
 │   ├── core/              # Shared business logic
@@ -878,6 +931,7 @@ raft-toolkit/
 ```
 
 **Benefits:**
+
 - ✅ **Separation of Concerns**: UI and business logic decoupled
 - ✅ **Environment Parity**: Same code for dev/prod
 - ✅ **Configuration via Environment**: 12-factor compliance
@@ -1078,6 +1132,7 @@ python answer.py --input questions.jsonl --output answers.jsonl --model gpt-4
 ```
 
 **Evaluation Metrics:**
+
 - **Relevance**: How relevant is the answer to the question?
 - **Groundedness**: Is the answer grounded in the provided context?
 - **Fluency**: How fluent and natural is the language?
@@ -1097,6 +1152,7 @@ python answer.py --input questions.jsonl --output answers.jsonl --model gpt-4
 - **🔒 Security**: Container scanning, network policies, secret management
 
 **Local Development:**
+
 ```bash
 # Development mode with auto-reload
 python run_web.py --debug
@@ -1165,3 +1221,4 @@ See the [Deployment Guide](docs/DEPLOYMENT.md) for comprehensive deployment inst
 ### Other Documentation
 
 - [Test Coverage Summary](docs/TEST_COVERAGE_SUMMARY.md)
+  

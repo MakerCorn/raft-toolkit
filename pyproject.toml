@@ -160,9 +160,9 @@ raft-pfeval-completion = "raft_toolkit.tools.pfeval_completion:main"
 raft-pfeval-local = "raft_toolkit.tools.pfeval_local:main"
 
 [project.urls]
-"Homepage" = "https://github.com/microsoft/raft-toolkit"
-"Bug Reports" = "https://github.com/microsoft/raft-toolkit/issues"
-"Source" = "https://github.com/microsoft/raft-toolkit"
+"Homepage" = "https://visland.com"
+"Bug Reports" = "https://github.com/makercorn/raft-toolkit/issues"
+"Source" = "https://github.com/makercorn/raft-toolkit"
 
 [tool.setuptools.packages.find]
 include = ["raft_toolkit*"]
