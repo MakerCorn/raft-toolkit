@@ -345,7 +345,8 @@ def main():
         input_type = "json"
 
     logger = logging.getLogger("raft")
-    ds = load_dataset(input_type, data_files={"train": args.input})["train"]
+    # Load dataset from local files only - not from HuggingFace Hub
+    ds = load_dataset(input_type, data_files={"train": args.input}, trust_remote_code=False)["train"]
     logger.info(f"Dataset has {ds.num_rows} rows")
     formatter = DatasetConverter()
 
